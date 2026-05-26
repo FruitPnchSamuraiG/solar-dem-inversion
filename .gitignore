@@ -4,3 +4,4 @@ __pycache__/
 *.npz.tmp
 *.fits
 data/
+output/

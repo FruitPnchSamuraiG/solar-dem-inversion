@@ -88,6 +88,21 @@ From the paper's "Future Work" section:
 - Goal: improve the DEM curve approximation quality (better architecture, training, uncertainty)
 - Web visualizer exists at `triborough.cs.nyu.edu/vp2435/demdemo/webapp/flaresX.html` (NYU server)
 - Deconvolution experiment visualizer: same host, `flaresX_deconv.html`
+- **Status**: BP solver running end-to-end on real AIA data (2017-09-10 X8.2 flare); next step is understanding training data format and building the NN
+
+## Running the Pipeline
+
+Download AIA data from JSOC (requires registered email):
+```
+uv run python dlAIA.py ./data/<timestamp> <YYYYMMDD_HHMM> <email>
+```
+
+Run the BP solver (use `--crop sy,sx,h,w` to test on a small patch first):
+```
+uv run python fullBP.py ./data/<timestamp> ./output/result.npz --crop 1900,1900,128,128 --parallel -1 --visTarget ./output/vis
+```
+
+Open `output/vis/vis.htm` to inspect DEM maps and AIA resynthesis quality.
 
 ## Useful Libraries
 

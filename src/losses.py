@@ -172,10 +172,11 @@ def barrier_loss_batch(x, D, I_obs, lb, ub, a_l2=0, a_l1=1.0, mu=1.0, alpha=0, m
     # I_obs: [B, n_obs]
     # lb, ub: [B, n_obs] lower and upper bounds for the observed data
 
-    # a_l2: regularization strength for L2
-    # a_l1: regularization strength for L1
-    # mu: barrier strength
-    # alpha: fit term weight
+    # per-channel noise sigma derived from the tolerance band: sigma = (ub - lb) / 2
+    # dividing by sigma^2 normalises each channel so faint and bright channels
+    # contribute equally (chi-squared style), preventing bright channels from
+    # dominating and the NN ignoring faint ones (e.g. 94A, 131A)
+    sigma2 = ((ub - lb) / 2) ** 2 + 1e-8  # [B, n_obs]
 
     # L2 regularization
     l2_term = 0.5 * a_l2 * torch.sum(x**2, dim=1)  # [B]
@@ -187,19 +188,16 @@ def barrier_loss_batch(x, D, I_obs, lb, ub, a_l2=0, a_l1=1.0, mu=1.0, alpha=0, m
 
     # barrier for x >= 0
     barrier_x = mu_pos * torch.sum(torch.relu(-x), dim=1)  # [B]
-    
-    # barrier for Dx >= lb
-    barrier_lb = mu * torch.sum(torch.relu(lb - Dx)**2, dim=1)  # [B]
-    #barrier_lb = mu * torch.sum(nn.functional.softplus(lb - Dx), dim=1)  # [B]
 
-    # barrier for Dx <= ub
-    barrier_ub = mu * torch.sum(torch.relu(Dx - ub)**2, dim=1)  # [B]
-    #barrier_ub = mu * torch.sum(nn.functional.softplus(Dx - ub), dim=1)  # [B]
+    # barrier for Dx >= lb  (normalised by sigma^2)
+    barrier_lb = mu * torch.sum(torch.relu(lb - Dx)**2 / sigma2, dim=1)  # [B]
 
-    # fit term
-    fit = alpha * torch.sum((Dx - I_obs)**2, dim=1)  # [B]
+    # barrier for Dx <= ub  (normalised by sigma^2)
+    barrier_ub = mu * torch.sum(torch.relu(Dx - ub)**2 / sigma2, dim=1)  # [B]
 
-    # final loss: shape [B], return mean for scalar loss
+    # fit term (chi-squared: normalised by sigma^2)
+    fit = alpha * torch.sum((Dx - I_obs)**2 / sigma2, dim=1)  # [B]
+
     total_loss = l2_term + l1_term + barrier_x + barrier_lb + barrier_ub + fit
     return total_loss.mean()
 

@@ -4,7 +4,7 @@ import sys
 import sunpy.map
 import matplotlib.pyplot as plt
 import astropy.io.fits as fits
-from aiapy.calibrate.util import get_pointing_table, get_correction_table, get_error_table
+from aiapy.calibrate.utils import get_pointing_table, get_correction_table, get_error_table
 from aiapy.calibrate import register, update_pointing, degradation, estimate_error
 import astropy.units as u
 from types import SimpleNamespace
@@ -128,7 +128,7 @@ def processIndAIAData(datePath, args):
     if hasattr(args, "crop") and args.crop != "":
         cropSy, cropSx, cropH, cropW = [int(v) for v in args.crop.split(",")]
         AIACube = AIACube[:, cropSy:(cropSy+cropH), cropSx:(cropSx+cropW)]
-        AIAErrors = AIAErrors[: cropSy:(cropSy+cropH), cropSx:(cropSx+cropW)]
+        AIAErrors = AIAErrors[:, cropSy:(cropSy+cropH), cropSx:(cropSx+cropW)]
 
     return AIACube / scaleFactor, AIAErrors / scaleFactor, scaleFactor
 

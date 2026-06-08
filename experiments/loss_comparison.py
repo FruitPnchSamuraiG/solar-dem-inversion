@@ -222,20 +222,21 @@ def main(args):
         ax.set_xlabel("log T", fontsize=8)
         ax.tick_params(labelsize=7)
 
-        # BP reference
+        # BP reference — light grey, behind everything
         if bp_dem is not None:
-            ax.plot(logT, np.maximum(bp_dem, 0), 'k-', lw=2.5,
-                    label=f'BP  MAE={bp_mae:.3f}', zorder=10)
+            ax.plot(logT, np.maximum(bp_dem, 0), color='black', lw=2.5,
+                    alpha=0.25, label=f'BP  MAE={bp_mae:.3f}', zorder=1)
         else:
             ax.set_title(f"Pixel {pi} — BP failed", fontsize=9)
 
-        # all differentiable losses overlaid
+        # all differentiable losses overlaid — solid, dark, on top
         for li, (name, loss_fn) in enumerate(LOSSES.items()):
             dem, resynth = optimize_dem(obs, err, D, B, loss_fn,
                                         tolfac=tolfac, steps=args.steps)
             mae = np.mean(np.abs(resynth - obs))
-            ax.plot(logT, np.maximum(dem, 0), color=COLORS[li], lw=1.5,
-                    linestyle='--', alpha=0.85, label=f'{name}  MAE={mae:.3f}')
+            ax.plot(logT, np.maximum(dem, 0), color=COLORS[li], lw=2.0,
+                    linestyle='-', alpha=1.0, label=f'{name}  MAE={mae:.3f}',
+                    zorder=2 + li)
 
         ax.legend(fontsize=7, loc='upper right')
         ax.set_title(f"Pixel {pi+1}  (171Å brightness={obs[2]:.1f})", fontsize=9)

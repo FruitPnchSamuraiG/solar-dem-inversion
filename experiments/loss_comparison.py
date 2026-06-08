@@ -225,7 +225,7 @@ def main(args):
         # BP reference — light grey, behind everything
         if bp_dem is not None:
             ax.plot(logT, np.maximum(bp_dem, 0), color='black', lw=2.5,
-                    alpha=0.25, label=f'BP  MAE={bp_mae:.3f}', zorder=1)
+                    alpha=1.0, label=f'BP  MAE={bp_mae:.3f}', zorder=1)
         else:
             ax.set_title(f"Pixel {pi} — BP failed", fontsize=9)
 

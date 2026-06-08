@@ -169,6 +169,22 @@ def visualize_results(results, aia_cube, logT, R, out_dir, tag):
     plt.savefig(os.path.join(out_dir, f"{tag}_resynth_diff.png"), dpi=100, bbox_inches='tight')
     plt.close()
 
+    # print similarity table
+    bp_dem = results.get('BP')
+    print(f"\n  {'Loss':<20} {'MAE vs observed':>16} {'MAE vs BP':>12}")
+    print(f"  {'-'*50}")
+    for name, dem in results.items():
+        flat = np.maximum(dem.reshape(len(logT), -1)[:, valid.flatten()], 0)
+        rs = (R_scaled @ flat)
+        obs_flat = aia_cube.reshape(C, -1)[:, valid.flatten()]
+        mae_obs = np.nanmean(np.abs(rs - obs_flat))
+        if bp_dem is not None and name != 'BP':
+            bp_flat = np.maximum(bp_dem.reshape(len(logT), -1)[:, valid.flatten()], 0)
+            mae_bp = np.nanmean(np.abs(flat - bp_flat))
+        else:
+            mae_bp = 0.0
+        print(f"  {name:<20} {mae_obs:>16.4f} {mae_bp:>12.4f}")
+
     print(f"  Saved plots: {out_dir}/{tag}_*.png")
 
 

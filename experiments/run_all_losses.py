@@ -116,7 +116,7 @@ def run_bp_pixel(args_tuple):
 
 # ── visualize ────────────────────────────────────────────────────────────────
 
-def visualize_results(results, aia_cube, logT, R, out_dir, tag):
+def visualize_results(results, aia_cube, logT, R, out_dir, tag, valid=None):
     """Save mean-logT maps and resynth-diff for all losses + BP."""
     C, H, W = aia_cube.shape
     n_temps = len(logT)
@@ -171,15 +171,16 @@ def visualize_results(results, aia_cube, logT, R, out_dir, tag):
 
     # print similarity table
     bp_dem = results.get('BP')
+    mask = valid.flatten() if valid is not None else np.ones(H * W, dtype=bool)
     print(f"\n  {'Loss':<20} {'MAE vs observed':>16} {'MAE vs BP':>12}")
     print(f"  {'-'*50}")
     for name, dem in results.items():
-        flat = np.maximum(dem.reshape(len(logT), -1)[:, valid.flatten()], 0)
-        rs = (R_scaled @ flat)
-        obs_flat = aia_cube.reshape(C, -1)[:, valid.flatten()]
+        flat = np.maximum(dem.reshape(len(logT), -1)[:, mask], 0)
+        rs = (R @ flat)
+        obs_flat = aia_cube.reshape(C, -1)[:, mask]
         mae_obs = np.nanmean(np.abs(rs - obs_flat))
         if bp_dem is not None and name != 'BP':
-            bp_flat = np.maximum(bp_dem.reshape(len(logT), -1)[:, valid.flatten()], 0)
+            bp_flat = np.maximum(bp_dem.reshape(len(logT), -1)[:, mask], 0)
             mae_bp = np.nanmean(np.abs(flat - bp_flat))
         else:
             mae_bp = 0.0
@@ -255,7 +256,7 @@ def process_timestamp(data_dir, D, B, R, logT, args):
     # visualize
     scale = 10 ** 26
     R_scaled = (R * scale).astype(np.float32)
-    visualize_results(results, aia_cube, logT, R_scaled, out_dir, tag)
+    visualize_results(results, aia_cube, logT, R_scaled, out_dir, tag, valid=valid)
     return results
 
 

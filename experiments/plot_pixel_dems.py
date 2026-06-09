@@ -27,9 +27,6 @@ DATA_DIRS = [
 
 
 def main(args):
-    from src.utils import processIndAIAData
-    from fullBP import getBasis
-
     RData = np.load("RData.npz")
     R, logT = RData['R'], RData['logT']
     scale = 10 ** 26
@@ -42,67 +39,90 @@ def main(args):
 
     for data_dir in DATA_DIRS:
         tag = os.path.basename(data_dir)
-        npy_dir = f"output/experiments/run_all_losses/{tag}"
+        npy_dir = f"output/dem_results/run_all_losses/{tag}"
+        if not os.path.exists(npy_dir):
+            npy_dir = f"output/experiments/run_all_losses/{tag}"
         if not os.path.exists(npy_dir):
             print(f"Skipping {tag} — no saved DEMs")
             continue
 
-        # load AIA for observations
-        data_args = SimpleNamespace(crop="1800,1800,256,256", corr_table="aia_corr.csv", pointing_file="")
-        aia_cube, aia_errors, _ = processIndAIAData(data_dir, args=data_args)
-        C, H, W = aia_cube.shape
-        obs_all = aia_cube.reshape(C, -1).T
-        err_all = aia_errors.reshape(C, -1).T
-        valid_mask = np.all(np.isfinite(obs_all) & np.isfinite(err_all) & (obs_all > 0), axis=1)
-        valid_idx = np.where(valid_mask)[0]
+        # load AIA if available (for MAE labels); optional
+        obs_all = None
+        H = W = None
+        if os.path.exists(data_dir):
+            from src.utils import processIndAIAData
+            data_args = SimpleNamespace(crop="1800,1800,256,256", corr_table="aia_corr.csv", pointing_file="")
+            aia_cube, aia_errors, _ = processIndAIAData(data_dir, args=data_args)
+            C, H, W = aia_cube.shape
+            obs_all = aia_cube.reshape(C, -1).T
+            err_all = aia_errors.reshape(C, -1).T
+            valid_mask = np.all(np.isfinite(obs_all) & np.isfinite(err_all) & (obs_all > 0), axis=1)
+            valid_idx = np.where(valid_mask)[0]
 
         # load saved DEMs
         dems = {}
         bp_path = os.path.join(npy_dir, "bp_dem.npy")
         if os.path.exists(bp_path):
-            dems['BP'] = np.load(bp_path).reshape(n_temps, -1)
+            dems['BP'] = np.load(bp_path)
         for name in LOSS_NAMES:
             path = os.path.join(npy_dir, f"{name}_dem.npy")
             if os.path.exists(path):
-                dems[name] = np.load(path).reshape(n_temps, -1)
+                dems[name] = np.load(path)
 
         if 'BP' not in dems:
             print(f"Skipping {tag} — no BP .npy")
             continue
 
-        # pick pixels
-        chosen = rng.choice(valid_idx, size=min(args.n_pixels, len(valid_idx)), replace=False)
+        n_pixels_total = dems['BP'].shape[1] * dems['BP'].shape[2]
+        for name in dems:
+            dems[name] = dems[name].reshape(n_temps, -1)
+
+        # pick pixels — from valid mask if AIA available, else random flat indices
+        if obs_all is not None:
+            chosen = rng.choice(valid_idx, size=min(args.n_pixels, len(valid_idx)), replace=False)
+        else:
+            chosen = rng.choice(n_pixels_total, size=min(args.n_pixels, n_pixels_total), replace=False)
+            H = W = int(n_pixels_total ** 0.5)
 
         fig, axes = plt.subplots(args.n_pixels, 1, figsize=(9, 3.5 * args.n_pixels))
         if args.n_pixels == 1:
             axes = [axes]
 
         for pi, pidx in enumerate(chosen):
-            obs = obs_all[pidx]
             ax = axes[pi]
 
             # BP reference
             bp_dem = np.maximum(dems['BP'][:, pidx], 0)
-            bp_resynth = R_scaled @ bp_dem
-            bp_mae = np.mean(np.abs(bp_resynth - obs))
-            ax.plot(logT, bp_dem, color='black', lw=2.5, label=f'BP  MAE={bp_mae:.3f}', zorder=1)
+            if obs_all is not None:
+                obs = obs_all[pidx]
+                bp_mae = np.mean(np.abs(R_scaled @ bp_dem - obs))
+                bp_label = f'BP  MAE={bp_mae:.3f}'
+            else:
+                obs = None
+                bp_label = 'BP'
+            ax.plot(logT, bp_dem, color='black', lw=2.5, label=bp_label, zorder=1)
 
             # each differentiable loss
             for li, name in enumerate(LOSS_NAMES):
                 if name not in dems:
                     continue
                 dem = np.maximum(dems[name][:, pidx], 0)
-                resynth = R_scaled @ dem
-                mae = np.mean(np.abs(resynth - obs))
-                ax.plot(logT, dem, color=COLORS[li], lw=1.8,
-                        label=f'{name}  MAE={mae:.3f}', zorder=2 + li)
+                if obs is not None:
+                    mae = np.mean(np.abs(R_scaled @ dem - obs))
+                    lbl = f'{name}  MAE={mae:.3f}'
+                else:
+                    lbl = name
+                ax.plot(logT, dem, color=COLORS[li], lw=1.8, label=lbl, zorder=2 + li)
 
             ax.set_ylabel("DEM", fontsize=8)
             ax.set_xlabel("log T", fontsize=8)
             ax.tick_params(labelsize=7)
             ax.legend(fontsize=7, loc='upper right')
-            row, col = divmod(pidx, W)
-            ax.set_title(f"Pixel ({row},{col})  171Å={obs[2]:.1f}", fontsize=9)
+            row, col = divmod(int(pidx), W)
+            title = f"Pixel ({row},{col})"
+            if obs is not None:
+                title += f"  171Å={obs[2]:.1f}"
+            ax.set_title(title, fontsize=9)
 
         plt.suptitle(f"Per-pixel DEMs — {tag}", fontsize=11)
         plt.tight_layout()

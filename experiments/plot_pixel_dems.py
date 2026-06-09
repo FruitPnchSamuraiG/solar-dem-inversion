@@ -84,7 +84,7 @@ def main(args):
             # BP reference
             bp_dem = np.maximum(dems['BP'][:, pidx], 0)
             bp_resynth = R_scaled @ bp_dem
-            bp_mae = np.mean(np.abs(bp_resynth - obs * scale))
+            bp_mae = np.mean(np.abs(bp_resynth - obs))
             ax.plot(logT, bp_dem, color='black', lw=2.5, label=f'BP  MAE={bp_mae:.3f}', zorder=1)
 
             # each differentiable loss
@@ -93,7 +93,7 @@ def main(args):
                     continue
                 dem = np.maximum(dems[name][:, pidx], 0)
                 resynth = R_scaled @ dem
-                mae = np.mean(np.abs(resynth - obs * scale))
+                mae = np.mean(np.abs(resynth - obs))
                 ax.plot(logT, dem, color=COLORS[li], lw=1.8,
                         label=f'{name}  MAE={mae:.3f}', zorder=2 + li)
 

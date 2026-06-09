@@ -213,32 +213,44 @@ def process_timestamp(data_dir, D, B, R, logT, args):
     os.makedirs(out_dir, exist_ok=True)
     results = {}
 
+    def log_progress(name, done, total):
+        pct = 100 * done / total
+        print(f"  {name}: {done:,}/{total:,} pixels ({pct:.0f}%)", flush=True)
+
     # BP
-    print(f"  Running BP...")
+    print(f"  Running BP...", flush=True)
     bp_args = [(obs_v[i], err_v[i], D, B) for i in range(n_valid)]
     with Pool(args.workers) as pool:
-        bp_dems = pool.map(run_bp_pixel, bp_args)
-    bp_dem_flat = np.array(bp_dems).T  # [n_temps, n_valid]
+        bp_dems = []
+        for i, result in enumerate(pool.imap(run_bp_pixel, bp_args), 1):
+            bp_dems.append(result)
+            if i % 5000 == 0 or i == n_valid:
+                log_progress('BP', i, n_valid)
+    bp_dem_flat = np.array(bp_dems).T
     dem_full = np.zeros((len(logT), H * W))
     dem_full[:, valid] = bp_dem_flat
     results['BP'] = dem_full.reshape(len(logT), H, W)
     np.save(os.path.join(out_dir, "bp_dem.npy"), results['BP'])
-    print(f"  BP done.")
+    print(f"  BP done.", flush=True)
 
     # each differentiable loss
     for loss_name in LOSSES:
-        print(f"  Running {loss_name}...")
+        print(f"  Running {loss_name}...", flush=True)
         pixel_args = [(obs_v[i], err_v[i], D, args.tolfac, loss_name, args.steps)
                       for i in range(n_valid)]
         with Pool(args.workers) as pool:
-            x_all = pool.map(optimize_pixel, pixel_args)
-        x_all = np.array(x_all)           # [n_valid, n_basis]
-        dem_v = (B @ x_all.T)             # [n_temps, n_valid]
+            x_all = []
+            for i, result in enumerate(pool.imap(optimize_pixel, pixel_args), 1):
+                x_all.append(result)
+                if i % 5000 == 0 or i == n_valid:
+                    log_progress(loss_name, i, n_valid)
+        x_all = np.array(x_all)
+        dem_v = (B @ x_all.T)
         dem_full = np.zeros((len(logT), H * W))
         dem_full[:, valid] = dem_v
         results[loss_name] = dem_full.reshape(len(logT), H, W)
         np.save(os.path.join(out_dir, f"{loss_name}_dem.npy"), results[loss_name])
-        print(f"  {loss_name} done.")
+        print(f"  {loss_name} done.", flush=True)
 
     # visualize
     scale = 10 ** 26

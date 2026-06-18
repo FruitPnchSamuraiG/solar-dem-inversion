@@ -10,9 +10,25 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import numpy as np
 from types import SimpleNamespace
+from scipy.stats import wasserstein_distance
 from fullBP import getBasis
 
 LOSS_NAMES = ['BP', 'barrier', 'barrier_fit', 'chisq_smooth', 'entropy', 'tikhonov']
+
+
+def mean_wasserstein_vs_bp(dem_flat, bp_flat, logT, pixel_idx):
+    """Mean 1D Wasserstein distance between DEM and BP DEM (as distributions over logT),
+    over the given pixel indices."""
+    dists = []
+    for i in pixel_idx:
+        p = np.maximum(dem_flat[:, i], 0)
+        q = np.maximum(bp_flat[:, i], 0)
+        if p.sum() <= 0 or q.sum() <= 0:
+            continue
+        p = p / p.sum()
+        q = q / q.sum()
+        dists.append(wasserstein_distance(logT, logT, u_weights=p, v_weights=q))
+    return np.mean(dists) if dists else float('nan')
 
 DATA_DIRS = [
     "./data/20110906_2217",
@@ -58,21 +74,28 @@ def main():
             continue
 
         bp_dem = dems.get('BP')
+        bp_flat_all = np.maximum(bp_dem.reshape(n_temps, -1)[:, valid], 0) if bp_dem is not None else None
+
+        # top 5% brightest pixels by 171A channel
+        brightness = obs_flat[2]
+        n_top = max(1, int(0.05 * len(brightness)))
+        top_idx = np.argsort(brightness)[-n_top:]
 
         print(f"\n{'='*60}")
-        print(f"Timestamp: {tag}  ({valid.sum():,} valid pixels)")
-        print(f"  {'Loss':<20} {'MAE vs observed':>16} {'MAE vs BP':>12}")
-        print(f"  {'-'*50}")
+        print(f"Timestamp: {tag}  ({valid.sum():,} valid pixels, top {n_top:,} brightest used for Wasserstein)")
+        print(f"  {'Loss':<20} {'MAE vs observed':>16} {'MAE vs BP':>12} {'Wasserstein(top5%)':>20}")
+        print(f"  {'-'*72}")
         for name, dem in dems.items():
             flat = np.maximum(dem.reshape(n_temps, -1)[:, valid], 0)
             rs = R_scaled @ flat
             mae_obs = np.nanmean(np.abs(rs - obs_flat))
-            if bp_dem is not None and name != 'BP':
-                bp_flat = np.maximum(bp_dem.reshape(n_temps, -1)[:, valid], 0)
-                mae_bp = np.nanmean(np.abs(flat - bp_flat))
+            if bp_flat_all is not None and name != 'BP':
+                mae_bp = np.nanmean(np.abs(flat - bp_flat_all))
+                wd = mean_wasserstein_vs_bp(flat, bp_flat_all, logT, top_idx)
             else:
                 mae_bp = 0.0
-            print(f"  {name:<20} {mae_obs:>16.4f} {mae_bp:>12.4f}")
+                wd = 0.0
+            print(f"  {name:<20} {mae_obs:>16.4f} {mae_bp:>12.4f} {wd:>20.4f}")
 
 if __name__ == "__main__":
     main()

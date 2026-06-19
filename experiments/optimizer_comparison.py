@@ -21,6 +21,24 @@ from types import SimpleNamespace
 from fullBP import getBasis, solveLP
 from src.losses import barrier_loss_batch
 
+NN_COLORS = {'barrier': 'tab:cyan', 'barrier_fit': 'tab:pink'}
+
+
+def load_nn_models():
+    """Load trained barrier/barrier_fit NN checkpoints if present."""
+    from experiments.train_unsupervised import DEMNet
+    models = {}
+    for name in NN_COLORS:
+        ckpt_path = f"output/experiments/{name}_nn_model.pt"
+        if not os.path.exists(ckpt_path):
+            continue
+        ckpt = torch.load(ckpt_path, map_location="cpu", weights_only=False)
+        model = DEMNet(n_basis=ckpt["B"].shape[1], hidden=ckpt.get("hidden", 256))
+        model.load_state_dict(ckpt["model"])
+        model.eval()
+        models[name] = (model, ckpt["B"])
+    return models
+
 
 def loss_barrier(x, D, obs, lb, ub, **kw):
     return barrier_loss_batch(x, D, obs, lb, ub, a_l1=1.0, a_l2=0.0, mu=1.0, alpha=0.0)
@@ -112,6 +130,12 @@ def main(args):
     pixel_indices, obs_all, err_all = pick_pixels(aia_cube, aia_errors, args.n_pixels)
     print(f"Selected {len(pixel_indices)} pixels")
 
+    nn_models = load_nn_models()
+    if nn_models:
+        print(f"Loaded NN checkpoints: {list(nn_models.keys())}")
+    else:
+        print("No NN checkpoints found — skipping NN overlay curves")
+
     fig, axes = plt.subplots(args.n_pixels, 1, figsize=(8, 3.5 * args.n_pixels))
     if args.n_pixels == 1:
         axes = [axes]
@@ -149,11 +173,21 @@ def main(args):
                         linestyle=LINESTYLES[loss_name], lw=1.8,
                         label=f'{loss_name}/{opt_name}  MAE={mae:.3f}')
 
+        for nn_name, (model, B_nn) in nn_models.items():
+            with torch.no_grad():
+                x_nn = model(torch.tensor(obs, dtype=torch.float32).unsqueeze(0))
+                dem_nn = B_nn @ x_nn.numpy()[0]
+            dem_nn = np.maximum(dem_nn, 0)
+            mae_nn = np.mean(np.abs(R @ dem_nn - obs))
+            ax.plot(logT, dem_nn, color=NN_COLORS[nn_name], linestyle=':', lw=2.2,
+                    label=f'{nn_name} (NN)  MAE={mae_nn:.3f}', zorder=10)
+
         ax.legend(fontsize=6, loc='upper right', ncol=2)
         ax.set_title(f"Pixel {pi+1}  (171Å brightness={obs[2]:.1f})", fontsize=9)
         print(f"Pixel {pi+1}/{args.n_pixels} done")
 
-    plt.suptitle("Optimizer comparison: L-BFGS vs Adam vs SGD\n(barrier solid, barrier_fit dashed)",
+    plt.suptitle("Optimizer comparison: L-BFGS vs Adam vs SGD vs NN\n"
+                 "(barrier solid, barrier_fit dashed, NN dotted)",
                  fontsize=10, y=1.01)
     plt.tight_layout()
     out = "output/experiments/optimizer_comparison.png"

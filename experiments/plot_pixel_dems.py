@@ -12,11 +12,14 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import argparse
 import numpy as np
+import torch
 import matplotlib.pyplot as plt
 from types import SimpleNamespace
 
 LOSS_NAMES = ['barrier', 'barrier_fit', 'chisq_smooth', 'entropy', 'tikhonov']
 COLORS     = ['tab:blue', 'tab:orange', 'tab:green', 'tab:red', 'tab:purple']
+NN_LOSS_NAMES = ['barrier', 'barrier_fit']
+NN_COLORS = {'barrier': 'tab:cyan', 'barrier_fit': 'tab:pink'}
 
 DATA_DIRS = [
     "./data/20110906_2217",
@@ -24,6 +27,22 @@ DATA_DIRS = [
     "./data/20131113_0908",
     "./data/20140910_1731",
 ]
+
+
+def load_nn_models():
+    """Load trained barrier/barrier_fit NN checkpoints if present."""
+    from experiments.train_unsupervised import DEMNet
+    models = {}
+    for name in NN_LOSS_NAMES:
+        ckpt_path = f"output/experiments/{name}_nn_model.pt"
+        if not os.path.exists(ckpt_path):
+            continue
+        ckpt = torch.load(ckpt_path, map_location="cpu", weights_only=False)
+        model = DEMNet(n_basis=ckpt["B"].shape[1], hidden=ckpt.get("hidden", 256))
+        model.load_state_dict(ckpt["model"])
+        model.eval()
+        models[name] = (model, ckpt["B"])
+    return models
 
 
 def main(args):
@@ -36,6 +55,12 @@ def main(args):
     out_dir = "output/experiments/pixel_dems"
     os.makedirs(out_dir, exist_ok=True)
     rng = np.random.default_rng(args.seed)
+
+    nn_models = load_nn_models()
+    if nn_models:
+        print(f"Loaded NN checkpoints: {list(nn_models.keys())}")
+    else:
+        print("No NN checkpoints found — skipping NN overlay curves")
 
     for data_dir in DATA_DIRS:
         tag = os.path.basename(data_dir)
@@ -113,6 +138,17 @@ def main(args):
                 else:
                     lbl = name
                 ax.plot(logT, dem, color=COLORS[li], lw=1.8, label=lbl, zorder=2 + li)
+
+            # NN-predicted curves (only possible when we have the raw AIA obs)
+            if obs is not None:
+                for nn_name, (model, B_nn) in nn_models.items():
+                    with torch.no_grad():
+                        x_nn = model(torch.tensor(obs, dtype=torch.float32).unsqueeze(0))
+                        dem_nn = (B_nn @ x_nn.numpy()[0])
+                    dem_nn = np.maximum(dem_nn, 0)
+                    mae_nn = np.mean(np.abs(R_scaled @ dem_nn - obs))
+                    ax.plot(logT, dem_nn, color=NN_COLORS[nn_name], lw=1.8, linestyle=':',
+                            label=f'{nn_name} (NN)  MAE={mae_nn:.3f}', zorder=10)
 
             ax.set_ylabel("DEM", fontsize=8)
             ax.set_xlabel("log T", fontsize=8)

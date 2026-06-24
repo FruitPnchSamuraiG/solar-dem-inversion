@@ -83,12 +83,37 @@ From the paper's "Future Work" section:
 
 ## Development Notes
 
-- The PhD student has written code for the paper; we are reviewing and building on it
-- Initial phase: understand his codebase, experiment with it, get a feel for the problem
-- Goal: improve the DEM curve approximation quality (better architecture, training, uncertainty)
+- The PhD student (Samuel) has written code for the paper; we are reviewing and building on it
 - Web visualizer exists at `triborough.cs.nyu.edu/vp2435/demdemo/webapp/flaresX.html` (NYU server)
 - Deconvolution experiment visualizer: same host, `flaresX_deconv.html`
-- **Status**: BP solver running end-to-end on real AIA data (2017-09-10 X8.2 flare); next step is understanding training data format and building the NN
+- A consolidated, most-recent-first write-up of all findings below (with embedded plots) lives in `results/findings_log.docx` — local-only, not committed to git, regenerated via `uv run python experiments/build_findings_doc.py`
+
+## Progress Log (most recent first)
+
+### In progress — Neural field DEM (patch-conditioned, per-image)
+- Samuel's directive after reviewing the per-pixel channel-input NN result (below): reframe as a **neural field**, NeRF-inspired (`2602.08029v2.pdf` PI-DEF black-hole tomography paper, computationalcameras.org). Must work even when only a single pixel/voxel is available, not the full image.
+- Agreed plan: feed the network a **local patch of AIA pixels** around the target pixel (not raw (x,y) coordinates) so it has spatial context to lean on — addresses the oscillation problem found below by construction, since shared conv weights regularize across nearby pixels.
+- Step 1 (current): **per-image** (one model fit per timestamp), patch-conditioned, trained with barrier loss — isolates "can patch context reach BP-like sparsity at all" from amortization effects. Implemented in `experiments/train_neural_field.py` (`PatchDEMNet`: small CNN over a KxK patch → basis coefficients via Softplus).
+- Added an explicit **sparsity metric** (`effective_sparsity` — Hoyer-style L1²/L2 ratio) to evaluation, compared directly against BP's sparsity on the same pixels — directly targets the failure mode below (low loss/MAE without actually being sparse like BP).
+- Step 2 (after step 1 validates): **amortize** the same patch architecture across the 4 timestamps.
+- Step 3 (later, per Samuel, deferred until step 1+2 work): train with random **neighborhood masking/dropout** during training so the network learns a smoothness fallback prior for when no/partial neighborhood context is available (single-voxel case).
+- Samuel is working on getting torch/GPU access (A100/H100, possibly multiple) — current scripts are CPU-sized (small crops/patches); scale up batch/patch/crop size once that lands.
+
+### 2026-06-19 — Barrier/barrier_fit as per-pixel channel-input NNs (amortized across all 4 timestamps)
+- Trained `f(6 AIA channels) → DEM` via `experiments/train_unsupervised.py`, minimizing barrier/barrier_fit loss directly (no BP labels), pooled across ~221k pixels from all 4 timestamps, 30 epochs each.
+- **Finding**: both NNs converge cleanly (loss plateaus ~4.0), but per-pixel predicted curves are visibly noisy/oscillating vs. BP and direct per-pixel optimization, despite low aggregate loss. Attributed to the non-smooth/overlapping basis matrix amplifying small amortized coefficient errors, plus the fundamental non-uniqueness of solutions to this underdetermined (6 eq, 18 unknown) inverse problem — the NN's "good on average" answer doesn't land on BP's specific sparse solution per pixel. This motivated the neural-field direction above.
+
+### 2026-06-18 — Optimizer comparison (L-BFGS vs Adam vs SGD)
+- Tested optimizer choice for direct per-pixel optimization of barrier/barrier_fit (`experiments/optimizer_comparison.py`).
+- **Finding**: L-BFGS and Adam converge to nearly identical, BP-tracking curves; SGD frequently fails to converge in the same step budget. Use L-BFGS/Adam; avoid SGD.
+
+### 2026-06-18 — Wasserstein distance vs. BP on top-5%-brightest pixels
+- Raw MAE isn't physically meaningful for DEM shape comparison; computed Wasserstein/Earth-Mover's distance treating each DEM as a probability distribution over logT, on the top 5% brightest pixels per timestamp.
+- **Finding**: barrier loss is consistently closest to BP on both MAE and Wasserstein, confirming it (plus barrier_fit) as the best differentiable proxy for BP's sparsity-seeking behavior.
+
+### 2026-06-09 — Initial 5-loss comparison (BP vs. 5 differentiable losses, full image)
+- Ran BP plus barrier, barrier_fit, chisq_smooth, entropy, tikhonov as direct per-pixel optimization across all valid pixels, all 4 timestamps.
+- **Finding**: barrier/barrier_fit track BP's spatial structure (mean logT maps) most closely. The other three get *better* raw resynthesis error but diverge from BP's DEM shape, since they lack BP's L1 sparsity constraint — BP optimizes for sparsity, not best-fit.
 
 ## Running the Pipeline
 

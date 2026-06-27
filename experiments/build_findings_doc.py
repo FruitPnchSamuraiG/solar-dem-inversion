@@ -99,6 +99,90 @@ doc.add_paragraph()
 
 
 # ════════════════════════════════════════════════════════════════════════════
+# 2026-06-27 — Neural field (patch-conditioned, per-image, step 1)
+# ════════════════════════════════════════════════════════════════════════════
+
+add_date_heading("2026-06-27 — Neural Field DEM (Patch-Conditioned, Per-Image): Step 1 Validation")
+
+add_para(
+    "Motivation: the previous amortized channel-input NN f(6 AIA channels) → DEM failed in two "
+    "compounded ways: (1) many spatially distant pixels share similar 6-channel values but need "
+    "different DEMs, so the NN averaged across them and produced oscillating, non-sparse curves; "
+    "(2) the network had no spatial context to resolve per-pixel structure. To isolate whether "
+    "spatial context alone fixes the sparsity problem — before adding cross-image amortization — "
+    "we implemented a per-image patch-conditioned neural field: one model fit jointly over all "
+    "pixels of a single AIA timestamp/crop."
+)
+
+add_subheading("Architecture: PatchDEMNet")
+add_para(
+    "Input: a 9×9 local patch of 6-channel AIA data centered on the target pixel, shape [6, 9, 9]. "
+    "Edge pixels receive edge-replicated padding so every pixel always has a full 9×9 patch. "
+    "The model is a small CNN: 3 convolutional layers (6→64→64→64 channels, 3×3 kernels, "
+    "padding=1, SiLU activations) followed by a flatten and 2-layer MLP head "
+    "(64×9×9 → 256 → 256 → 54 basis coefficients, Softplus output to enforce positivity). "
+    "Total: ~300k parameters."
+)
+
+add_subheading("Training")
+add_para(
+    "One model is trained per image (per-image, not amortized across timestamps). "
+    "All ~16,000 valid pixels in a 128×128 crop of timestamp 20110906_2217 are used as "
+    "training samples. Each sample is one pixel's 9×9 patch plus its center pixel's AIA "
+    "observations and noise bounds (lb = obs − 1.4σ, ub = obs + 1.4σ). "
+    "The loss is barrier_loss_batch — the same differentiable physics constraint used in "
+    "prior experiments — which simultaneously penalizes: (a) D@x falling outside [lb, ub] "
+    "(the AIA observation must be explained within noise), and (b) large L1 norm on the "
+    "basis coefficients (sparsity pressure, matching BP's L1-minimization objective). "
+    "No BP labels are used — the loss is fully physics-constrained / unsupervised. "
+    "Optimizer: Adam with CosineAnnealingLR, gradient clipping at 1.0, 30 epochs, batch size 512. "
+    "The shared CNN weights are updated using gradients from all pixels simultaneously — "
+    "this is the key spatial regularizer: the weights learn a representation that is consistent "
+    "across neighboring pixels, preventing the per-pixel oscillation seen before."
+)
+
+add_subheading("Inference")
+add_para(
+    "At inference time: extract the 9×9 AIA patch centered on the target pixel, run one forward "
+    "pass through the frozen model, multiply the 54 output coefficients by the basis matrix B "
+    "to get the 18-bin DEM. No LP solver, no per-pixel gradient loop — a single matrix-multiply "
+    "chain. This is the speedup over BP, which must solve a linear program per pixel."
+)
+
+add_subheading("Sparsity metric")
+add_para(
+    "To directly detect the failure mode from the previous NN (low barrier loss but non-sparse "
+    "solutions), we track effective sparsity (Hoyer L1²/L2 ratio) per pixel during training and "
+    "compare against BP's sparsity on the same pixels. Lower = sparser. BP's target value is "
+    "computed by solving the real LP on a random 200-pixel subset."
+)
+
+add_finding(
+    "Training converged cleanly: loss 1.43 at epoch 30. Final NN effective sparsity: 1.30 vs "
+    "BP reference: 1.84. The NN is actually sparser than BP on average — a strong step-1 "
+    "validation that patch context alone is sufficient to reach BP-like sparse solutions. "
+    "Per-pixel DEM curves (below) show the NN tracking BP's single-peaked shape well on most "
+    "pixels, with physically meaningful peak temperatures. One limitation: on pixels where BP "
+    "finds a bimodal (two-peak) solution with disjoint sparse support (e.g., a low-T secondary "
+    "bump near logT 5.5–5.75 plus a main peak near logT 6.25), the NN collapses to a single "
+    "smooth peak and misses the secondary component — expected, as the aggregate barrier loss "
+    "pushes toward unimodal compromise rather than committing to disjoint support. "
+    "Important caveat: this is a per-image fit. The model trains and evaluates on the same "
+    "image, so it is not yet generalizing to unseen timestamps. Step 2 (amortized across all 4 "
+    "timestamps) is needed before claiming generalization."
+)
+
+add_subheading("Per-pixel DEM curves: neural field (cyan dotted) vs BP (black)")
+add_image(
+    "output/experiments/neural_field_20110906_2217_pixel_dems.png",
+    width_in=5.5,
+    caption="10 random pixels from 128×128 crop of 20110906_2217 — NN patch-conditioned neural field vs BP"
+)
+
+add_divider()
+
+
+# ════════════════════════════════════════════════════════════════════════════
 # 2026-06-19 — NN vs direct optimization
 # ════════════════════════════════════════════════════════════════════════════
 

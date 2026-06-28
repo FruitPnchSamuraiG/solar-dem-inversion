@@ -4,7 +4,14 @@ __pycache__/
 *.npz.tmp
 *.fits
 data/
-output/
+output/**
+# Track plot images the findings doc depends on
+!output/experiments/
+!output/experiments/*.png
+!output/experiments/pixel_dems/
+!output/experiments/pixel_dems/*.png
+!output/dem_results/
+!output/dem_results/optimizer_comparison.png
 2602.08029v2.pdf
 7909_Revealing_the_3D_Cosmic_W.pdf
 results/findings_log.docx

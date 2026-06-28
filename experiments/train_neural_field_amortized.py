@@ -114,6 +114,8 @@ def train(args):
     os.makedirs("output/experiments", exist_ok=True)
     history = []
 
+    pad = args.patch_size // 2  # center pixel position within the patch
+
     # ── training loop ──────────────────────────────────────────────────────
     for epoch in range(args.epochs):
         model.train()
@@ -122,6 +124,16 @@ def train(args):
         for patch, obs, lb, ub in loader:
             patch, obs, lb, ub = (patch.to(device), obs.to(device),
                                    lb.to(device), ub.to(device))
+
+            # neighborhood masking: zero out full patch except center pixel
+            # for a random fraction of samples in the batch
+            if args.mask_prob > 0.0:
+                mask = torch.rand(patch.shape[0], device=device) < args.mask_prob
+                if mask.any():
+                    center = patch[mask, :, pad, pad].clone()
+                    patch[mask] = 0.0
+                    patch[mask, :, pad, pad] = center
+
             optimizer.zero_grad()
             x = model(patch)
             loss = barrier_loss_batch(x, D_t, obs, lb, ub,
@@ -142,7 +154,7 @@ def train(args):
 
     # ── save checkpoint ────────────────────────────────────────────────────
     tags = [os.path.basename(d.rstrip("/")) for d in args.data_dirs]
-    ckpt_tag = f"amortized_{len(tags)}ts"
+    ckpt_tag = f"amortized_{len(tags)}ts" + (f"_mask{args.mask_prob}" if args.mask_prob > 0 else "")
     ckpt_path = f"output/experiments/neural_field_{ckpt_tag}.pt"
     torch.save({
         "model":      model.state_dict(),
@@ -192,6 +204,8 @@ def parse_args():
     p.add_argument("--alpha_l1",   type=float, default=1.0)
     p.add_argument("--alpha_l2",   type=float, default=0.0)
     p.add_argument("--mu",         type=float, default=1.0)
+    p.add_argument("--mask_prob",  type=float, default=0.0,
+                   help="fraction of training samples where neighborhood is zeroed (center pixel only)")
     p.add_argument("--bp_compare", type=int,   default=100,
                    help="pixels per timestamp for BP sparsity reference; 0 to skip")
     p.add_argument("--seed",       type=int,   default=42)

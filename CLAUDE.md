@@ -83,7 +83,7 @@ From the paper's "Future Work" section:
 
 ## Development Notes
 
-- The PhD student (Samuel) has written code for the paper; we are reviewing and building on it
+- The PhD student has written code for the paper; we are reviewing and building on it
 - Web visualizer exists at `triborough.cs.nyu.edu/vp2435/demdemo/webapp/flaresX.html` (NYU server)
 - Deconvolution experiment visualizer: same host, `flaresX_deconv.html`
 - A consolidated, most-recent-first write-up of all findings below (with embedded plots) lives in `results/findings_log.docx` — local-only, not committed to git, regenerated via `uv run python experiments/build_findings_doc.py`
@@ -103,12 +103,12 @@ All 3 neural field steps complete and validated on 128×128 crops of 4 timestamp
 **Recommended checkpoint for further work**: `neural_field_amortized_4ts_mask0.1.pt` — amortized across all 4 timestamps, single-pixel robust, closest to BP sparsity.
 
 **Pending**:
-- Samuel getting A100/H100 GPU access → scale to larger crops (512×512+) and more timestamps
+- GPU access (A100/H100) pending → scale to larger crops (512×512+) and more timestamps
 - Leave-one-timestamp-out evaluation → honest test of generalization to unseen images
 - Findings log (`results/findings_log.docx`) is up to date — rebuild with `uv run python experiments/build_findings_doc.py`
 
 ### In progress — Next steps (GPU access pending, leave-one-timestamp-out eval)
-- Samuel is working on getting torch/GPU access (A100/H100, possibly multiple) — scale up batch/patch/crop size once that lands.
+- GPU access (A100/H100, possibly multiple) pending — scale up batch/patch/crop size once that lands.
 - Natural next validation: **leave-one-timestamp-out** — train on 3 timestamps, test on 4th entirely unseen image. This is the honest generalization test beyond the current per-image val split.
 
 ### 2026-06-27 — Neural field step 3: neighborhood masking (VALIDATED, mask=0.1 best)

@@ -90,6 +90,23 @@ From the paper's "Future Work" section:
 
 ## Progress Log (most recent first)
 
+### Current state (as of 2026-06-28)
+
+All 3 neural field steps complete and validated on 128×128 crops of 4 timestamps:
+
+| Step | Status | Script | Best checkpoint |
+|------|--------|--------|----------------|
+| Step 1: per-image patch-conditioned | ✓ Done | `train_neural_field.py` | `neural_field_20110906_2217.pt` |
+| Step 2: amortized across 4 timestamps | ✓ Done | `train_neural_field_amortized.py` | `neural_field_amortized_4ts.pt` |
+| Step 3: neighborhood masking | ✓ Done | `train_neural_field_amortized.py --mask_prob 0.1` | `neural_field_amortized_4ts_mask0.1.pt` |
+
+**Recommended checkpoint for further work**: `neural_field_amortized_4ts_mask0.1.pt` — amortized across all 4 timestamps, single-voxel robust, closest to BP sparsity.
+
+**Pending**:
+- Samuel getting A100/H100 GPU access → scale to larger crops (512×512+) and more timestamps
+- Leave-one-timestamp-out evaluation → honest test of generalization to unseen images
+- Findings log (`results/findings_log.docx`) is up to date — rebuild with `uv run python experiments/build_findings_doc.py`
+
 ### In progress — Next steps (GPU access pending, leave-one-timestamp-out eval)
 - Samuel is working on getting torch/GPU access (A100/H100, possibly multiple) — scale up batch/patch/crop size once that lands.
 - Natural next validation: **leave-one-timestamp-out** — train on 3 timestamps, test on 4th entirely unseen image. This is the honest generalization test beyond the current per-image val split.

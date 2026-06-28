@@ -282,7 +282,7 @@ run.font.size = Pt(8)
 
 add_finding(
     "mask_prob=0.1 is the best choice: stays closest to BP's sparsity across all timestamps "
-    "while gaining single-voxel robustness. Higher mask values (0.5, 0.7) make solutions "
+    "while gaining single-pixel robustness. Higher mask values (0.5, 0.7) make solutions "
     "progressively less sparse — the network spreads probability across more temperature bins "
     "when forced to work without neighborhood context more often. "
     "Note: MAE (AIA channel reconstruction error) decreases with higher masking, but this is "

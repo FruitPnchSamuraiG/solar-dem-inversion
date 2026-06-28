@@ -100,7 +100,7 @@ All 3 neural field steps complete and validated on 128×128 crops of 4 timestamp
 | Step 2: amortized across 4 timestamps | ✓ Done | `train_neural_field_amortized.py` | `neural_field_amortized_4ts.pt` |
 | Step 3: neighborhood masking | ✓ Done | `train_neural_field_amortized.py --mask_prob 0.1` | `neural_field_amortized_4ts_mask0.1.pt` |
 
-**Recommended checkpoint for further work**: `neural_field_amortized_4ts_mask0.1.pt` — amortized across all 4 timestamps, single-voxel robust, closest to BP sparsity.
+**Recommended checkpoint for further work**: `neural_field_amortized_4ts_mask0.1.pt` — amortized across all 4 timestamps, single-pixel robust, closest to BP sparsity.
 
 **Pending**:
 - Samuel getting A100/H100 GPU access → scale to larger crops (512×512+) and more timestamps
@@ -112,8 +112,8 @@ All 3 neural field steps complete and validated on 128×128 crops of 4 timestamp
 - Natural next validation: **leave-one-timestamp-out** — train on 3 timestamps, test on 4th entirely unseen image. This is the honest generalization test beyond the current per-image val split.
 
 ### 2026-06-27 — Neural field step 3: neighborhood masking (VALIDATED, mask=0.1 best)
-- Trained 4 variants with `--mask_prob 0.1/0.3/0.5/0.7` on top of the amortized model. During training, mask_prob fraction of batches get neighborhood zeroed (center pixel only), forcing network to learn single-voxel fallback.
-- **Finding**: mask=0.1 is optimal — closest to BP sparsity, nearly identical curve quality to no-mask, gains single-voxel robustness. Higher masking (0.5, 0.7) makes solutions less sparse. MAE decreases with higher masking but is not the right metric — BP sparsity similarity is. Curves across all mask values cluster tightly; the mask level barely changes shape. Bimodal BP solutions still missed by all variants (fundamental limitation).
+- Trained 4 variants with `--mask_prob 0.1/0.3/0.5/0.7` on top of the amortized model. During training, mask_prob fraction of batches get neighborhood zeroed (center pixel only), forcing network to learn single-pixel fallback.
+- **Finding**: mask=0.1 is optimal — closest to BP sparsity, nearly identical curve quality to no-mask, gains single-pixel robustness. Higher masking (0.5, 0.7) makes solutions less sparse. MAE decreases with higher masking but is not the right metric — BP sparsity similarity is. Curves across all mask values cluster tightly; the mask level barely changes shape. Bimodal BP solutions still missed by all variants (fundamental limitation).
 - **Why high mask still works unlike old channel-input NN**: masked network trained with (1-mask_prob) full-patch batches, so CNN weights still encode spatial structure. Old channel-input NN never had patches at all.
 - Checkpoints: `output/experiments/neural_field_amortized_4ts_mask{0.1,0.3,0.5,0.7}.pt`
 

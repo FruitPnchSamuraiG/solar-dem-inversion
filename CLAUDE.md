@@ -98,12 +98,12 @@ From the paper's "Future Work" section:
 - Trained one `PatchDEMNet` jointly over all 4 timestamps (~64k pixels total) via `experiments/train_neural_field_amortized.py`. 80/20 train/val split per timestamp — val pixels held out before training, never seen by the model.
 - Val results (held-out pixels, ~2800 per timestamp):
 
-| Timestamp | NN sparsity | BP sparsity | NN MAE |
-|-----------|-------------|-------------|--------|
-| 20110906_2217 | 1.84 | 1.97 | 2.97 |
-| 20120603_0000 | 1.58 | 1.67 | 2.83 |
-| 20131113_0908 | 1.47 | 1.82 | 3.93 |
-| 20140910_1731 | 1.86 | 1.71 | 4.71 |
+| Timestamp | Activity | NN sparsity | BP sparsity | NN MAE |
+|-----------|----------|-------------|-------------|--------|
+| 20110906_2217 | X2.1 flare (AR 11283) | 1.84 | 1.97 | 2.97 |
+| 20120603_0000 | Quiet sun | 1.58 | 1.67 | 2.83 |
+| 20131113_0908 | Moderate activity | 1.47 | 1.82 | 3.93 |
+| 20140910_1731 | X1.6 flare (AR 12158) | 1.86 | 1.71 | 4.71 |
 
 - **Finding**: amortization works — one model generalizes to held-out pixels across all 4 timestamps. Per-pixel DEM curves always smooth and single-peaked at physically correct temperatures (no oscillation). Consistent systematic offset: NN curves slightly broader/smoother than BP's sharp sparse peaks — expected cost of sharing weights across 64k pixels. `20131113_0908` shows the largest sparsity gap; `20140910_1731` (flare-active) is the hardest timestamp, BP itself is noisier there.
 - **Important caveat**: val pixels are from the same 4 images as training (just held-out pixels). This is **not** a true test — a true test would be an entirely unseen timestamp. Leave-one-timestamp-out evaluation is a natural next step.

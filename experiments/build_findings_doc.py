@@ -232,6 +232,13 @@ add_finding(
     "a leave-one-timestamp-out evaluation is the natural next step to assess true generalization."
 )
 
+add_subheading("Training loss curve (step 2, no mask)")
+add_image(
+    "output/experiments/neural_field_amortized_4ts_train_loss.png",
+    width_in=5.0,
+    caption="Amortized neural field training loss — 4 timestamps, no masking, 30 epochs"
+)
+
 add_subheading("Per-pixel DEM curves: amortized neural field (cyan dotted) vs BP (black)")
 for tag in ["20110906_2217", "20120603_0000", "20131113_0908", "20140910_1731"]:
     add_image(
@@ -289,6 +296,18 @@ add_finding(
     "structure at all. Masking preserves spatial knowledge in the weights; it just teaches "
     "the network to also function without it."
 )
+
+add_subheading("Training loss curves — all mask values")
+add_para(
+    "All runs converge cleanly. Higher mask values start with higher initial loss "
+    "(harder problem with less neighborhood context) but plateau equally well by epoch 5-7."
+)
+for mp in ["0.1", "0.3", "0.5", "0.7"]:
+    add_image(
+        f"output/experiments/neural_field_amortized_4ts_mask{mp}_train_loss.png",
+        width_in=5.0,
+        caption=f"Training loss — mask_prob={mp}, 4 timestamps, 30 epochs"
+    )
 
 add_subheading("All mask variants vs BP per pixel — 4 timestamps")
 add_para(

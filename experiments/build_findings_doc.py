@@ -183,6 +183,67 @@ add_divider()
 
 
 # ════════════════════════════════════════════════════════════════════════════
+# 2026-06-27 — Amortized neural field (step 2, all 4 timestamps)
+# ════════════════════════════════════════════════════════════════════════════
+
+add_date_heading("2026-06-27 — Amortized Neural Field (Step 2): One Model, All 4 Timestamps")
+
+add_para(
+    "Step 1 validated that the patch-conditioned CNN architecture can reach BP-like sparse "
+    "solutions on a single image. Step 2 asks: does it generalize? One PatchDEMNet is trained "
+    "jointly over all 4 timestamps (~64k pixels total) using the same barrier loss. Each "
+    "timestamp contributes ~80% of its pixels to training; the remaining 20% are held out as "
+    "a validation set before training begins and are never seen by the model. Implemented in "
+    "experiments/train_neural_field_amortized.py."
+)
+
+add_subheading("Validation results (held-out pixels, ~2800 per timestamp)")
+add_para(
+    "After 30 epochs, the model is evaluated on held-out val pixels per timestamp. "
+    "NN sparsity and MAE are computed from inference on those pixels; BP sparsity reference "
+    "is computed by solving the real LP on a 100-pixel subset of each timestamp."
+)
+
+val_table = (
+    f"{'Timestamp':<22} {'Val pixels':>10} {'NN sparsity':>12} {'BP sparsity':>12} {'NN MAE':>10}\n"
+    f"{'-'*70}\n"
+    f"{'20110906_2217':<22} {'2,829':>10} {'1.84':>12} {'1.97':>12} {'2.97':>10}\n"
+    f"{'20120603_0000':<22} {'2,661':>10} {'1.58':>12} {'1.67':>12} {'2.83':>10}\n"
+    f"{'20131113_0908':<22} {'2,850':>10} {'1.47':>12} {'1.82':>12} {'3.93':>10}\n"
+    f"{'20140910_1731':<22} {'2,857':>10} {'1.86':>12} {'1.71':>12} {'4.71':>10}\n"
+)
+mono = doc.add_paragraph()
+run = mono.add_run(val_table)
+run.font.name = "Courier New"
+run.font.size = Pt(8)
+
+add_finding(
+    "Amortization works: one model generalizes to held-out pixels across all 4 timestamps. "
+    "Per-pixel DEM curves are always smooth and single-peaked at physically correct temperatures "
+    "— no oscillation (the failure mode of the previous channel-input NN). "
+    "Consistent systematic pattern: NN curves are slightly broader and smoother than BP's sharper "
+    "sparse peaks — expected cost of sharing weights across 64k diverse pixels, as the model "
+    "finds a solution that works on average rather than the exact sparse optimum per pixel. "
+    "20131113_0908 shows the largest sparsity gap; 20140910_1731 (flare-active timestamp) is "
+    "the hardest — BP itself produces noisier solutions there, so disagreements may reflect "
+    "BP's own instability rather than NN failure. "
+    "Important caveat: val pixels are from the same 4 images as training (different pixels, "
+    "not different images). This is NOT a true test of generalization to new solar conditions — "
+    "a leave-one-timestamp-out evaluation is the natural next step to assess true generalization."
+)
+
+add_subheading("Per-pixel DEM curves: amortized neural field (cyan dotted) vs BP (black)")
+for tag in ["20110906_2217", "20120603_0000", "20131113_0908", "20140910_1731"]:
+    add_image(
+        f"output/experiments/neural_field_{tag}_pixel_dems.png",
+        width_in=5.5,
+        caption=f"{tag} — amortized neural field vs BP on 10 held-out val pixels"
+    )
+
+add_divider()
+
+
+# ════════════════════════════════════════════════════════════════════════════
 # 2026-06-19 — NN vs direct optimization
 # ════════════════════════════════════════════════════════════════════════════
 

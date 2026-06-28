@@ -90,14 +90,29 @@ From the paper's "Future Work" section:
 
 ## Progress Log (most recent first)
 
-### In progress — Neural field DEM (patch-conditioned, per-image)
-- Samuel's directive after reviewing the per-pixel channel-input NN result (below): reframe as a **neural field**, NeRF-inspired (`2602.08029v2.pdf` PI-DEF black-hole tomography paper, computationalcameras.org). Must work even when only a single pixel/voxel is available, not the full image.
-- Agreed plan: feed the network a **local patch of AIA pixels** around the target pixel (not raw (x,y) coordinates) so it has spatial context to lean on — addresses the oscillation problem found below by construction, since shared conv weights regularize across nearby pixels.
-- Step 1 (current): **per-image** (one model fit per timestamp), patch-conditioned, trained with barrier loss — isolates "can patch context reach BP-like sparsity at all" from amortization effects. Implemented in `experiments/train_neural_field.py` (`PatchDEMNet`: small CNN over a KxK patch → basis coefficients via Softplus).
-- Added an explicit **sparsity metric** (`effective_sparsity` — Hoyer-style L1²/L2 ratio) to evaluation, compared directly against BP's sparsity on the same pixels — directly targets the failure mode below (low loss/MAE without actually being sparse like BP).
-- Step 2 (after step 1 validates): **amortize** the same patch architecture across the 4 timestamps.
-- Step 3 (later, per Samuel, deferred until step 1+2 work): train with random **neighborhood masking/dropout** during training so the network learns a smoothness fallback prior for when no/partial neighborhood context is available (single-voxel case).
-- Samuel is working on getting torch/GPU access (A100/H100, possibly multiple) — current scripts are CPU-sized (small crops/patches); scale up batch/patch/crop size once that lands.
+### In progress — Neural field DEM step 3 (neighborhood masking for single-voxel robustness)
+- Step 3 (next): train with random **neighborhood masking/dropout** during training so the network learns a smoothness fallback prior for when no/partial neighborhood context is available (single-voxel case, per Samuel's constraint). To be added on top of the amortized model.
+- Samuel is working on getting torch/GPU access (A100/H100, possibly multiple) — current scripts are CPU-sized (128×128 crops); scale up batch/patch/crop size once that lands.
+
+### 2026-06-27 — Neural field step 2: amortized across all 4 timestamps (VALIDATED)
+- Trained one `PatchDEMNet` jointly over all 4 timestamps (~64k pixels total) via `experiments/train_neural_field_amortized.py`. 80/20 train/val split per timestamp — val pixels held out before training, never seen by the model.
+- Val results (held-out pixels, ~2800 per timestamp):
+
+| Timestamp | NN sparsity | BP sparsity | NN MAE |
+|-----------|-------------|-------------|--------|
+| 20110906_2217 | 1.84 | 1.97 | 2.97 |
+| 20120603_0000 | 1.58 | 1.67 | 2.83 |
+| 20131113_0908 | 1.47 | 1.82 | 3.93 |
+| 20140910_1731 | 1.86 | 1.71 | 4.71 |
+
+- **Finding**: amortization works — one model generalizes to held-out pixels across all 4 timestamps. Per-pixel DEM curves always smooth and single-peaked at physically correct temperatures (no oscillation). Consistent systematic offset: NN curves slightly broader/smoother than BP's sharp sparse peaks — expected cost of sharing weights across 64k pixels. `20131113_0908` shows the largest sparsity gap; `20140910_1731` (flare-active) is the hardest timestamp, BP itself is noisier there.
+- **Important caveat**: val pixels are from the same 4 images as training (just held-out pixels). This is **not** a true test — a true test would be an entirely unseen timestamp. Leave-one-timestamp-out evaluation is a natural next step.
+- Checkpoint: `output/experiments/neural_field_amortized_4ts.pt`
+
+### 2026-06-27 — Neural field step 1: per-image, patch-conditioned (VALIDATED)
+- Trained one `PatchDEMNet` on a single timestamp (20110906_2217, 128×128 crop, ~16k pixels) via `experiments/train_neural_field.py`. Loss converged to 1.43 at epoch 30.
+- NN effective sparsity 1.30 vs BP reference 1.84 — NN actually sparser than BP. Per-pixel curves track BP's single-peaked shape well. One failure mode: misses bimodal (two-peak) BP solutions.
+- Established that patch context alone (no amortization pressure) is sufficient to reach BP-like sparse solutions. This validated the architecture before moving to step 2.
 
 ### 2026-06-19 — Barrier/barrier_fit as per-pixel channel-input NNs (amortized across all 4 timestamps)
 - Trained `f(6 AIA channels) → DEM` via `experiments/train_unsupervised.py`, minimizing barrier/barrier_fit loss directly (no BP labels), pooled across ~221k pixels from all 4 timestamps, 30 epochs each.

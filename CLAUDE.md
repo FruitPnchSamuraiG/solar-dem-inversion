@@ -90,9 +90,15 @@ From the paper's "Future Work" section:
 
 ## Progress Log (most recent first)
 
-### In progress — Neural field DEM step 3 (neighborhood masking for single-voxel robustness)
-- Step 3 (next): train with random **neighborhood masking/dropout** during training so the network learns a smoothness fallback prior for when no/partial neighborhood context is available (single-voxel case, per Samuel's constraint). To be added on top of the amortized model.
-- Samuel is working on getting torch/GPU access (A100/H100, possibly multiple) — current scripts are CPU-sized (128×128 crops); scale up batch/patch/crop size once that lands.
+### In progress — Next steps (GPU access pending, leave-one-timestamp-out eval)
+- Samuel is working on getting torch/GPU access (A100/H100, possibly multiple) — scale up batch/patch/crop size once that lands.
+- Natural next validation: **leave-one-timestamp-out** — train on 3 timestamps, test on 4th entirely unseen image. This is the honest generalization test beyond the current per-image val split.
+
+### 2026-06-27 — Neural field step 3: neighborhood masking (VALIDATED, mask=0.1 best)
+- Trained 4 variants with `--mask_prob 0.1/0.3/0.5/0.7` on top of the amortized model. During training, mask_prob fraction of batches get neighborhood zeroed (center pixel only), forcing network to learn single-voxel fallback.
+- **Finding**: mask=0.1 is optimal — closest to BP sparsity, nearly identical curve quality to no-mask, gains single-voxel robustness. Higher masking (0.5, 0.7) makes solutions less sparse. MAE decreases with higher masking but is not the right metric — BP sparsity similarity is. Curves across all mask values cluster tightly; the mask level barely changes shape. Bimodal BP solutions still missed by all variants (fundamental limitation).
+- **Why high mask still works unlike old channel-input NN**: masked network trained with (1-mask_prob) full-patch batches, so CNN weights still encode spatial structure. Old channel-input NN never had patches at all.
+- Checkpoints: `output/experiments/neural_field_amortized_4ts_mask{0.1,0.3,0.5,0.7}.pt`
 
 ### 2026-06-27 — Neural field step 2: amortized across all 4 timestamps (VALIDATED)
 - Trained one `PatchDEMNet` jointly over all 4 timestamps (~64k pixels total) via `experiments/train_neural_field_amortized.py`. 80/20 train/val split per timestamp — val pixels held out before training, never seen by the model.

@@ -104,7 +104,7 @@ All 3 neural field steps complete and validated on 128×128 crops of 4 timestamp
 **Recommended checkpoint for further work**: `neural_field_amortized_4ts_mask0.1.pt` — amortized across all 4 timestamps, single-pixel robust, closest to BP sparsity.
 
 **Pending**:
-- GPU access (A100/H100) pending → scale to larger crops (512×512+) and more timestamps
+- Scaling plan: confirm current ablation results on crunchy1 first, then move to NYU Torch HPC (SLURM, A100/H100) for larger crops (512×512+) and more timestamps — setup notes in local `dem-handoff.md`
 - Leave-one-timestamp-out evaluation → honest test of generalization to unseen images
 - Findings log (`results/findings_log.docx`) is up to date — rebuild with `uv run python experiments/build_findings_doc.py`
 

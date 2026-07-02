@@ -87,7 +87,7 @@ From the paper's "Future Work" section:
 - Web visualizer exists at `triborough.cs.nyu.edu/vp2435/demdemo/webapp/flaresX.html` (NYU server)
 - Deconvolution experiment visualizer: same host, `flaresX_deconv.html`
 - A consolidated, most-recent-first write-up of all findings below (with embedded plots) lives in `results/findings_log.docx` — local-only, not committed to git, regenerated via `uv run python experiments/build_findings_doc.py`
-- **Plot/output convention**: `output/` is scratch — fully gitignored, servers may symlink it elsewhere; never track files inside it. Any plot the findings doc embeds must be copied to `results/plots/` (committed to git) and referenced there by `build_findings_doc.py`. When new plots are generated on a server, scp them into `results/plots/experiments/` locally and commit.
+- **Plot/output convention**: `output/` is scratch — fully gitignored, servers may symlink it elsewhere; never track files inside it. Any plot the findings doc embeds must be copied into `results/plots/<NN_experiment-slug_YYYYMMDD>/` (committed to git) and referenced there by `build_findings_doc.py`. `results/plots/` subfolders are numbered in chronological order (`01_multiloss_20260609` ... `07_ablation_20260702`) so `ls results/plots/` alone shows experiment history — when starting a new experiment, add the next-numbered folder rather than dropping files into a generic `experiments/`-style bucket. When new plots are generated on a server, scp them into the matching (or a new) folder under `results/plots/` locally and commit.
 
 ## Progress Log (most recent first)
 

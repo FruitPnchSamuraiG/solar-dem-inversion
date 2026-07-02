@@ -91,9 +91,11 @@ From the paper's "Future Work" section:
 
 ## Progress Log (most recent first)
 
-### Current state (as of 2026-06-28)
+### Current state (as of 2026-07-02)
 
-All 3 neural field steps complete and validated on 128×128 crops of 4 timestamps:
+Ablation study + ElasticNet loss run complete on crunchy1 (see 2026-07-02 entry below) — key revision: **capacity mattered more than we thought**; the patch CNN's edge over a capacity-matched center-pixel MLP is real but smaller than previously credited. Naming note per PhD student: call the model the **patch CNN**, not "neural field".
+
+All 3 patch-CNN steps complete and validated on 128×128 crops of 4 timestamps:
 
 | Step | Status | Script | Best checkpoint |
 |------|--------|--------|----------------|
@@ -104,13 +106,18 @@ All 3 neural field steps complete and validated on 128×128 crops of 4 timestamp
 **Recommended checkpoint for further work**: `neural_field_amortized_4ts_mask0.1.pt` — amortized across all 4 timestamps, single-pixel robust, closest to BP sparsity.
 
 **Pending**:
-- Scaling plan: confirm current ablation results on crunchy1 first, then move to NYU Torch HPC (SLURM, A100/H100) for larger crops (512×512+) and more timestamps — setup notes in local `dem-handoff.md`
+- Optional ablation follow-up: rerun the exact old 213k MLP (hidden=256, center-pixel input) inside `train_ablations.py`'s harness to cleanly separate capacity from dataset/hyperparameter differences
 - Leave-one-timestamp-out evaluation → honest test of generalization to unseen images
+- Scaling: ablation results now confirmed → migrate to NYU Torch HPC (SLURM, A100/H100) for larger crops (512×512+) and more timestamps — setup notes in local `dem-handoff.md`
 - Findings log (`results/findings_log.docx`) is up to date — rebuild with `uv run python experiments/build_findings_doc.py`
 
-### In progress — Next steps (GPU access pending, leave-one-timestamp-out eval)
-- GPU access (A100/H100, possibly multiple) pending — scale up batch/patch/crop size once that lands.
-- Natural next validation: **leave-one-timestamp-out** — train on 3 timestamps, test on 4th entirely unseen image. This is the honest generalization test beyond the current per-image val split.
+### 2026-07-02 — Ablation study: why does the patch CNN work? (+ ElasticNet loss) — DONE
+- Overnight run on crunchy1 via `experiments/train_ablations.py`: 4 capacity-matched variants (~1.43–1.50M params) at fixed barrier loss — `cnn` (reference), `mlp6` (center pixel only), `mlp_patch` (flat patch, no conv), `cnn_shuffled` (fixed random spatial permutation) — plus `cnn` × ENet loss. Combined plots via `experiments/plot_ablation_comparison.py`.
+- Mean sparsity across 4 timestamps (BP ref 1.79): cnn **1.70**, cnn_shuffled 1.88, mlp6 1.89, mlp_patch 1.95, cnn(enet) 2.28. cnn reproduces the earlier amortized run almost exactly (1.87/1.54/1.48/1.89 vs 1.84/1.58/1.47/1.86) → results genuine.
+- **Key revision**: `mlp6` (1.43M params, center-pixel input) produces smooth single-peaked curves — no variant oscillates. So the old 213k MLP's noisy curves were driven substantially by **capacity**, not solely missing spatial context. The patch CNN still wins: only variant at/below BP sparsity, fewest per-pixel outliers; `mlp6` has the most visible peak-shift failures (flare timestamp).
+- Convolution's contribution is **consistency**: `mlp_patch` is erratic (best on X2.1 flare 1.61, worst on quiet sun 2.27). `cnn_shuffled` ≈ cnn (slightly worse on 3/4) → benefit mostly from neighborhood values, geometry adds a little.
+- **ENet loss**: trains cleanly, halves MAE-vs-BP but curves are broadest/least sparse (by design — L2 smoothing). Viable alternative target emulating a *different* solver behavior; also demonstrates MAE-vs-BP is a misleading metric. Bimodal BP solutions still missed by all variants.
+- Checkpoints: `output/experiments/ablation_{cnn,mlp6,mlp_patch,cnn_shuffled}_barrier.pt`, `ablation_cnn_enet.pt` (crunchy1). Plots committed in `results/plots/experiments/ablation_*.png`.
 
 ### 2026-06-27 — Neural field step 3: neighborhood masking (VALIDATED, mask=0.1 best)
 - Trained 4 variants with `--mask_prob 0.1/0.3/0.5/0.7` on top of the amortized model. During training, mask_prob fraction of batches get neighborhood zeroed (center pixel only), forcing network to learn single-pixel fallback.

@@ -99,6 +99,265 @@ doc.add_paragraph()
 
 
 # ════════════════════════════════════════════════════════════════════════════
+# 2026-07-02 — Ablation study: why does the patch CNN work?
+# ════════════════════════════════════════════════════════════════════════════
+
+add_date_heading("2026-07-02 — Ablation Study: Why Does the Patch CNN Work? (+ ElasticNet Loss)")
+
+add_para(
+    "Motivation: the patch CNN fixed the oscillating-curve failure of the earlier per-pixel "
+    "channel-input MLP, but we had no verified explanation for WHY. Several confounds were "
+    "possible: the CNN has ~7x the parameters of the old MLP (1.48M vs 213k), it sees a 9x9 "
+    "neighborhood instead of 1 pixel, and it uses convolution. To separate these, four "
+    "capacity-matched variants (~1.43-1.50M params each) were trained with identical data, "
+    "loss (barrier), and budget (30 epochs, 4 timestamps amortized, 44,796 train pixels, "
+    "80/20 held-out val split): "
+    "cnn = the reference patch CNN; "
+    "mlp6 = MLP on the 6 center-pixel channels only (capacity vs information); "
+    "mlp_patch = MLP on the flattened 486-dim patch, no convolution (patch info vs convolution); "
+    "cnn_shuffled = patch CNN with a fixed random permutation of the 81 spatial positions "
+    "(neighborhood values vs geometry). "
+    "Additionally, the reference CNN was trained with the ElasticNet loss "
+    "(Athiray & Winebarger 2024) — naturally unconstrained and differentiable, "
+    "fit + L1 + L2 with lam=0.9 (mostly-L1, BP-like) — as a loss-function comparison. "
+    "Implemented in experiments/train_ablations.py; combined plots via "
+    "experiments/plot_ablation_comparison.py."
+)
+
+add_subheading("Held-out validation results (sparsity: lower = sparser = closer to BP)")
+abl_sp_table = (
+    f"{'Timestamp':<16} {'BP':>5}  {'cnn':>6}  {'mlp6':>6}  {'mlp_patch':>9}  {'cnn_shuf':>8}  {'cnn(enet)':>9}\n"
+    f"{'-'*68}\n"
+    f"{'20110906_2217':<16} {'1.97':>5}  {'1.87':>6}  {'1.87':>6}  {'1.61':>9}  {'1.95':>8}  {'2.23':>9}\n"
+    f"{'20120603_0000':<16} {'1.67':>5}  {'1.54':>6}  {'1.95':>6}  {'2.27':>9}  {'1.80':>8}  {'2.46':>9}\n"
+    f"{'20131113_0908':<16} {'1.82':>5}  {'1.48':>6}  {'1.63':>6}  {'2.15':>9}  {'1.65':>8}  {'2.02':>9}\n"
+    f"{'20140910_1731':<16} {'1.71':>5}  {'1.89':>6}  {'2.12':>6}  {'1.76':>9}  {'2.13':>8}  {'2.40':>9}\n"
+    f"{'mean':<16} {'1.79':>5}  {'1.70':>6}  {'1.89':>6}  {'1.95':>9}  {'1.88':>8}  {'2.28':>9}\n"
+)
+mono = doc.add_paragraph()
+run = mono.add_run(abl_sp_table)
+run.font.name = "Courier New"
+run.font.size = Pt(8)
+
+add_para(
+    "MAE vs the BP solution: cnn 3.00/2.93/4.00/4.83, mlp6 3.30/3.25/4.41/4.34, "
+    "mlp_patch 2.83/2.54/3.94/4.70, cnn_shuffled 2.92/2.75/3.84/4.73, "
+    "cnn(enet) 1.34/1.42/1.91/2.75 per timestamp. Note MAE here is measured against BP as "
+    "ground truth (not against the observed AIA image)."
+)
+
+add_finding(
+    "(1) The results are genuine and reproducible: the reference cnn's sparsity "
+    "(1.87/1.54/1.48/1.89) matches the earlier independent amortized run "
+    "(1.84/1.58/1.47/1.86) almost exactly. "
+    "(2) The biggest surprise, which revises our earlier explanation: mlp6 — center-pixel "
+    "input only, but 1.43M parameters — produces SMOOTH, SINGLE-PEAKED curves. No variant "
+    "oscillates. The old 213k-parameter channel-input MLP's noisy curves were therefore "
+    "driven substantially by model capacity (and possibly training budget), not solely by the "
+    "missing spatial context we previously credited. "
+    "(3) The patch + convolution still measurably helps: cnn is the only variant whose mean "
+    "sparsity (1.70) is at/below the BP reference (1.79) — the others cluster at 1.88-1.95 — "
+    "and cnn has the fewest per-pixel outliers in the curve plots, while mlp6 shows the most "
+    "visible failure cases (peak shifted to the wrong temperature on several flare-timestamp "
+    "pixels, e.g. 20140910_1731 pixels (91,70) and (8,1)). "
+    "(4) cnn_shuffled is close to cnn but slightly worse on 3 of 4 timestamps: most of the "
+    "patch benefit comes from the neighborhood VALUES/statistics, with spatial geometry "
+    "adding a modest extra gain. "
+    "(5) mlp_patch is erratic — best of all variants on the X2.1 flare (1.61) but worst on "
+    "quiet sun (2.27) and moderate activity (2.15). The patch information is available to it, "
+    "but without convolution's weight sharing it uses that information unreliably. "
+    "Convolution's contribution is consistency, not raw capability. "
+    "(6) ElasticNet loss trains cleanly and roughly halves MAE vs BP, yet its curves are "
+    "visually the broadest and least sparse (mean sparsity 2.28) — systematically wider "
+    "peaks with elevated low-T wings. This is expected: ENet's L2 component smooths solutions "
+    "by design, and it doubles as a demonstration that MAE against BP is a misleading metric "
+    "(broad curves score lower pointwise error against BP's sharp peaks than sharp-but-"
+    "slightly-shifted ones do). ENet is a viable alternative target, but it approximates a "
+    "different solver behavior, not a better approximation of BP. "
+    "(7) Bimodal BP solutions are still missed by every variant — unchanged fundamental "
+    "limitation. "
+    "Bottom line for 'why does the patch CNN work': capacity matters more than we previously "
+    "believed (a big center-pixel MLP already produces smooth curves); on top of that, the "
+    "9x9 patch input gives a consistent additional gain in matching BP's sparsity, driven "
+    "mostly by the neighborhood values themselves, with convolution providing reliability "
+    "across solar conditions rather than being essential. "
+    "Open follow-up: rerun the exact old 213k architecture (hidden=256) in this identical "
+    "harness to cleanly separate capacity from the other differences (dataset pooling, "
+    "hyperparameters) between the old and new training setups."
+)
+
+add_subheading("Per-pixel DEM curves: all 5 variants (dashed) vs BP (black), 10 held-out val pixels")
+for tag in ["20110906_2217", "20120603_0000", "20131113_0908", "20140910_1731"]:
+    act = {"20110906_2217": "X2.1 flare", "20120603_0000": "Quiet sun",
+           "20131113_0908": "Moderate activity", "20140910_1731": "X1.6 flare"}[tag]
+    add_image(
+        f"results/plots/experiments/ablation_comparison_{tag}.png",
+        width_in=5.5,
+        caption=f"{tag} ({act}) — cnn / mlp6 / mlp_patch / cnn_shuffled / cnn(enet) vs BP"
+    )
+
+add_subheading("Training loss curves")
+for variant, label in [("cnn_barrier", "cnn (barrier)"), ("mlp6_barrier", "mlp6 (barrier)"),
+                        ("mlp_patch_barrier", "mlp_patch (barrier)"),
+                        ("cnn_shuffled_barrier", "cnn_shuffled (barrier)"),
+                        ("cnn_enet", "cnn (ElasticNet)")]:
+    add_image(
+        f"results/plots/experiments/ablation_{variant}_train_loss.png",
+        width_in=4.5,
+        caption=f"Ablation training loss — {label}, 30 epochs"
+    )
+
+add_divider()
+
+
+# ════════════════════════════════════════════════════════════════════════════
+# 2026-06-27 — Neural field step 3: neighborhood masking
+# ════════════════════════════════════════════════════════════════════════════
+
+add_date_heading("2026-06-27 — Neural Field Step 3: Neighborhood Masking for Single-Pixel Robustness")
+
+add_para(
+    "Project constraint: the model must work even when only a single pixel is available "
+    "(no surrounding neighborhood). Step 3 adds random neighborhood masking during training: "
+    "with probability mask_prob, the entire 9x9 patch is zeroed out except the center pixel, "
+    "forcing the network to learn a fallback when no spatial context is available. "
+    "Four mask_prob values were trained and compared: 0.1, 0.3, 0.5, 0.7, plus the no-mask "
+    "baseline from step 2. All use the same architecture (PatchDEMNet, amortized across 4 "
+    "timestamps, 80/20 val split, same random seed)."
+)
+
+add_subheading("Sparsity comparison (lower = sparser = closer to BP)")
+mask_sp_table = (
+    f"{'Timestamp':<22} {'Activity':<14} {'BP':>5}  {'no mask':>8}  {'m=0.1':>7}  {'m=0.3':>7}  {'m=0.5':>7}  {'m=0.7':>7}\n"
+    f"{'-'*85}\n"
+    f"{'20110906_2217':<22} {'X2.1 flare':<14} {'1.97':>5}  {'1.84':>8}  {'1.89':>7}  {'1.90':>7}  {'2.12':>7}  {'2.14':>7}\n"
+    f"{'20120603_0000':<22} {'Quiet sun':<14} {'1.67':>5}  {'1.58':>8}  {'1.55':>7}  {'1.69':>7}  {'2.15':>7}  {'1.81':>7}\n"
+    f"{'20131113_0908':<22} {'Moderate':<14} {'1.82':>5}  {'1.47':>8}  {'1.48':>7}  {'1.62':>7}  {'2.15':>7}  {'1.90':>7}\n"
+    f"{'20140910_1731':<22} {'X1.6 flare':<14} {'1.71':>5}  {'1.86':>8}  {'2.00':>7}  {'2.15':>7}  {'2.05':>7}  {'2.13':>7}\n"
+)
+mono = doc.add_paragraph()
+run = mono.add_run(mask_sp_table)
+run.font.name = "Courier New"
+run.font.size = Pt(8)
+
+add_finding(
+    "mask_prob=0.1 is the best choice: stays closest to BP's sparsity across all timestamps "
+    "while gaining single-pixel robustness. Higher mask values (0.5, 0.7) make solutions "
+    "progressively less sparse — the network spreads probability across more temperature bins "
+    "when forced to work without neighborhood context more often. "
+    "Note: MAE (AIA channel reconstruction error) decreases with higher masking, but this is "
+    "not a meaningful win — removing the sparsity constraint always lowers MAE trivially. "
+    "BP sparsity similarity is the correct metric since BP is the ground truth we approximate. "
+    "Why does high mask still work at all (unlike the old channel-input NN that also saw only "
+    "one pixel and failed)? Because the masked network was trained with (1-mask_prob) full-patch "
+    "batches — the CNN weights learned spatial structure from those samples. When a masked "
+    "sample arrives, the network falls back on weights that already encode spatial knowledge. "
+    "The old channel-input NN never had patch context, so its weights never learned spatial "
+    "structure at all. Masking preserves spatial knowledge in the weights; it just teaches "
+    "the network to also function without it."
+)
+
+add_subheading("Training loss curves — all mask values")
+add_para(
+    "All runs converge cleanly. Higher mask values start with higher initial loss "
+    "(harder problem with less neighborhood context) but plateau equally well by epoch 5-7."
+)
+for mp in ["0.1", "0.3", "0.5", "0.7"]:
+    add_image(
+        f"results/plots/experiments/neural_field_amortized_4ts_mask{mp}_train_loss.png",
+        width_in=5.0,
+        caption=f"Training loss — mask_prob={mp}, 4 timestamps, 30 epochs"
+    )
+
+add_subheading("All mask variants vs BP per pixel — 4 timestamps")
+add_para(
+    "Each subplot shows BP (black solid) and all 5 NN variants (colored dashed) on the same "
+    "axes. Key observations: (1) all variants cluster tightly — mask level barely changes "
+    "curve shape; (2) no oscillation anywhere; (3) no mask / mask 0.1 closest to BP peak "
+    "sharpness; (4) bimodal BP solutions missed by ALL variants — fundamental architecture "
+    "limitation, not a masking issue."
+)
+for tag in ["20110906_2217", "20120603_0000", "20131113_0908", "20140910_1731"]:
+    act = {"20110906_2217": "X2.1 flare", "20120603_0000": "Quiet sun",
+           "20131113_0908": "Moderate activity", "20140910_1731": "X1.6 flare"}[tag]
+    add_image(
+        f"results/plots/experiments/mask_comparison_{tag}.png",
+        width_in=5.5,
+        caption=f"{tag} ({act}) — all mask values vs BP, 10 val pixels"
+    )
+
+add_divider()
+
+
+# ════════════════════════════════════════════════════════════════════════════
+# 2026-06-27 — Amortized neural field (step 2, all 4 timestamps)
+# ════════════════════════════════════════════════════════════════════════════
+
+add_date_heading("2026-06-27 — Amortized Neural Field (Step 2): One Model, All 4 Timestamps")
+
+add_para(
+    "Step 1 validated that the patch-conditioned CNN architecture can reach BP-like sparse "
+    "solutions on a single image. Step 2 asks: does it generalize? One PatchDEMNet is trained "
+    "jointly over all 4 timestamps (~64k pixels total) using the same barrier loss. Each "
+    "timestamp contributes ~80% of its pixels to training; the remaining 20% are held out as "
+    "a validation set before training begins and are never seen by the model. Implemented in "
+    "experiments/train_neural_field_amortized.py."
+)
+
+add_subheading("Validation results (held-out pixels, ~2800 per timestamp)")
+add_para(
+    "After 30 epochs, the model is evaluated on held-out val pixels per timestamp. "
+    "NN sparsity and MAE are computed from inference on those pixels; BP sparsity reference "
+    "is computed by solving the real LP on a 100-pixel subset of each timestamp."
+)
+
+val_table = (
+    f"{'Timestamp':<22} {'Activity':<22} {'Val px':>7} {'NN sp':>7} {'BP sp':>7} {'NN MAE':>8}\n"
+    f"{'-'*77}\n"
+    f"{'20110906_2217':<22} {'X2.1 flare (AR 11283)':<22} {'2,829':>7} {'1.84':>7} {'1.97':>7} {'2.97':>8}\n"
+    f"{'20120603_0000':<22} {'Quiet sun':<22} {'2,661':>7} {'1.58':>7} {'1.67':>7} {'2.83':>8}\n"
+    f"{'20131113_0908':<22} {'Moderate activity':<22} {'2,850':>7} {'1.47':>7} {'1.82':>7} {'3.93':>8}\n"
+    f"{'20140910_1731':<22} {'X1.6 flare (AR 12158)':<22} {'2,857':>7} {'1.86':>7} {'1.71':>7} {'4.71':>8}\n"
+)
+mono = doc.add_paragraph()
+run = mono.add_run(val_table)
+run.font.name = "Courier New"
+run.font.size = Pt(8)
+
+add_finding(
+    "Amortization works: one model generalizes to held-out pixels across all 4 timestamps. "
+    "Per-pixel DEM curves are always smooth and single-peaked at physically correct temperatures "
+    "— no oscillation (the failure mode of the previous channel-input NN). "
+    "Consistent systematic pattern: NN curves are slightly broader and smoother than BP's sharper "
+    "sparse peaks — expected cost of sharing weights across 64k diverse pixels, as the model "
+    "finds a solution that works on average rather than the exact sparse optimum per pixel. "
+    "20131113_0908 shows the largest sparsity gap; 20140910_1731 (flare-active timestamp) is "
+    "the hardest — BP itself produces noisier solutions there, so disagreements may reflect "
+    "BP's own instability rather than NN failure. "
+    "Important caveat: val pixels are from the same 4 images as training (different pixels, "
+    "not different images). This is NOT a true test of generalization to new solar conditions — "
+    "a leave-one-timestamp-out evaluation is the natural next step to assess true generalization."
+)
+
+add_subheading("Training loss curve (step 2, no mask)")
+add_image(
+    "results/plots/experiments/neural_field_amortized_4ts_train_loss.png",
+    width_in=5.0,
+    caption="Amortized neural field training loss — 4 timestamps, no masking, 30 epochs"
+)
+
+add_subheading("Per-pixel DEM curves: amortized neural field (cyan dotted) vs BP (black)")
+for tag in ["20110906_2217", "20120603_0000", "20131113_0908", "20140910_1731"]:
+    add_image(
+        f"results/plots/experiments/neural_field_{tag}_pixel_dems.png",
+        width_in=5.5,
+        caption=f"{tag} — amortized neural field vs BP on 10 held-out val pixels"
+    )
+
+add_divider()
+
+
+# ════════════════════════════════════════════════════════════════════════════
 # 2026-06-27 — Neural field (patch-conditioned, per-image, step 1)
 # ════════════════════════════════════════════════════════════════════════════
 
@@ -178,153 +437,6 @@ add_image(
     width_in=5.5,
     caption="10 random pixels from 128×128 crop of 20110906_2217 — NN patch-conditioned neural field vs BP"
 )
-
-add_divider()
-
-
-# ════════════════════════════════════════════════════════════════════════════
-# 2026-06-27 — Amortized neural field (step 2, all 4 timestamps)
-# ════════════════════════════════════════════════════════════════════════════
-
-add_date_heading("2026-06-27 — Amortized Neural Field (Step 2): One Model, All 4 Timestamps")
-
-add_para(
-    "Step 1 validated that the patch-conditioned CNN architecture can reach BP-like sparse "
-    "solutions on a single image. Step 2 asks: does it generalize? One PatchDEMNet is trained "
-    "jointly over all 4 timestamps (~64k pixels total) using the same barrier loss. Each "
-    "timestamp contributes ~80% of its pixels to training; the remaining 20% are held out as "
-    "a validation set before training begins and are never seen by the model. Implemented in "
-    "experiments/train_neural_field_amortized.py."
-)
-
-add_subheading("Validation results (held-out pixels, ~2800 per timestamp)")
-add_para(
-    "After 30 epochs, the model is evaluated on held-out val pixels per timestamp. "
-    "NN sparsity and MAE are computed from inference on those pixels; BP sparsity reference "
-    "is computed by solving the real LP on a 100-pixel subset of each timestamp."
-)
-
-val_table = (
-    f"{'Timestamp':<22} {'Activity':<22} {'Val px':>7} {'NN sp':>7} {'BP sp':>7} {'NN MAE':>8}\n"
-    f"{'-'*77}\n"
-    f"{'20110906_2217':<22} {'X2.1 flare (AR 11283)':<22} {'2,829':>7} {'1.84':>7} {'1.97':>7} {'2.97':>8}\n"
-    f"{'20120603_0000':<22} {'Quiet sun':<22} {'2,661':>7} {'1.58':>7} {'1.67':>7} {'2.83':>8}\n"
-    f"{'20131113_0908':<22} {'Moderate activity':<22} {'2,850':>7} {'1.47':>7} {'1.82':>7} {'3.93':>8}\n"
-    f"{'20140910_1731':<22} {'X1.6 flare (AR 12158)':<22} {'2,857':>7} {'1.86':>7} {'1.71':>7} {'4.71':>8}\n"
-)
-mono = doc.add_paragraph()
-run = mono.add_run(val_table)
-run.font.name = "Courier New"
-run.font.size = Pt(8)
-
-add_finding(
-    "Amortization works: one model generalizes to held-out pixels across all 4 timestamps. "
-    "Per-pixel DEM curves are always smooth and single-peaked at physically correct temperatures "
-    "— no oscillation (the failure mode of the previous channel-input NN). "
-    "Consistent systematic pattern: NN curves are slightly broader and smoother than BP's sharper "
-    "sparse peaks — expected cost of sharing weights across 64k diverse pixels, as the model "
-    "finds a solution that works on average rather than the exact sparse optimum per pixel. "
-    "20131113_0908 shows the largest sparsity gap; 20140910_1731 (flare-active timestamp) is "
-    "the hardest — BP itself produces noisier solutions there, so disagreements may reflect "
-    "BP's own instability rather than NN failure. "
-    "Important caveat: val pixels are from the same 4 images as training (different pixels, "
-    "not different images). This is NOT a true test of generalization to new solar conditions — "
-    "a leave-one-timestamp-out evaluation is the natural next step to assess true generalization."
-)
-
-add_subheading("Training loss curve (step 2, no mask)")
-add_image(
-    "results/plots/experiments/neural_field_amortized_4ts_train_loss.png",
-    width_in=5.0,
-    caption="Amortized neural field training loss — 4 timestamps, no masking, 30 epochs"
-)
-
-add_subheading("Per-pixel DEM curves: amortized neural field (cyan dotted) vs BP (black)")
-for tag in ["20110906_2217", "20120603_0000", "20131113_0908", "20140910_1731"]:
-    add_image(
-        f"results/plots/experiments/neural_field_{tag}_pixel_dems.png",
-        width_in=5.5,
-        caption=f"{tag} — amortized neural field vs BP on 10 held-out val pixels"
-    )
-
-add_divider()
-
-
-# ════════════════════════════════════════════════════════════════════════════
-# 2026-06-27 — Neural field step 3: neighborhood masking
-# ════════════════════════════════════════════════════════════════════════════
-
-add_date_heading("2026-06-27 — Neural Field Step 3: Neighborhood Masking for Single-Voxel Robustness")
-
-add_para(
-    "Samuel's constraint: the model must work even when only a single pixel is available "
-    "(no surrounding neighborhood). Step 3 adds random neighborhood masking during training: "
-    "with probability mask_prob, the entire 9x9 patch is zeroed out except the center pixel, "
-    "forcing the network to learn a fallback when no spatial context is available. "
-    "Four mask_prob values were trained and compared: 0.1, 0.3, 0.5, 0.7, plus the no-mask "
-    "baseline from step 2. All use the same architecture (PatchDEMNet, amortized across 4 "
-    "timestamps, 80/20 val split, same random seed)."
-)
-
-add_subheading("Sparsity comparison (lower = sparser = closer to BP)")
-mask_sp_table = (
-    f"{'Timestamp':<22} {'Activity':<14} {'BP':>5}  {'no mask':>8}  {'m=0.1':>7}  {'m=0.3':>7}  {'m=0.5':>7}  {'m=0.7':>7}\n"
-    f"{'-'*85}\n"
-    f"{'20110906_2217':<22} {'X2.1 flare':<14} {'1.97':>5}  {'1.84':>8}  {'1.89':>7}  {'1.90':>7}  {'2.12':>7}  {'2.14':>7}\n"
-    f"{'20120603_0000':<22} {'Quiet sun':<14} {'1.67':>5}  {'1.58':>8}  {'1.55':>7}  {'1.69':>7}  {'2.15':>7}  {'1.81':>7}\n"
-    f"{'20131113_0908':<22} {'Moderate':<14} {'1.82':>5}  {'1.47':>8}  {'1.48':>7}  {'1.62':>7}  {'2.15':>7}  {'1.90':>7}\n"
-    f"{'20140910_1731':<22} {'X1.6 flare':<14} {'1.71':>5}  {'1.86':>8}  {'2.00':>7}  {'2.15':>7}  {'2.05':>7}  {'2.13':>7}\n"
-)
-mono = doc.add_paragraph()
-run = mono.add_run(mask_sp_table)
-run.font.name = "Courier New"
-run.font.size = Pt(8)
-
-add_finding(
-    "mask_prob=0.1 is the best choice: stays closest to BP's sparsity across all timestamps "
-    "while gaining single-pixel robustness. Higher mask values (0.5, 0.7) make solutions "
-    "progressively less sparse — the network spreads probability across more temperature bins "
-    "when forced to work without neighborhood context more often. "
-    "Note: MAE (AIA channel reconstruction error) decreases with higher masking, but this is "
-    "not a meaningful win — removing the sparsity constraint always lowers MAE trivially. "
-    "BP sparsity similarity is the correct metric since BP is the ground truth we approximate. "
-    "Why does high mask still work at all (unlike the old channel-input NN that also saw only "
-    "one pixel and failed)? Because the masked network was trained with (1-mask_prob) full-patch "
-    "batches — the CNN weights learned spatial structure from those samples. When a masked "
-    "sample arrives, the network falls back on weights that already encode spatial knowledge. "
-    "The old channel-input NN never had patch context, so its weights never learned spatial "
-    "structure at all. Masking preserves spatial knowledge in the weights; it just teaches "
-    "the network to also function without it."
-)
-
-add_subheading("Training loss curves — all mask values")
-add_para(
-    "All runs converge cleanly. Higher mask values start with higher initial loss "
-    "(harder problem with less neighborhood context) but plateau equally well by epoch 5-7."
-)
-for mp in ["0.1", "0.3", "0.5", "0.7"]:
-    add_image(
-        f"results/plots/experiments/neural_field_amortized_4ts_mask{mp}_train_loss.png",
-        width_in=5.0,
-        caption=f"Training loss — mask_prob={mp}, 4 timestamps, 30 epochs"
-    )
-
-add_subheading("All mask variants vs BP per pixel — 4 timestamps")
-add_para(
-    "Each subplot shows BP (black solid) and all 5 NN variants (colored dashed) on the same "
-    "axes. Key observations: (1) all variants cluster tightly — mask level barely changes "
-    "curve shape; (2) no oscillation anywhere; (3) no mask / mask 0.1 closest to BP peak "
-    "sharpness; (4) bimodal BP solutions missed by ALL variants — fundamental architecture "
-    "limitation, not a masking issue."
-)
-for tag in ["20110906_2217", "20120603_0000", "20131113_0908", "20140910_1731"]:
-    act = {"20110906_2217": "X2.1 flare", "20120603_0000": "Quiet sun",
-           "20131113_0908": "Moderate activity", "20140910_1731": "X1.6 flare"}[tag]
-    add_image(
-        f"results/plots/experiments/mask_comparison_{tag}.png",
-        width_in=5.5,
-        caption=f"{tag} ({act}) — all mask values vs BP, 10 val pixels"
-    )
 
 add_divider()
 

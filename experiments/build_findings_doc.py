@@ -174,7 +174,7 @@ add_finding(
 
 add_subheading("Per-pixel DEM curves: neural field (cyan dotted) vs BP (black)")
 add_image(
-    "output/experiments/neural_field_20110906_2217_pixel_dems.png",
+    "results/plots/experiments/neural_field_20110906_2217_pixel_dems.png",
     width_in=5.5,
     caption="10 random pixels from 128×128 crop of 20110906_2217 — NN patch-conditioned neural field vs BP"
 )
@@ -234,7 +234,7 @@ add_finding(
 
 add_subheading("Training loss curve (step 2, no mask)")
 add_image(
-    "output/experiments/neural_field_amortized_4ts_train_loss.png",
+    "results/plots/experiments/neural_field_amortized_4ts_train_loss.png",
     width_in=5.0,
     caption="Amortized neural field training loss — 4 timestamps, no masking, 30 epochs"
 )
@@ -242,7 +242,7 @@ add_image(
 add_subheading("Per-pixel DEM curves: amortized neural field (cyan dotted) vs BP (black)")
 for tag in ["20110906_2217", "20120603_0000", "20131113_0908", "20140910_1731"]:
     add_image(
-        f"output/experiments/neural_field_{tag}_pixel_dems.png",
+        f"results/plots/experiments/neural_field_{tag}_pixel_dems.png",
         width_in=5.5,
         caption=f"{tag} — amortized neural field vs BP on 10 held-out val pixels"
     )
@@ -304,7 +304,7 @@ add_para(
 )
 for mp in ["0.1", "0.3", "0.5", "0.7"]:
     add_image(
-        f"output/experiments/neural_field_amortized_4ts_mask{mp}_train_loss.png",
+        f"results/plots/experiments/neural_field_amortized_4ts_mask{mp}_train_loss.png",
         width_in=5.0,
         caption=f"Training loss — mask_prob={mp}, 4 timestamps, 30 epochs"
     )
@@ -321,7 +321,7 @@ for tag in ["20110906_2217", "20120603_0000", "20131113_0908", "20140910_1731"]:
     act = {"20110906_2217": "X2.1 flare", "20120603_0000": "Quiet sun",
            "20131113_0908": "Moderate activity", "20140910_1731": "X1.6 flare"}[tag]
     add_image(
-        f"output/experiments/mask_comparison_{tag}.png",
+        f"results/plots/experiments/mask_comparison_{tag}.png",
         width_in=5.5,
         caption=f"{tag} ({act}) — all mask values vs BP, 10 val pixels"
     )
@@ -358,9 +358,9 @@ add_finding(
 )
 
 add_subheading("Training loss curves")
-add_image("output/experiments/barrier_train_loss.png", width_in=5.0,
+add_image("results/plots/experiments/barrier_train_loss.png", width_in=5.0,
            caption="barrier NN training loss (30 epochs, pooled across 4 timestamps)")
-add_image("output/experiments/barrier_fit_train_loss.png", width_in=5.0,
+add_image("results/plots/experiments/barrier_fit_train_loss.png", width_in=5.0,
            caption="barrier_fit NN training loss (30 epochs, pooled across 4 timestamps)")
 
 add_subheading("Optimizer comparison + NN overlay (6 pixels, timestamp 20110906_2217)")
@@ -369,12 +369,12 @@ add_para(
     "(blue=L-BFGS, orange=Adam, green=SGD); dotted cyan/pink = NN predictions for "
     "barrier / barrier_fit respectively. Black = BP reference."
 )
-add_image("output/experiments/optimizer_comparison.png", width_in=4.5,
+add_image("results/plots/experiments/optimizer_comparison.png", width_in=4.5,
            caption="optimizer_comparison.png — BP + 3 optimizers x 2 losses + 2 NNs, per pixel")
 
 add_subheading("Per-pixel DEM curves with NN overlay (all 4 timestamps, 10 random pixels each)")
 for tag in ["20110906_2217", "20120603_0000", "20131113_0908", "20140910_1731"]:
-    add_image(f"output/experiments/pixel_dems/{tag}_pixel_dems.png", width_in=4.5,
+    add_image(f"results/plots/experiments/pixel_dems/{tag}_pixel_dems.png", width_in=4.5,
                caption=f"{tag} — pixel DEM curves with NN overlay")
 
 add_divider()
@@ -397,7 +397,7 @@ add_finding(
     "budget on several pixels, producing flat-zero or badly wrong-shaped spikes. Conclusion: "
     "L-BFGS/Adam are both safe choices for per-pixel optimization; avoid SGD here."
 )
-add_image("output/dem_results/optimizer_comparison.png", width_in=4.5,
+add_image("results/plots/dem_results/optimizer_comparison.png", width_in=4.5,
            caption="optimizer_comparison.png — BP + 3 optimizers x 2 losses, per pixel (pre-NN)")
 
 add_divider()

@@ -201,6 +201,23 @@ def barrier_loss_batch(x, D, I_obs, lb, ub, a_l2=0, a_l1=1.0, mu=1.0, alpha=0, m
     total_loss = l2_term + l1_term + barrier_x + barrier_lb + barrier_ub + fit
     return total_loss.mean()
 
+def enet_loss_batch(x, D, I_obs, lb, ub, C=1.0, alpha=1.0, lam=0.9):
+    # Elastic Net objective (Athiray & Winebarger 2024), unconstrained:
+    #   (1/2C)||o - Dx||^2 + alpha*lam*||x||_1 + (1/2)*alpha*(1-lam)*||x||_2^2
+    # x >= 0 is handled by the network's Softplus output, so no barrier needed.
+    # The fit term is chi-squared normalised (sigma from the tolerance band,
+    # same convention as barrier_loss_batch) so faint channels aren't ignored.
+    # lam=1 recovers Lasso; lam=0 recovers ridge.
+    sigma2 = ((ub - lb) / 2) ** 2 + 1e-8  # [B, n_obs]
+
+    Dx = torch.matmul(x, D.T)  # [B, n_obs]
+    fit = (0.5 / C) * torch.sum((Dx - I_obs) ** 2 / sigma2, dim=1)  # [B]
+    l1 = alpha * lam * torch.sum(torch.abs(x), dim=1)               # [B]
+    l2 = 0.5 * alpha * (1.0 - lam) * torch.sum(x ** 2, dim=1)       # [B]
+
+    return (fit + l1 + l2).mean()
+
+
 class BarrierLoss(nn.Module):
     def __init__(self, D, R, B, args=None):
         super().__init__()

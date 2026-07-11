@@ -199,23 +199,41 @@ def train(args):
 
 # ── BP sparsity reference (for comparison printout) ───────────────────────────
 
-def bp_sparsity_reference(dataset, D, n_pixels=200, seed=42):
+def _bp_solve_escalating(work):
+    """Solve BP for one pixel with the escalating tolerance schedule.
+    Module-level so multiprocessing can pickle it. Returns effective
+    sparsity or None if no tolerance level yields a solution."""
+    D64, obs, err = work
+    for tolfac in [1.4, 2.0, 2.8, 5.0]:
+        lb, ub = obs - tolfac * err, obs + tolfac * err
+        x_bp = solveLP((D64, obs, lb, ub, None))
+        if x_bp is not None:
+            return (np.sum(np.abs(x_bp)) ** 2) / (np.sum(x_bp ** 2) + 1e-6)
+    return None
+
+
+def bp_sparsity_reference(dataset, D, n_pixels=200, seed=42, n_jobs=0):
     """Solve BP on a random subset of pixels and report effective sparsity,
-    so the neural field's sparsity can be compared to BP's directly."""
+    so the neural field's sparsity can be compared to BP's directly.
+    n_jobs: 0 = serial, -1 = all cores, >0 = that many processes."""
+    import multiprocessing
     rng = np.random.default_rng(seed)
     idx = rng.choice(len(dataset.coords), size=min(n_pixels, len(dataset.coords)), replace=False)
-    sparsities = []
+    D64 = D.astype(np.float64)
+    work = []
     for i in idx:
         row, col = dataset.coords[i]
         p = dataset.pad
         obs = dataset.obs_pad[:, row + p, col + p].numpy().astype(np.float64)
         err = dataset.err_pad[:, row + p, col + p].numpy().astype(np.float64)
-        for tolfac in [1.4, 2.0, 2.8, 5.0]:
-            lb, ub = obs - tolfac * err, obs + tolfac * err
-            x_bp = solveLP((D.astype(np.float64), obs, lb, ub, None))
-            if x_bp is not None:
-                sparsities.append((np.sum(np.abs(x_bp)) ** 2) / (np.sum(x_bp ** 2) + 1e-6))
-                break
+        work.append((D64, obs, err))
+    if n_jobs != 0:
+        procs = multiprocessing.cpu_count() if n_jobs < 0 else n_jobs
+        with multiprocessing.Pool(procs) as pool:
+            results = pool.map(_bp_solve_escalating, work)
+    else:
+        results = [_bp_solve_escalating(w) for w in work]
+    sparsities = [s for s in results if s is not None]
     return float(np.mean(sparsities)) if sparsities else float("nan")
 
 

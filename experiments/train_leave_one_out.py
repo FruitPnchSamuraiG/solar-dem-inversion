@@ -50,7 +50,7 @@ def train_fold(variant, train_subsets, D_t, args, device, n_basis):
     """Train one variant on the pooled train subsets (3 timestamps)."""
     full_train = ConcatDataset(train_subsets)
     loader = DataLoader(full_train, batch_size=args.batch_size, shuffle=True,
-                        num_workers=2, pin_memory=True)
+                        num_workers=args.num_workers, pin_memory=True)
 
     perm = None
     if variant == "cnn_shuffled":
@@ -157,7 +157,8 @@ def main(args):
                                         patch_size=args.patch_size, tolfac=args.tolfac)
         if args.bp_compare > 0:
             bp_refs[tag] = bp_sparsity_reference(datasets[tag], D,
-                                                 n_pixels=args.bp_compare, seed=args.seed)
+                                                 n_pixels=args.bp_compare, seed=args.seed,
+                                                 n_jobs=args.bp_jobs)
             print(f"  BP sparsity reference: {bp_refs[tag]:.2f}")
 
     os.makedirs("output/experiments", exist_ok=True)
@@ -245,6 +246,10 @@ def parse_args():
     p.add_argument("--alpha_l2",   type=float, default=0.0)
     p.add_argument("--mu",         type=float, default=1.0)
     p.add_argument("--bp_compare", type=int,   default=100)
+    p.add_argument("--bp_jobs",    type=int,   default=-1,
+                   help="processes for BP reference solves (0=serial, -1=all cores)")
+    p.add_argument("--num_workers", type=int,  default=4,
+                   help="DataLoader workers; match --cpus-per-task on SLURM")
     p.add_argument("--n_pixels",   type=int,   default=10)
     p.add_argument("--seed",       type=int,   default=42)
     return p.parse_args()

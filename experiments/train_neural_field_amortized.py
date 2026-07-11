@@ -38,10 +38,11 @@ def split_dataset(dataset, val_frac, seed):
     return Subset(dataset, idx[n_val:].tolist()), Subset(dataset, idx[:n_val].tolist())
 
 
-def evaluate_val(model, val_subsets, D, device, n_sample=500, seed=42):
+def evaluate_val(model, val_subsets, D, device, n_sample=500, seed=42, batch_size=512):
     """
     Run NN inference on held-out val pixels for each timestamp.
-    Returns dict: tag -> {nn_sparsity, nn_mae, n_val}
+    Batched forward passes (identical results to per-pixel; the model has no
+    batch-dependent layers). Returns dict: tag -> {nn_sparsity, nn_mae, n_val}
     """
     D_t = torch.tensor(D).to(device)
     model.eval()
@@ -53,12 +54,20 @@ def evaluate_val(model, val_subsets, D, device, n_sample=500, seed=42):
 
         nn_sparsities, nn_maes = [], []
         with torch.no_grad():
-            for i in chosen:
-                patch, obs, lb, ub = val_ds[int(i)]
-                x = model(patch.unsqueeze(0).to(device))
-                nn_sparsities.append(effective_sparsity(x).item())
-                pred = (D_t @ x[0]).cpu().numpy()
-                nn_maes.append(float(np.mean(np.abs(pred - obs.numpy()))))
+            for start in range(0, len(chosen), batch_size):
+                batch_idx = chosen[start:start + batch_size]
+                patches, obses = [], []
+                for i in batch_idx:
+                    patch, obs, lb, ub = val_ds[int(i)]
+                    patches.append(patch)
+                    obses.append(obs)
+                patch_b = torch.stack(patches).to(device)
+                obs_b = torch.stack(obses).to(device)
+                x = model(patch_b)                        # [B, n_basis]
+                nn_sparsities.extend(effective_sparsity(x).cpu().tolist())
+                pred = x @ D_t.T                          # [B, n_channels]
+                mae = (pred - obs_b).abs().mean(dim=1)
+                nn_maes.extend(mae.cpu().tolist())
 
         results[tag] = {
             "nn_sparsity": float(np.mean(nn_sparsities)),
@@ -92,14 +101,15 @@ def train(args):
         val_subsets[tag] = val_ds
         if args.bp_compare > 0:
             print(f"  computing BP sparsity reference for {tag}...")
-            bp_refs[tag] = bp_sparsity_reference(ds, D, n_pixels=args.bp_compare, seed=args.seed)
+            bp_refs[tag] = bp_sparsity_reference(ds, D, n_pixels=args.bp_compare, seed=args.seed,
+                                                 n_jobs=args.bp_jobs)
             print(f"  BP sparsity reference: {bp_refs[tag]:.2f}")
 
     full_train = ConcatDataset(train_subsets)
     print(f"\nTotal train pixels across all timestamps: {len(full_train):,}")
 
     loader = DataLoader(full_train, batch_size=args.batch_size, shuffle=True,
-                        num_workers=2, pin_memory=True)
+                        num_workers=args.num_workers, pin_memory=True)
 
     # ── model ──────────────────────────────────────────────────────────────
     model = PatchDEMNet(n_basis=D.shape[1], patch_size=args.patch_size,
@@ -208,6 +218,10 @@ def parse_args():
                    help="fraction of training samples where neighborhood is zeroed (center pixel only)")
     p.add_argument("--bp_compare", type=int,   default=100,
                    help="pixels per timestamp for BP sparsity reference; 0 to skip")
+    p.add_argument("--bp_jobs",    type=int,   default=-1,
+                   help="processes for BP reference solves (0=serial, -1=all cores)")
+    p.add_argument("--num_workers", type=int,  default=4,
+                   help="DataLoader workers; match --cpus-per-task on SLURM")
     p.add_argument("--seed",       type=int,   default=42)
     return p.parse_args()
 

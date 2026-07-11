@@ -91,9 +91,14 @@ From the paper's "Future Work" section:
 
 ## Progress Log (most recent first)
 
-### Current state (as of 2026-07-02)
+### Current state (as of 2026-07-10)
 
 Ablation study + ElasticNet loss run complete on crunchy1 (see 2026-07-02 entry below) — key revision: **capacity mattered more than we thought**; the patch CNN's edge over a capacity-matched center-pixel MLP is real but smaller than previously credited. Naming note per PhD student: call the model the **patch CNN**, not "neural field".
+
+**2026-07-10 meeting direction (advisor/PhD student)**:
+- **Bimodal DEMs are the priority question**: BP produces bimodal solutions *because* two narrow spikes are sparse (2–3 nonzero bins < one broad peak); the NN misses them due to amortization — a deterministic point-estimate network averages across pixels with near-identical AIA inputs but different BP optima. Before architecting a fix: (a) diagnostic — rerun BP on noise-perturbed inputs at bimodal pixels to test whether the second peak is stable signal or noise-level degeneracy; (b) compare barrier-loss value at BP's bimodal solution vs the NN's unimodal output at those pixels (near-equal ⇒ both valid optima, tie-breaking issue not a model failure). If real signal → distribution-output head (binned probabilities à la SuperSynthIA, or mixture density) rather than point estimate.
+- **Prefer the simplest model that scales with data**: carry `mlp6` (1.5M single-pixel MLP — already run in the ablation, sparsity 1.89 vs cnn 1.70) forward as the simplicity baseline when scaling; optionally try parallel CNN paths (~1.5M total) as a variant.
+- **Overfitting suspicion**: current model may be too big for 4 images. Leave-one-timestamp-out eval is the prerequisite honest number; then scale timestamps on Torch HPC tracking cnn vs mlp6 — if the CNN's edge shrinks with more data, simplest-model-wins; if it holds, the patch is real.
 
 All 3 patch-CNN steps complete and validated on 128×128 crops of 4 timestamps:
 
@@ -105,10 +110,12 @@ All 3 patch-CNN steps complete and validated on 128×128 crops of 4 timestamps:
 
 **Recommended checkpoint for further work**: `neural_field_amortized_4ts_mask0.1.pt` — amortized across all 4 timestamps, single-pixel robust, closest to BP sparsity.
 
-**Pending**:
-- Optional ablation follow-up: rerun the exact old 213k MLP (hidden=256, center-pixel input) inside `train_ablations.py`'s harness to cleanly separate capacity from dataset/hyperparameter differences
-- Leave-one-timestamp-out evaluation → honest test of generalization to unseen images
-- Scaling: ablation results now confirmed → migrate to NYU Torch HPC (SLURM, A100/H100) for larger crops (512×512+) and more timestamps — setup notes in local `dem-handoff.md`
+**Pending** (ordered per 2026-07-10 meeting):
+1. Leave-one-timestamp-out evaluation → honest test of generalization to unseen images (prerequisite for interpreting overfitting concern)
+2. Bimodal diagnostic (parallel, cheap): find BP-bimodal pixels, perturb-and-rerun BP for stability, compare barrier loss NN-unimodal vs BP-bimodal at those pixels
+3. Scaling on NYU Torch HPC (SLURM, A100/H100): larger crops (512×512+), more timestamps, track cnn vs mlp6 as data grows — setup notes in local `dem-handoff.md`
+4. If bimodality is real signal: distribution-output head (binned probabilities / mixture density) instead of point estimate
+5. Optional: rerun the exact old 213k MLP (hidden=256, center-pixel input) inside `train_ablations.py`'s harness to cleanly separate capacity from dataset/hyperparameter differences; optional parallel-CNN-paths variant (~1.5M)
 - Findings log (`results/findings_log.docx`) is up to date — rebuild with `uv run python experiments/build_findings_doc.py`
 
 ### 2026-07-02 — Ablation study: why does the patch CNN work? (+ ElasticNet loss) — DONE

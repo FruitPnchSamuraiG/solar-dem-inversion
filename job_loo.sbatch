@@ -2,7 +2,6 @@
 #SBATCH --job-name=dem_loo
 #SBATCH --account=torch_pr_41_tandon_advanced
 #SBATCH --gres=gpu:1
-#SBATCH --comment="preemption=yes;requeue=true"
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=64GB
 #SBATCH --time=12:00:00

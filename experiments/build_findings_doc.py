@@ -99,6 +99,83 @@ doc.add_paragraph()
 
 
 # ════════════════════════════════════════════════════════════════════════════
+# 2026-07-11 — Bimodal DEM diagnostic
+# ════════════════════════════════════════════════════════════════════════════
+
+add_date_heading("2026-07-11 — Bimodal DEM Diagnostic: Is BP's Second Peak Real Signal or Noise?")
+
+add_para(
+    "Per the 2026-07-10 meeting: BP produces bimodal DEM solutions because two narrow spikes "
+    "are sparser (fewer active bins) than one broad peak, while the patch CNN — a deterministic "
+    "point-estimate regressor — averages across near-identical AIA inputs that map to different "
+    "BP optima and collapses to a single blended peak (the inverse problem is underdetermined: "
+    "6 observed channels, 54 basis coefficients). Before building a distribution-output head to "
+    "fix this, this diagnostic answers two questions on each timestamp: (1) stability — solve BP "
+    "on the real observation, flag bimodal solutions via peak detection, then re-solve BP 20 times "
+    "under simulated photon noise (obs + N(0,1)*err) and measure how often the second peak "
+    "survives; (2) degeneracy — compare the barrier-loss value of BP's bimodal solution vs. the "
+    "trained patch CNN's (ablation_cnn_barrier.pt) unimodal prediction at the same pixels — "
+    "near-equal loss means both are valid optima of the same objective, a tie-breaking difference "
+    "rather than a model failure. Implemented in experiments/bimodal_diagnostic.py; run on "
+    "1,000 randomly scanned pixels per timestamp, 30 bimodal pixels studied in depth with 20 "
+    "noise perturbations each."
+)
+
+add_subheading("Bimodality prevalence and stability under noise")
+bimodal_table = (
+    f"{'Timestamp':<22} {'Activity':<22} {'Bimodal %':>10} {'Mean stab.':>11} {'Stable (>=0.8)':>15}\n"
+    f"{'-'*84}\n"
+    f"{'20110906_2217':<22} {'X2.1 flare':<22} {'8.5%':>10} {'0.46':>11} {'5/30':>15}\n"
+    f"{'20120603_0000':<22} {'Quiet sun':<22} {'5.1%':>10} {'0.44':>11} {'0/30':>15}\n"
+    f"{'20131113_0908':<22} {'Moderate activity':<22} {'8.5%':>10} {'0.40':>11} {'0/30':>15}\n"
+    f"{'20140910_1731':<22} {'X1.6 flare':<22} {'9.1%':>10} {'0.46':>11} {'1/30':>15}\n"
+)
+mono = doc.add_paragraph()
+run = mono.add_run(bimodal_table)
+run.font.name = "Courier New"
+run.font.size = Pt(8)
+
+add_finding(
+    "(1) Bimodal BP solutions are rare (5-9% of scanned pixels) and mostly unstable under "
+    "realistic photon noise: mean stability is well below the 0.8 threshold at every timestamp, "
+    "and only 6 of 120 studied pixels (5 + 0 + 0 + 1) stayed bimodal across at least 80% of "
+    "noise draws. Most of BP's bimodality is therefore an artifact of exactly where the noisy "
+    "observation happens to land — BP flip-flopping between near-tied optima — rather than a "
+    "physically real second temperature component the NN is failing to reproduce. "
+    "(2) The 6 stable pixels cluster almost entirely in the two flare timestamps (5 in the X2.1 "
+    "flare, 1 in the X1.6 flare; zero in quiet sun or moderate activity) — physically sensible, "
+    "since flare regions plausibly contain genuinely multi-thermal plasma (hot flare-heated "
+    "material plus cooler ambient corona along the line of sight) where quiet-sun conditions do "
+    "not. These are the best candidates for real bimodality. "
+    "(3) At those 6 stable pixels, the barrier-loss comparison shows the patch CNN's unimodal "
+    "prediction achieves LOWER (better) loss than BP's own bimodal solution in 4/6 cases, and "
+    "only modestly higher loss in the other 2 (2.41 vs. 1.69, and 3.29 vs. 3.00) — i.e. even at "
+    "the physically plausible bimodal pixels, the NN is not failing to fit the data, it is "
+    "finding an equally- or better-scoring optimum of the same objective, just a different "
+    "(unimodal) one. This pattern held broadly across all 120 studied pixels, not just the "
+    "stable ones, likely because BP's escalating-tolerance solve schedule sometimes has to "
+    "relax past the tight noise band to find a feasible sparse solution, while the NN — trained "
+    "to directly minimize the smooth barrier loss — tends to satisfy the tight band better even "
+    "when less sparse. "
+    "Bottom line: bimodality does not look like an urgent NN failure mode overall; a "
+    "distribution-output head (binned probabilities / mixture density) is better motivated as a "
+    "narrow, flare-region-targeted addition than a whole-model architecture change."
+)
+
+add_subheading("Spaghetti plots: BP under noise perturbation (gray) vs. real BP (black) vs. NN (dashed blue)")
+for tag in ["20110906_2217", "20120603_0000", "20131113_0908", "20140910_1731"]:
+    act = {"20110906_2217": "X2.1 flare", "20120603_0000": "Quiet sun",
+           "20131113_0908": "Moderate activity", "20140910_1731": "X1.6 flare"}[tag]
+    add_image(
+        f"results/plots/08_bimodal_20260711/bimodal_diagnostic_{tag}.png",
+        width_in=5.5,
+        caption=f"{tag} ({act}) — bimodal pixel stability under 20 noise perturbations, cnn prediction overlaid"
+    )
+
+add_divider()
+
+
+# ════════════════════════════════════════════════════════════════════════════
 # 2026-07-02 — Ablation study: why does the patch CNN work?
 # ════════════════════════════════════════════════════════════════════════════
 

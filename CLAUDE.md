@@ -91,7 +91,9 @@ From the paper's "Future Work" section:
 
 ## Progress Log (most recent first)
 
-### Current state (as of 2026-07-10)
+### Current state (as of 2026-07-11)
+
+Bimodal diagnostic complete on crunchy1 (see 2026-07-11 entry below): bimodality is rare (5-9% of pixels) and mostly noise-driven (only 6/120 studied pixels stable under perturbation), concentrated in flare regions where real multi-thermal plasma is physically plausible; even at those 6 stable pixels the patch CNN's unimodal prediction matches or beats BP's own barrier loss in 4/6 cases. Leave-one-timestamp-out (LOO) training job is running on Torch HPC (job `13320865`, non-preemptible, any-GPU) to get the honest overfitting number for cnn vs mlp6.
 
 Ablation study + ElasticNet loss run complete on crunchy1 (see 2026-07-02 entry below) — key revision: **capacity mattered more than we thought**; the patch CNN's edge over a capacity-matched center-pixel MLP is real but smaller than previously credited. Naming note per PhD student: call the model the **patch CNN**, not "neural field".
 
@@ -111,12 +113,21 @@ All 3 patch-CNN steps complete and validated on 128×128 crops of 4 timestamps:
 **Recommended checkpoint for further work**: `neural_field_amortized_4ts_mask0.1.pt` — amortized across all 4 timestamps, single-pixel robust, closest to BP sparsity.
 
 **Pending** (ordered per 2026-07-10 meeting):
-1. Leave-one-timestamp-out evaluation → honest test of generalization to unseen images (prerequisite for interpreting overfitting concern)
-2. Bimodal diagnostic (parallel, cheap): find BP-bimodal pixels, perturb-and-rerun BP for stability, compare barrier loss NN-unimodal vs BP-bimodal at those pixels
-3. Scaling on NYU Torch HPC (SLURM, A100/H100): larger crops (512×512+), more timestamps, track cnn vs mlp6 as data grows — setup notes in local `dem-handoff.md`
-4. If bimodality is real signal: distribution-output head (binned probabilities / mixture density) instead of point estimate
+1. Leave-one-timestamp-out evaluation → honest test of generalization to unseen images (prerequisite for interpreting overfitting concern) — **running on Torch HPC** (`job_loo.sbatch`, job `13320865`, 4 folds × 2 variants, full 128×128 crop)
+2. ~~Bimodal diagnostic~~ — **DONE**, see 2026-07-11 entry below
+3. Scaling on NYU Torch HPC (SLURM, A100/H100): larger crops (512×512+), more timestamps, track cnn vs mlp6 as data grows — setup notes in local `dem-handoff.md`. Torch env fully staged (data, checkpoints, symlinks verified working via GPU smoke test).
+4. Bimodality diagnostic suggests this is now a LOW priority, not urgent: distribution-output head (binned probabilities / mixture density), narrowly targeted at flare-region pixels only, rather than a whole-model change
 5. Optional: rerun the exact old 213k MLP (hidden=256, center-pixel input) inside `train_ablations.py`'s harness to cleanly separate capacity from dataset/hyperparameter differences; optional parallel-CNN-paths variant (~1.5M)
 - Findings log (`results/findings_log.docx`) is up to date — rebuild with `uv run python experiments/build_findings_doc.py`
+
+### 2026-07-11 — Bimodal DEM diagnostic — DONE
+
+- Ran `experiments/bimodal_diagnostic.py` on crunchy1 across all 4 training timestamps: scanned 1000 pixels each for bimodal BP solutions, studied 30 bimodal pixels per timestamp with 20 noise perturbations each, and compared barrier loss of BP's bimodal solution vs the trained patch CNN's (`ablation_cnn_barrier.pt`) unimodal prediction at those pixels.
+- **Prevalence + stability**: bimodal solutions are rare (5.1-9.1% of scanned pixels) and mostly unstable under simulated photon noise — mean stability 0.40-0.46 across all 4 timestamps (well below the 0.8 "stable" threshold), only 6/120 studied pixels (5 in X2.1 flare, 0 in quiet sun, 0 in moderate activity, 1 in X1.6 flare) stayed bimodal across ≥80% of noise draws.
+- **Finding**: most of BP's bimodality is noise-level degeneracy (BP flip-flopping between near-tied optima depending on exactly where the noisy observation lands), not a real second temperature component the NN is missing. The stable minority clusters entirely in flare timestamps — physically sensible (real multi-thermal plasma from flare heating + ambient corona), so these are the best candidates for genuine bimodality.
+- **Degeneracy check**: at the 6 stable pixels, the CNN's unimodal prediction has LOWER (better) barrier loss than BP's own bimodal solution in 4/6 cases; the other 2 are only modestly higher. Held broadly across all 120 studied pixels — likely because BP's escalating-tolerance solve schedule sometimes relaxes past the tight noise band to find a feasible sparse solution, while the NN (trained to directly minimize the smooth barrier loss) satisfies the tight band more consistently.
+- **Conclusion**: bimodality is not an urgent NN failure mode. A distribution-output head is better motivated as a narrow, flare-region-targeted addition later, not a priority architecture change now.
+- Plots: `results/plots/08_bimodal_20260711/bimodal_diagnostic_{tag}.png` (4 files, one per timestamp — gray perturbed BP solves + black real BP + dashed blue NN prediction). Summary: `output/experiments/bimodal_diagnostic_summary.json` (crunchy1, not committed — scratch).
 
 ### 2026-07-02 — Ablation study: why does the patch CNN work? (+ ElasticNet loss) — DONE
 - Overnight run on crunchy1 via `experiments/train_ablations.py`: 4 capacity-matched variants (~1.43–1.50M params) at fixed barrier loss — `cnn` (reference), `mlp6` (center pixel only), `mlp_patch` (flat patch, no conv), `cnn_shuffled` (fixed random spatial permutation) — plus `cnn` × ENet loss. Combined plots via `experiments/plot_ablation_comparison.py`.

@@ -99,6 +99,85 @@ doc.add_paragraph()
 
 
 # ════════════════════════════════════════════════════════════════════════════
+# 2026-07-11 — Leave-one-timestamp-out evaluation
+# ════════════════════════════════════════════════════════════════════════════
+
+add_date_heading("2026-07-11 — Leave-One-Timestamp-Out: The Honest Generalization Test (cnn vs mlp6)")
+
+add_para(
+    "Per the 2026-07-10 meeting, two concerns needed a real answer: (1) all previous "
+    "validation held out only PIXELS from the training images, never an entire unseen image, "
+    "so the suspicion that the ~1.5M-param models overfit 4 images had never been tested; "
+    "(2) the advisor's preference for the simplest model that scales — is the patch CNN's "
+    "in-sample edge over the capacity-matched center-pixel MLP (ablation: 1.70 vs 1.89 mean "
+    "sparsity) real, or an artifact of fitting the training images? This run holds out each "
+    "timestamp in turn: train both variants (cnn and mlp6, identical hyperparameters to the "
+    "ablation) on the other 3 timestamps, evaluate on the never-seen one, and compare against "
+    "the same variant's performance on held-out pixels of the SEEN images (the 'sp gap' — "
+    "held-out minus in-sample — is the generalization penalty). 8 trainings total "
+    "(4 folds x 2 variants), 30 epochs each, full 128x128 crops, run on Torch HPC (A100). "
+    "Implemented in experiments/train_leave_one_out.py; job script job_loo.sbatch."
+)
+
+add_subheading("Results (sparsity: lower = closer to BP; gap = heldout − insample)")
+loo_table = (
+    f"{'Held-out ts':<16} {'Variant':<8} {'BP sp':>6} {'heldout sp':>11} {'insample sp':>12} {'sp gap':>8} {'heldout MAE':>12} {'insample MAE':>13}\n"
+    f"{'-'*92}\n"
+    f"{'20110906_2217':<16} {'cnn':<8} {'1.97':>6} {'1.64':>11} {'1.77':>12} {'-0.13':>8} {'4.74':>12} {'3.95':>13}\n"
+    f"{'20110906_2217':<16} {'mlp6':<8} {'1.97':>6} {'1.59':>11} {'1.77':>12} {'-0.18':>8} {'5.09':>12} {'4.26':>13}\n"
+    f"{'20120603_0000':<16} {'cnn':<8} {'1.67':>6} {'1.61':>11} {'1.76':>12} {'-0.15':>8} {'3.61':>12} {'3.94':>13}\n"
+    f"{'20120603_0000':<16} {'mlp6':<8} {'1.67':>6} {'1.78':>11} {'1.85':>12} {'-0.07':>8} {'3.35':>12} {'4.14':>13}\n"
+    f"{'20131113_0908':<16} {'cnn':<8} {'1.82':>6} {'1.83':>11} {'2.03':>12} {'-0.20':>8} {'8.17':>12} {'3.50':>13}\n"
+    f"{'20131113_0908':<16} {'mlp6':<8} {'1.82':>6} {'1.83':>11} {'1.70':>12} {'+0.14':>8} {'5.43':>12} {'3.87':>13}\n"
+    f"{'20140910_1731':<16} {'cnn':<8} {'1.71':>6} {'2.31':>11} {'1.84':>12} {'+0.47':>8} {'4.52':>12} {'3.20':>13}\n"
+    f"{'20140910_1731':<16} {'mlp6':<8} {'1.71':>6} {'1.96':>11} {'1.69':>12} {'+0.27':>8} {'4.45':>12} {'3.56':>13}\n"
+)
+mono = doc.add_paragraph()
+run = mono.add_run(loo_table)
+run.font.name = "Courier New"
+run.font.size = Pt(8)
+
+add_finding(
+    "(1) The overfitting suspicion is largely NOT confirmed: for 3 of 4 folds the held-out "
+    "sparsity is within ±0.2 of the in-sample number (several folds even negative, i.e. the "
+    "unseen image scored closer to BP than the seen ones). Models trained on 3 timestamps "
+    "transfer to a 4th unseen one; per-pixel curves on the never-seen image remain smooth, "
+    "single-peaked, at physically correct temperatures — no oscillation regression. "
+    "(2) The one meaningful generalization gap is the X1.6 flare fold (20140910_1731): "
+    "cnn +0.47, mlp6 +0.27. Expected — holding out a flare timestamp leaves only one other "
+    "flare image in training, and flare pixels are the rarest, hardest regime. The failure "
+    "mode on that fold is peak SHIFTS (peak at logT ~6.1 where BP says ~6.4) and missed "
+    "low-T components, not noisy curves. The remedy is more flare timestamps — exactly the "
+    "scaling plan. "
+    "(3) Headline: on unseen images, the patch CNN's in-sample edge over mlp6 DISAPPEARS. "
+    "Held-out sparsity by fold — mlp6 wins the X2.1 flare fold (1.59 vs 1.64), cnn wins "
+    "quiet sun (1.61 vs 1.78), dead tie on moderate activity (1.83 both), and mlp6 clearly "
+    "wins the hard flare fold (1.96 vs 2.31). mlp6 also has better held-out MAE on 3 of 4 "
+    "folds. The ablation's cnn advantage (1.70 vs 1.89 mean sparsity) was measured on "
+    "held-out pixels of SEEN images and does not carry over to unseen images. This is "
+    "evidence FOR the advisor's simplest-model-that-scales position: the center-pixel MLP "
+    "generalizes at least as well as the patch CNN at this data scale. Caveat: 4 folds is a "
+    "small sample; the definitive test is tracking both variants as timestamps grow during "
+    "the Torch scaling runs. "
+    "(4) Same bimodal pixels missed by both variants on the held-out images (low-T spike at "
+    "logT 5.5) — consistent with the bimodal diagnostic's conclusion below that these are "
+    "mostly noise-degenerate BP solutions."
+)
+
+add_subheading("Per-pixel DEM curves on the held-out (never seen) image: cnn (blue) / mlp6 (red) vs BP (black)")
+for tag in ["20110906_2217", "20120603_0000", "20131113_0908", "20140910_1731"]:
+    act = {"20110906_2217": "X2.1 flare", "20120603_0000": "Quiet sun",
+           "20131113_0908": "Moderate activity", "20140910_1731": "X1.6 flare"}[tag]
+    add_image(
+        f"results/plots/09_loo_20260711/loo_heldout_{tag}.png",
+        width_in=5.5,
+        caption=f"Held-out {tag} ({act}) — models trained on the other 3 timestamps only"
+    )
+
+add_divider()
+
+
+# ════════════════════════════════════════════════════════════════════════════
 # 2026-07-11 — Bimodal DEM diagnostic
 # ════════════════════════════════════════════════════════════════════════════
 

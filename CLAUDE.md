@@ -93,7 +93,12 @@ From the paper's "Future Work" section:
 
 ### Current state (as of 2026-07-11)
 
-Bimodal diagnostic complete on crunchy1 (see 2026-07-11 entry below): bimodality is rare (5-9% of pixels) and mostly noise-driven (only 6/120 studied pixels stable under perturbation), concentrated in flare regions where real multi-thermal plasma is physically plausible; even at those 6 stable pixels the patch CNN's unimodal prediction matches or beats BP's own barrier loss in 4/6 cases. Leave-one-timestamp-out (LOO) training job is running on Torch HPC (job `13320865`, non-preemptible, any-GPU) to get the honest overfitting number for cnn vs mlp6.
+Both 2026-07-10 meeting priorities are answered (see 2026-07-11 entries below):
+
+1. **Bimodal diagnostic (crunchy1)**: bimodality is rare (5-9% of pixels) and mostly noise-driven (only 6/120 studied pixels stable under perturbation), concentrated in flare regions where real multi-thermal plasma is physically plausible; even at those 6 stable pixels the patch CNN's unimodal prediction matches or beats BP's own barrier loss in 4/6 cases. Not an urgent NN failure mode.
+2. **Leave-one-timestamp-out (Torch HPC, job 13320865)**: overfitting suspicion largely NOT confirmed — held-out-image sparsity within ±0.2 of in-sample for 3/4 folds. The one real gap is the X1.6-flare fold (cnn +0.47, mlp6 +0.27; only one other flare image in training). **Headline: on unseen images the patch CNN's edge over mlp6 disappears** (mlp6 wins 2 folds incl. the hard flare fold, ties 1, cnn wins 1) — first real evidence for the advisor's simplest-model-that-scales position. Definitive test = tracking both during Torch scaling.
+
+Torch HPC is fully operational as the primary compute: data + checkpoints staged, symlinks fixed, GPU smoke test passed, first real sbatch job completed (`job_loo.sbatch`).
 
 Ablation study + ElasticNet loss run complete on crunchy1 (see 2026-07-02 entry below) — key revision: **capacity mattered more than we thought**; the patch CNN's edge over a capacity-matched center-pixel MLP is real but smaller than previously credited. Naming note per PhD student: call the model the **patch CNN**, not "neural field".
 
@@ -112,13 +117,21 @@ All 3 patch-CNN steps complete and validated on 128×128 crops of 4 timestamps:
 
 **Recommended checkpoint for further work**: `neural_field_amortized_4ts_mask0.1.pt` — amortized across all 4 timestamps, single-pixel robust, closest to BP sparsity.
 
-**Pending** (ordered per 2026-07-10 meeting):
-1. Leave-one-timestamp-out evaluation → honest test of generalization to unseen images (prerequisite for interpreting overfitting concern) — **running on Torch HPC** (`job_loo.sbatch`, job `13320865`, 4 folds × 2 variants, full 128×128 crop)
+**Pending** (updated 2026-07-11 after LOO + bimodal results):
+1. ~~Leave-one-timestamp-out evaluation~~ — **DONE**, see 2026-07-11 entry below
 2. ~~Bimodal diagnostic~~ — **DONE**, see 2026-07-11 entry below
-3. Scaling on NYU Torch HPC (SLURM, A100/H100): larger crops (512×512+), more timestamps, track cnn vs mlp6 as data grows — setup notes in local `dem-handoff.md`. Torch env fully staged (data, checkpoints, symlinks verified working via GPU smoke test).
-4. Bimodality diagnostic suggests this is now a LOW priority, not urgent: distribution-output head (binned probabilities / mixture density), narrowly targeted at flare-region pixels only, rather than a whole-model change
+3. Scaling on NYU Torch HPC (SLURM, A100/H100): larger crops (512×512+), more timestamps (esp. more FLARE timestamps — the LOO flare fold is the weak spot), track cnn vs mlp6 as data grows — if the CNN's edge stays absent, simplest-model-wins and mlp6 becomes the production architecture. Torch env fully operational. Before the big runs: cache preprocessed AIA cubes to .npz (currently ~30s of pointing/degradation redone per timestamp per run); eval + BP-reference speedups already landed (`--num_workers`, `--bp_jobs`).
+4. LOW priority (per bimodal diagnostic): distribution-output head (binned probabilities / mixture density), narrowly targeted at flare-region pixels only, rather than a whole-model change
 5. Optional: rerun the exact old 213k MLP (hidden=256, center-pixel input) inside `train_ablations.py`'s harness to cleanly separate capacity from dataset/hyperparameter differences; optional parallel-CNN-paths variant (~1.5M)
 - Findings log (`results/findings_log.docx`) is up to date — rebuild with `uv run python experiments/build_findings_doc.py`
+
+### 2026-07-11 — Leave-one-timestamp-out evaluation — DONE
+
+- First real sbatch job on Torch HPC (`job_loo.sbatch`, A100, ~30 min): 4 folds × 2 variants (cnn, mlp6), each trained 30 epochs on 3 timestamps, evaluated on the held-out 4th (never seen) + held-out pixels of seen images. Same hyperparameters as the 2026-07-02 ablation.
+- **Overfitting largely not confirmed**: sp gap (heldout − insample) within ±0.2 for 3/4 folds, several negative. Curves on unseen images stay smooth/single-peaked at correct temperatures.
+- **Flare fold is the weak spot**: holding out 20140910_1731 (X1.6 flare) gives the only big gaps (cnn +0.47, mlp6 +0.27) — only one other flare image in training. Failure mode = peak shifts (~6.1 vs BP ~6.4) and missed low-T components, not oscillation. Remedy: more flare timestamps when scaling.
+- **Headline — cnn's edge does not survive unseen images**: held-out sparsity mlp6 1.59/1.78/1.83/1.96 vs cnn 1.64/1.61/1.83/2.31; mlp6 wins 2 folds (incl. flare), ties 1, cnn wins 1 (quiet sun); mlp6 better heldout MAE on 3/4. The ablation's in-sample cnn advantage (1.70 vs 1.89) was an artifact of evaluating on pixels of seen images. Supports simplest-model-that-scales; 4 folds is small-sample, definitive answer comes from tracking both during scaling.
+- Checkpoints: `output/experiments/loo_{cnn,mlp6}_holdout_{tag}.pt` (Torch scratch). Plots: `results/plots/09_loo_20260711/loo_heldout_{tag}.png`. Summary: `output/experiments/loo_summary.json`.
 
 ### 2026-07-11 — Bimodal DEM diagnostic — DONE
 

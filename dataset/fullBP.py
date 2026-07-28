@@ -2,7 +2,7 @@ import numpy as np
 import aiapy.calibrate
 import scipy.optimize
 from aiapy.calibrate import register, update_pointing, degradation, estimate_error
-from aiapy.calibrate.util import get_pointing_table, get_correction_table, get_error_table
+from aiapy.calibrate.utils import get_pointing_table, get_correction_table, get_error_table
 from aiapy.psf import deconvolve, psf
 from xrtpy.image_correction import remove_lightleak
 from xrtpy.image_correction import deconvolve as xrt_deconvolve

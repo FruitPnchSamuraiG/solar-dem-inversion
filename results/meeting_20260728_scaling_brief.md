@@ -35,18 +35,38 @@ pixels (textbook quiet-sun / AR corona, ~2–3 MK).
 | File size (clean, `--noisy 0`) | **715 MB** (DEM + AIA + AIAErrors) |
 | **NaN (infeasible) pixels** | **6.6%** (278,183 / 4,194,304) |
 
-NaN on the small on-disk crop was only 2.4% — the full-disk figure is higher because
-of off-limb / low-signal regions.
+NaN on the small on-disk crop was only 2.4%.
+
+### 2b. With Hofmeister deconvolution (same timestamp, 16 cores, no GPU)
+
+PSFs obtained from the Harvard Dataverse (doi:10.7910/DVN/DYT4ZL, 3.2 GB zip, seven
+512 MB 8192x8192 PSFs — 304A included but unused), staged on scratch and symlinked into
+`dataset/hofmeister_psf/`.
+
+| Quantity | No deconvolution | Hofmeister |
+|---|---|---|
+| Wall time per timestamp | 4 min 2 s | **7 min 57 s** |
+| BP portion | 3 min 10 s | 3 min 42 s |
+| **NaN (infeasible) pixels** | 6.6% | **10.2%** |
+
+**Deconvolution runs on CPU, not GPU.** `fullBP.py:776` hardcodes `use_gpu=False` and the
+sbatch script requests no GPU. Cost is ~4 min/job on 16 cores, comfortably inside the
+2 h limit. (An earlier version of this brief claimed it needed a GPU; it does not. The
+error-table caching fix in 4.3 still stands — compute nodes have no internet regardless.)
+
+**Deconvolution verified to be doing the right thing.** Median relative change vs the
+undeconvolved AIA: 94A 32%, 335A 35%, 171A 12%, 193A 8%, 211A 8%. The largest corrections
+land on the two faintest channels, which is exactly where scattered light from the bright
+channels dominates — the correct physical signature, and a much larger effect than
+`aiapy`'s standard PSF deconvolution.
 
 ### Extrapolation to the full run
 
-- **Compute**: 6,115 jobs × ~4 min ≈ **410 job-hours ≈ 6,500 core-hours**. As a SLURM
-  array at ~100 concurrent that is roughly **4 hours wall clock**. His 2 h/job limit has
-  a large margin (though Hofmeister deconvolution adds GPU time on top — unmeasured).
-- **Storage**: 1,223 clean files × 715 MB ≈ **875 GB**, plus 4,892 noisy files
-  (DEM-only, estimated ~250 MB each) ≈ **1.2 TB** → **~2.1 TB of `.npz`**, before the
-  staged Zarr copy on top. Scratch quota is 5 TB and the cluster filesystem is
-  currently **97% full**, with a 60-day no-access purge.
+On the reduced evaluation-only job list (see `scaling_plan_20260728.md` section 2b —
+roughly 400 jobs rather than 6,115), at ~8 min/job with deconvolution that is about
+**53 job-hours** and well under 500 GB. Cost is no longer a constraint. For reference,
+the original full 6,115-job plan would have been ~815 job-hours and ~2.1 TB, against a
+5 TB quota on a filesystem currently 97% full with a 60-day no-access purge.
 
 ---
 
@@ -59,11 +79,12 @@ aiapy ≥ 0.12 (it is `aiapy.calibrate.utils`). Fixed and pushed as `eb9a8d6`.
 
 ## 4. Blockers / decisions needed from Samuel
 
-### 4.1 Hofmeister PSF files are missing
-`dataset/hofmeister_psf/` contains only `deconvolve_image.py`. The code expects
-`psf_aia_{94,131,171,193,211,335}.fits` in that directory. **Where are these on Torch,
-or do we pull them from the Harvard Dataverse link?** Blocks `--deconvolve hofmeister`,
-which is the whole point of this pipeline version.
+### 4.1 Hofmeister PSF files — RESOLVED
+Downloaded from the Dataverse link (doi:10.7910/DVN/DYT4ZL) to
+`$SCRATCH/dem/data/hofmeister_psf/` and symlinked into `dataset/hofmeister_psf/`, which is
+where `fullBP.py:768` looks. Filenames matched the expected pattern exactly. Symlinks are
+gitignored (they point at personal scratch). `--deconvolve hofmeister` now runs
+end to end — see section 2b.
 
 ### 4.2 NaN policy for infeasible pixels — 6.6% of every image
 `fullBP.py:478` initialises the DEM cube to NaN; `--zerochill` disables the tolerance
@@ -75,10 +96,42 @@ path, never to the saved `.npz`.
 of every training patch will carry NaN labels straight into the Zarr, which silently
 destroys training (NaN loss → NaN gradients).
 
-**Decision needed:** drop those pixels, nearest-neighbour interpolate them like the vis
-path, or carry a validity mask into the Zarr and mask them in the loss. My preference is
-a mask — interpolation invents labels that BP never produced, and the NN would learn to
-imitate the interpolator rather than the solver.
+**With deconvolution this rises to 10.2%**, and the lost pixels are *not* harmless empty
+sky — they concentrate on-disk:
+
+| | NaN rate |
+|---|---|
+| On-disk | **13.4%** |
+| Off-limb | 6.3% |
+
+**Mechanism (measured).** NaN rate binned by 171A brightness decile:
+
+| decile | 3 | 5 | 7 | 9 | 10 |
+|---|---|---|---|---|---|
+| median DN | 10.7 | 69.5 | 140.6 | 263.6 | 487.1 |
+| NaN rate | 2.1% | 11.0% | 15.3% | **17.7%** | 10.8% |
+
+An 8x rise with brightness. This is consistent with photon noise (sigma ~ sqrt(counts)),
+which makes the *relative* tolerance band `+/- t.sigma/o` shrink as pixels brighten. Once
+that band is narrower than the mismatch between the response matrix R and real coronal
+plasma, no non-negative DEM fits and the LP is infeasible. Faint pixels have wide relative
+bands and are easy to satisfy. Deconvolution raises contrast in bright structure, which
+tightens things further — hence 6.6% -> 10.2%.
+
+Two candidate causes were tested and **ruled out**: the deconvolution's positivity clamp
+(66% of pixels have a zeroed channel, but `P(NaN | zeroed)` is 10.5% vs 9.6% otherwise —
+no relationship), and low-signal off-limb regions (the rate is *higher* on-disk).
+Unexplained: the turnover in the brightest decile (17.7% -> 10.8%).
+
+**So infeasibility is model mismatch at high SNR, not bad pixels.** BP's escalating
+tolerance schedule (1.4 -> 2.0 -> 2.8 -> 5.0) exists precisely to handle this, and
+`--zerochill` disables it. **Recommendation: drop `--zerochill`**, or raise the tolerance
+floor, and re-measure. He chose it deliberately so there will be a reason, but it is worth
+confirming he measured the rate *after* deconvolution.
+
+**If NaNs remain, mask rather than interpolate.** Carry a validity mask into the Zarr and
+exclude those pixels from the loss. Interpolation invents labels BP never produced, and
+the NN would learn to imitate `nnInterpNaN` rather than the solver.
 
 ### 4.3 Error table is fetched over the network on every job
 `fullBP.py:790` calls `get_error_table(source="SSW")`, which downloads. The pointing

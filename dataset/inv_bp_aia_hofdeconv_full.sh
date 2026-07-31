@@ -30,16 +30,35 @@ fi
 
 module purge
 
+REPO_DIR="$(dirname "$DATASET_DIR")"
+OVERLAY=${OVERLAY:-/scratch/$USER/workspace/dem/overlay-25GB-500K.ext3}
+
+# Two supported environments: the singularity overlay (vp2435's setup) or the uv venv
+# at the repo root (hsr3649's). Pick whichever this user actually has.
+if [ -f "$OVERLAY" ]; then
+  echo "environment: singularity overlay $OVERLAY"
+  run_job() {
+    singularity exec \
+      --overlay "$OVERLAY":ro \
+      $CONTAINER_IMAGES_FOLDER/cuda12.1.1-cudnn8.9.0-devel-ubuntu22.04.2.sif \
+      /bin/bash -c "source /ext3/env.sh; export SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt; conda activate dem_new; \
+      cd $DATASET_DIR && python3 -u fullBP.py $job_params"
+  }
+elif [ -f "$REPO_DIR/env.sh" ]; then
+  echo "environment: uv venv via $REPO_DIR/env.sh"
+  run_job() {
+    ( cd "$REPO_DIR" && source env.sh && python3 -u dataset/fullBP.py $job_params )
+  }
+else
+  echo "ERROR: no usable environment (no overlay at $OVERLAY, no $REPO_DIR/env.sh)"
+  exit 1
+fi
+
 max_attempts=3
 attempt=1
 while [ $attempt -le $max_attempts ]; do
   echo "processing job $SLURM_ARRAY_TASK_ID: $job_params (attempt $attempt/$max_attempts)"
-  singularity exec \
-    --overlay /scratch/$USER/workspace/dem/overlay-25GB-500K.ext3:ro \
-    $CONTAINER_IMAGES_FOLDER/cuda12.1.1-cudnn8.9.0-devel-ubuntu22.04.2.sif \
-    /bin/bash -c "source /ext3/env.sh; export SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt; conda activate dem_new; \
-    cd $DATASET_DIR && \
-    python3 -u fullBP.py $job_params" && break
+  run_job && break
   echo "attempt $attempt failed; retrying in 60s..."
   sleep 60
   attempt=$((attempt+1))

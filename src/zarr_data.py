@@ -42,6 +42,19 @@ from torch.utils.data import Dataset
 N_AIA_BINS = 18
 N_STORED_BINS = 26
 
+# Minimum per-channel observation for a pixel to be trainable.
+#
+# ~4.4% of pixels carry a hard zero in 171A or 193A -- the two *brightest*
+# channels (medians 131 and 145 DN). Faintness cannot produce that; it is the
+# positivity clamp applied after Hofmeister deconvolution, which can drive
+# deconvolved values negative and then floors them at zero. BP still returns a
+# feasible DEM for such pixels (mostly at tolLevel 1), so the mask alone does
+# not catch them -- the label is simply fitted to a detector artifact.
+#
+# 1e-3 sits three orders of magnitude below the faintest channel's median
+# (94A, 0.76) so it cannot clip real signal, and removes ~5% of pixels.
+MIN_OBS = 1e-3
+
 
 class ZarrPatchBlockDataset(Dataset):
     """One item = one staged block, subsampled to `pixels_per_block` pixels.
@@ -52,7 +65,7 @@ class ZarrPatchBlockDataset(Dataset):
 
     def __init__(self, root, phase, patch_size=9, stride=2, tolfac=1.4,
                  pixels_per_block=512, n_bins=N_AIA_BINS, with_labels=False,
-                 tol_levels=(1, 3, 5), max_blocks=None, seed=0):
+                 tol_levels=(1, 3, 5), min_obs=MIN_OBS, max_blocks=None, seed=0):
         import zarr
 
         self.root = root
@@ -64,6 +77,7 @@ class ZarrPatchBlockDataset(Dataset):
         self.n_bins = n_bins
         self.with_labels = with_labels
         self.tol_levels = tuple(tol_levels)
+        self.min_obs = min_obs
         self.seed = seed
 
         def _open(suffix):
@@ -100,8 +114,10 @@ class ZarrPatchBlockDataset(Dataset):
         return self.n_blocks
 
     def _valid_mask(self, obs_c, err_c, tol):
-        """Pixels usable for training: solver-solved and finite positive AIA."""
-        finite = np.all(np.isfinite(obs_c) & np.isfinite(err_c) & (obs_c > 0), axis=0)
+        """Pixels usable for training: solver-solved, finite, and above the
+        deconvolution-clamp floor in every channel (see MIN_OBS)."""
+        finite = np.all(np.isfinite(obs_c) & np.isfinite(err_c) &
+                        (obs_c > self.min_obs), axis=0)
         solved = np.isin(tol, self.tol_levels)
         return finite & solved
 

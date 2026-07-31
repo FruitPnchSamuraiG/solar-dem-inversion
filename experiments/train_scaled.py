@@ -31,7 +31,7 @@ import torch
 
 from fullBP import getBasis
 from src.losses import barrier_loss_batch, enet_loss_batch
-from src.zarr_data import make_loader, flatten_blocks, N_AIA_BINS
+from src.zarr_data import make_loader, flatten_blocks, N_AIA_BINS, MIN_OBS
 from experiments.train_neural_field import effective_sparsity, pick_device
 from experiments.train_ablations import build_model, VARIANTS
 
@@ -115,7 +115,8 @@ def train(args):
         args.n_bins = len(logT)
 
     data_kw = dict(patch_size=args.patch_size, stride=args.stride, tolfac=args.tolfac,
-                   pixels_per_block=args.pixels_per_block, n_bins=args.n_bins)
+                   pixels_per_block=args.pixels_per_block, n_bins=args.n_bins,
+                   min_obs=args.min_obs)
     _, train_loader = make_loader(args.root, 'train', batch_blocks=args.batch_blocks,
                                   num_workers=args.num_workers, shuffle=True,
                                   max_blocks=args.max_train_blocks,
@@ -200,6 +201,8 @@ def parse_args():
     p.add_argument("--batch_blocks", type=int, default=8)
     p.add_argument("--n_bins", type=int, default=N_AIA_BINS)
     p.add_argument("--tolfac", type=float, default=1.4)
+    p.add_argument("--min_obs", type=float, default=MIN_OBS,
+                   help="drop pixels with any channel below this (deconvolution clamp)")
     p.add_argument("--max_train_blocks", type=int, default=None)
     p.add_argument("--max_val_blocks", type=int, default=256)
     p.add_argument("--num_workers", type=int, default=8)

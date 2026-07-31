@@ -61,8 +61,9 @@ def evaluate(model, loader, D_t, B_t, loss_fn, device, n_bins):
     """Loss, sparsity and label agreement on held-out blocks, split by tolLevel."""
     model.eval()
     agg = {"loss": 0.0, "n_batches": 0}
-    per_level = {1: {"n": 0, "sp_nn": 0.0, "sp_ref": 0.0, "mae": 0.0},
-                 "relaxed": {"n": 0, "sp_nn": 0.0, "sp_ref": 0.0, "mae": 0.0}}
+    keys = ("sp_coef", "sp_dem", "sp_ref", "mae_dem", "mae_aia")
+    per_level = {k: dict({"n": 0}, **{m: 0.0 for m in keys})
+                 for k in (1, "relaxed")}
 
     for batch in loader:
         patch, obs, lb, ub, dem, tol = (t.to(device) for t in flatten_blocks(batch))
@@ -73,24 +74,33 @@ def evaluate(model, loader, D_t, B_t, loss_fn, device, n_bins):
         # B is [n_temps, n_basis]; the stored label has 26 bins of which only the
         # first n_bins are real for AIA-only (the rest are stacked zeros).
         pred = (x @ B_t.T)[:, :n_bins]
-        sp_nn = effective_sparsity(pred)
-        sp_ref = effective_sparsity(dem)
-        mae = (pred - dem).abs().mean(dim=1)
+        vals = {
+            # Sparsity of the basis coefficients -- the quantity every earlier run
+            # reported (ablation: BP 1.79, cnn 1.70, mlp6 1.89), so this is the one
+            # that is comparable across the project's history.
+            "sp_coef": effective_sparsity(x),
+            # Sparsity in DEM-bin space, where the solver label also lives, so NN
+            # and reference are measured on the same object. Not comparable to
+            # sp_coef: 54 coefficients and 18 bins give different Hoyer scales.
+            "sp_dem": effective_sparsity(pred),
+            "sp_ref": effective_sparsity(dem),
+            "mae_dem": (pred - dem).abs().mean(dim=1),
+            # AIA resynthesis error, the "MAE" of the earlier runs.
+            "mae_aia": (x @ D_t.T - obs).abs().mean(dim=1),
+        }
 
         for key, sel in ((1, tol == 1), ("relaxed", (tol == 3) | (tol == 5))):
             n = int(sel.sum())
             if n == 0:
                 continue
             per_level[key]["n"] += n
-            per_level[key]["sp_nn"] += float(sp_nn[sel].sum())
-            per_level[key]["sp_ref"] += float(sp_ref[sel].sum())
-            per_level[key]["mae"] += float(mae[sel].sum())
+            for m in keys:
+                per_level[key][m] += float(vals[m][sel].sum())
 
     out = {"loss": agg["loss"] / max(agg["n_batches"], 1)}
     for key, d in per_level.items():
         n = max(d["n"], 1)
-        out[str(key)] = {"n": d["n"], "nn_sparsity": d["sp_nn"] / n,
-                         "ref_sparsity": d["sp_ref"] / n, "mae": d["mae"] / n}
+        out[str(key)] = dict({"n": d["n"]}, **{m: d[m] / n for m in keys})
     return out
 
 
@@ -170,8 +180,9 @@ def train(args):
         tight = val["1"]
         print(f"Epoch {epoch+1:3d}/{args.epochs}  loss={rec['train_loss']:.4f}  "
               f"val_loss={val['loss']:.4f}  "
-              f"sp(nn/ref @tol1)={tight['nn_sparsity']:.2f}/{tight['ref_sparsity']:.2f}  "
-              f"mae={tight['mae']:.3f}  {rec['secs']:.0f}s")
+              f"sp_coef={tight['sp_coef']:.2f} (hist: BP 1.79)  "
+              f"sp_dem nn/ref={tight['sp_dem']:.2f}/{tight['sp_ref']:.2f}  "
+              f"mae_aia={tight['mae_aia']:.3f}  {rec['secs']:.0f}s")
 
         torch.save({"model": model.state_dict(), "variant": args.variant,
                     "loss": args.loss, "patch_size": args.patch_size,

@@ -27,7 +27,9 @@ H = W        = 4096
 PER_IMAGE    = 64
 N_AIA        = 6
 N_BINS       = 26
-N_WORKERS    = 64
+# Each worker holds a decompressed DEM cube plus AIA obs and errors, ~1.3 GB.
+# 64 workers therefore needs ~80 GB of RAM; override to fit the allocation.
+N_WORKERS    = int(os.environ.get('STAGE_WORKERS', 32))
 
 REF_DS       = _HERE
 DATA_ROOT    = os.environ.get(

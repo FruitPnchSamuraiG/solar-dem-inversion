@@ -101,6 +101,12 @@ def train(args):
 
     D_t, B_t, n_basis, logT = load_operators(device)
     print(f"D: {tuple(D_t.shape)}   basis: {n_basis}   temps: {len(logT)}")
+
+    if args.enet_C < 0:
+        args.enet_C = float(D_t.shape[0])          # n_obs, the solver's N
+    if args.loss == "enet":
+        print(f"ENet objective: C={args.enet_C} alpha={args.enet_alpha} "
+              f"lam={args.enet_lam} (solver used alpha=1, l1_ratio=0.5)")
     if len(logT) < args.n_bins:
         # The label comparison needs one predicted value per scored bin. R's own
         # temperature grid is the ceiling; scoring past it is not meaningful.
@@ -206,10 +212,17 @@ def parse_args():
     p.add_argument("--alpha_l1", type=float, default=1.0)
     p.add_argument("--alpha_l2", type=float, default=0.0)
     p.add_argument("--mu", type=float, default=1.0)
-    # enet
-    p.add_argument("--enet_C", type=float, default=1.0)
-    p.add_argument("--enet_alpha", type=float, default=1.0)
-    p.add_argument("--enet_lam", type=float, default=0.9)
+    # ENet defaults mirror the solver that produced the ENet labels, so the network
+    # minimises the same objective it is scored against. fullBP's solveElasticNet is
+    #   1/(2N)||Dx-y||^2 + a*l*||x||_1 + a(1-l)*0.5*||x||^2,  a=1, l=0.5, N=n_obs,
+    # and it scales D and y by tol = meas - lb, i.e. our sigma. enet_loss_batch's
+    # (0.5/C) prefactor therefore needs C = n_obs; --enet_C -1 resolves it from D.
+    p.add_argument("--enet_C", type=float, default=-1.0,
+                   help="-1 = use n_obs, matching the solver's 1/(2N) prefactor")
+    p.add_argument("--enet_alpha", type=float, default=1.0,   # --fitlinearalpha
+                   help="matches fullBP --fitlinearalpha")
+    p.add_argument("--enet_lam", type=float, default=0.5,     # --fitlinearl1ratio
+                   help="matches fullBP --fitlinearl1ratio")
     return p.parse_args()
 
 

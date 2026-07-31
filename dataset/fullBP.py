@@ -476,6 +476,11 @@ def invertDEMCube(AIACube, AIAErrors, RData, args):
     # get shapes
     C, H, W = AIACube.shape
     DEMC = np.nan * np.ones((R.shape[1], H, W))
+    # Which tolerance a pixel was finally solved at, as a multiple of args.tolfac.
+    # 0 = never solved (DEM stays NaN), 1 = solved at the tight band, 3 / 5 = only
+    # solved after relaxation. A pixel solved at 5 satisfied a much weaker constraint
+    # than one solved at 1, and the DEM alone does not show that.
+    tolLevel = np.zeros((H, W), dtype=np.uint8)
 
     # total matrix is R (nObs x nLogTBins) @ B (nLogTBins x nBasis)
     D = R@B
@@ -548,20 +553,26 @@ def invertDEMCube(AIACube, AIAErrors, RData, args):
     for ii, (i, j) in enumerate(inds):
         if results[ii] is not None:
             DEMC[:,i,j] = B@results[ii]
+            tolLevel[i,j] = 1
 
     for ii in range(len(resultsInvalid)):
         if resultsInvalid[ii] is not None:
             i, j = inds[invalid[ii]]
             DEMC[:,i,j] = B@resultsInvalid[ii]
+            tolLevel[i,j] = 3
 
     for ii in range(len(resultsInvalid2)):
         if resultsInvalid2[ii] is not None:
             i, j = inds[invalid2[ii]]
             DEMC[:,i,j] = B@resultsInvalid2[ii]
+            tolLevel[i,j] = 5
 
     toc = time.time()
     print("Repacking took %.2f" % (toc-tic))
-    return DEMC
+    for lvl, label in ((0, "unsolved (NaN)"), (1, "tight"), (3, "relaxed 3x"), (5, "relaxed 5x")):
+        n = int((tolLevel == lvl).sum())
+        print("  tolerance level %d (%-14s): %8d px  %5.2f%%" % (lvl, label, n, 100.0*n/(H*W)))
+    return DEMC, tolLevel
 
 
 def fitAffine(XYXPYP):
@@ -1004,7 +1015,7 @@ if __name__ == "__main__":
 
     print("Running DEM inversion")
     tic = time.time()
-    DEMCube = invertDEMCube(AIACube / scaleFactor, AIAErrors / scaleFactor, RData, args)
+    DEMCube, tolLevel = invertDEMCube(AIACube / scaleFactor, AIAErrors / scaleFactor, RData, args)
     toc = time.time()
     print("Finished in %.1f seconds" % (toc-tic))
 
@@ -1041,6 +1052,7 @@ if __name__ == "__main__":
             print("noisy run detected: saving DEM only (dropping AIA and AIAErrors)")
             np.savez(args.target,
                 DEMCube=DEMCubeEncode, DEMCubeShape=DEMCubeShape,
+                tolLevel=tolLevel,
                 logT=logT, scaleFactor=scaleFactor)
         else:
                 # save original AIA (before noise), not the noisy version
@@ -1057,8 +1069,9 @@ if __name__ == "__main__":
                 AIACubeEncode = aia_compressor.encode(AIACubeSave.astype(np.float32))
                 AIAErrorsEncode = aia_compressor.encode(AIAErrorsSave.astype(np.float32))
                 
-                np.savez(args.target, 
-                    DEMCube=DEMCubeEncode, DEMCubeShape=DEMCubeShape, 
+                np.savez(args.target,
+                    DEMCube=DEMCubeEncode, DEMCubeShape=DEMCubeShape,
+                    tolLevel=tolLevel,
                     AIACube=AIACubeEncode, AIAErrors=AIAErrorsEncode, AIACubeShape=AIACubeShape,
                     logT=logT, scaleFactor=scaleFactor)
             

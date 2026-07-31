@@ -72,6 +72,40 @@ def harden_softplus(model, floor=-20.0):
     return n
 
 
+def init_output_head(model, bias=-3.0, weight_scale=0.01):
+    """Start the network at a physically plausible DEM instead of a huge one.
+
+    Every variant ends in Linear -> Softplus, and Softplus(0) = 0.693, so at
+    default initialisation all 54 basis coefficients start near 0.7. With
+
+        sum|D| per channel = [13.2, 117.6, 2541.4, 1478.7, 415.0, 33.5]
+
+    that puts Dx for 171A at ~1780 against a typical ub of ~155 -- a 10x
+    overshoot before the network has seen any data. barrier squares the excess
+    and divides by sigma^2, which is small for the faint channels, giving the
+    1.6e11 epoch-1 loss of array 15091457 and an immediate dead Softplus.
+
+    Shrinking the final weights and setting a negative bias makes the initial
+    output nearly constant at softplus(-3) ~ 0.049, i.e. Dx ~ 124 for 171A,
+    comfortably inside the band. The network then grows away from that under
+    warmup rather than having to climb back from saturation.
+
+    log1p on the input (NormalizedInput) fixes conditioning; this fixes scale.
+    Both are needed -- 15091457 had only the former and still collapsed.
+    """
+    last = None
+    for mod in model.modules():
+        if isinstance(mod, nn.Linear):
+            last = mod
+    if last is None:
+        return None
+    with torch.no_grad():
+        last.weight.mul_(weight_scale)
+        if last.bias is not None:
+            last.bias.fill_(bias)
+    return last
+
+
 class NormalizedInput(nn.Module):
     """Wraps a variant so it sees a compressed version of the AIA patch.
 
@@ -225,10 +259,23 @@ def train(args):
     core = build_model(args.variant, n_basis, args.patch_size, args.channels,
                        perm=perm)
     n_sp = harden_softplus(core, args.softplus_floor)
+    init_output_head(core, args.init_bias, args.init_weight_scale)
     model = NormalizedInput(core, args.input_transform).to(device)
     print(f"Model params: {sum(p.numel() for p in model.parameters()):,}  "
           f"input={args.input_transform}  softplus floor={args.softplus_floor} "
-          f"({n_sp} replaced)")
+          f"({n_sp} replaced)  init bias={args.init_bias} "
+          f"wscale={args.init_weight_scale}")
+
+    # The first forward pass is what killed 15088220 and 15091457, so state it
+    # plainly in the log rather than inferring it from the epoch-1 loss.
+    with torch.no_grad():
+        probe = next(iter(val_loader))
+        p_patch = flatten_blocks(probe)[0][:4096].to(device)
+        x0 = model(p_patch)
+        Dx0 = x0 @ D_t.T
+    print(f"init check: x med={x0.median():.4f} max={x0.max():.4f}  "
+          f"|Dx| med={Dx0.abs().median():.3e} max={Dx0.abs().max():.3e}  "
+          f"(want |Dx| comparable to obs, not orders above)")
 
     loss_fn = make_loss_fn(args)
     optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
@@ -291,10 +338,17 @@ def train(args):
         # more identical epochs: an all-zero prediction has zero Hoyer sparsity,
         # and a bit-identical loss means the weights have stopped moving (block
         # sampling is deterministic, so epochs differ only in order).
-        if rec["train_sparsity"] == 0.0:
+        # Zero Hoyer sparsity means an identically-zero prediction. Check the
+        # validation value too: 15091457 slipped past a train-only check for a
+        # full epoch because a few surviving units kept the train mean just
+        # above 0 while every reported metric was already dead.
+        if rec["train_sparsity"] == 0.0 or tight["sp_coef"] == 0.0:
             raise RuntimeError(
-                f"collapsed at epoch {epoch+1}: prediction is identically zero. "
-                f"Check the input transform and warmup before resubmitting.")
+                f"collapsed at epoch {epoch+1}: prediction is identically zero "
+                f"(train sp {rec['train_sparsity']:.3e}, val sp "
+                f"{tight['sp_coef']:.3e}). Check the init-check line above: if "
+                f"|Dx| starts orders above the observations, the output head is "
+                f"initialised too large.")
         if len(history) > 1 and rec["train_loss"] == history[-2]["train_loss"]:
             raise RuntimeError(
                 f"collapsed at epoch {epoch+1}: train loss is bit-identical to "
@@ -336,6 +390,10 @@ def parse_args():
                    help="linear LR warmup; 0 disables")
     p.add_argument("--softplus_floor", type=float, default=-20.0,
                    help="clamp on the output pre-activation, guards against dead units")
+    p.add_argument("--init_bias", type=float, default=-3.0,
+                   help="output-layer bias; softplus(-3)~0.049 keeps initial Dx in-band")
+    p.add_argument("--init_weight_scale", type=float, default=0.01,
+                   help="shrink factor on the output layer's initial weights")
     # barrier
     p.add_argument("--alpha_l1", type=float, default=1.0)
     p.add_argument("--alpha_l2", type=float, default=0.0)

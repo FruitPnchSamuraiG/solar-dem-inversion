@@ -5,7 +5,7 @@
 #SBATCH --nodes=1
 #SBATCH --cpus-per-task=32
 #SBATCH --mem=180G
-#SBATCH --time=08:00:00
+#SBATCH --time=06:00:00
 #SBATCH --mail-type=END,FAIL
 #
 # Stages the generated solver outputs into zarr for training. Both configs run

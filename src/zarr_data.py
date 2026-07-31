@@ -12,9 +12,12 @@ Two things about this data drive the design:
 
 1. AIA and DEM are on different grids. fullBP.py:979 decimates by plain
    subsampling (`AIACube[:, ::2, ::2]`), so DEM pixel (i,j) was solved from AIA
-   pixel (2i,2j) exactly -- no averaging. To give the patch CNN the same
-   physical footprint as the validated 128x128-crop runs, the 9x9 neighborhood
-   is sampled at stride 2, i.e. from a 17x17 region of the AIA grid.
+   pixel (2i,2j) exactly -- no averaging, and 3 of every 4 stored AIA pixels
+   were never seen by the solver. So the first thing this dataset does is apply
+   the same subsampling: after that AIA and DEM share one grid and patches are
+   plain contiguous slices, exactly as in the validated 128x128-crop runs.
+   (Equivalently, a stride-2 patch on the 4096 grid -- same nine pixels, but
+   the subsample-first form has far fewer indices to get wrong.)
 
 2. A chunk is one whole block (chunks=(..., 1)), so reading a single pixel costs
    the same as reading all 16,384 DEM pixels of its block. A dataset item is
@@ -86,8 +89,8 @@ class ZarrPatchBlockDataset(Dataset):
             f"stride {stride} does not relate AIA block {self.aia_block} to "
             f"DEM block {self.dem_block}")
 
-        # Padding on the AIA grid so every DEM pixel has a full stride-2 patch.
-        self.pad = (patch_size // 2) * stride
+        # Padding on the (subsampled) shared grid so edge pixels get a full patch.
+        self.pad = patch_size // 2
 
         print(f"[{phase}] {self.n_blocks:,} blocks x {pixels_per_block} px "
               f"= {self.n_blocks * pixels_per_block:,} samples/epoch "
@@ -109,8 +112,10 @@ class ZarrPatchBlockDataset(Dataset):
         err = np.asarray(self.E[:, :, :, idx], dtype=np.float32)   # [6, A, A]
         tol = np.asarray(self.M[:, :, idx])                        # [D, D]
 
+        # Same subsampling fullBP applied, so obs_c[:, i, j] is precisely the
+        # observation the solver used to produce the DEM at (i, j).
         s = self.stride
-        obs_c = obs[:, ::s, ::s]   # AIA value at the exact pixel each DEM came from
+        obs_c = obs[:, ::s, ::s]
         err_c = err[:, ::s, ::s]
 
         valid = self._valid_mask(obs_c, err_c, tol)
@@ -131,13 +136,13 @@ class ZarrPatchBlockDataset(Dataset):
         i = rows[pick].astype(np.int64)
         j = cols[pick].astype(np.int64)
 
-        # Patch on the padded AIA grid. DEM (i,j) sits at padded AIA (s*i+pad, s*j+pad);
-        # offsets s*(-k..k) then span s*i .. s*i+2*pad inclusive -- always in bounds.
-        obs_pad = np.pad(obs, ((0, 0), (self.pad, self.pad), (self.pad, self.pad)),
+        # Contiguous patch on the shared grid. DEM (i,j) sits at padded (i+pad, j+pad),
+        # so offsets 0..K-1 from i span i-pad .. i+pad -- always in bounds.
+        obs_pad = np.pad(obs_c, ((0, 0), (self.pad, self.pad), (self.pad, self.pad)),
                          mode='edge')
-        off = s * np.arange(self.patch_size, dtype=np.int64)       # [K]
-        rr = (s * i)[:, None] + off                                # [P, K]
-        cc = (s * j)[:, None] + off                                # [P, K]
+        off = np.arange(self.patch_size, dtype=np.int64)           # [K]
+        rr = i[:, None] + off                                      # [P, K]
+        cc = j[:, None] + off                                      # [P, K]
         patch = obs_pad[:, rr[:, :, None], cc[:, None, :]]         # [6, P, K, K]
         patch = np.ascontiguousarray(patch.transpose(1, 0, 2, 3))  # [P, 6, K, K]
 

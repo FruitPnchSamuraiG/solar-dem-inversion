@@ -57,7 +57,7 @@ def filter_npzs(all_npzs, timestamps):
 
 
 def handle(t):
-    X, Y, M, i, fn, numBlocksPerH, numBlocksPerW, numBlocksPerImage, blockSize, perImage, src = t
+    X, E, Y, M, i, fn, numBlocksPerH, numBlocksPerW, numBlocksPerImage, blockSize, perImage, src = t
     compressor = Blosc(cname='zstd', clevel=4, shuffle=2)
     random.seed(i)
 
@@ -94,8 +94,13 @@ def handle(t):
                 return
             raw = d['AIACube'].item() if d['AIACube'].ndim == 0 else d['AIACube'].copy()
             shape = tuple(d['AIACubeShape'])
+            # AIAErrors is required by the unsupervised barrier/enet losses, which need the
+            # per-pixel feasibility band lb/ub = obs -/+ tolfac*err. Without it those losses
+            # cannot be evaluated from the zarr at all.
+            rawE = d['AIAErrors'].item() if d['AIAErrors'].ndim == 0 else d['AIAErrors'].copy()
         AIA = np.frombuffer(compressor.decode(raw), dtype=np.float32).reshape(shape)[:N_AIA]
-        del raw
+        ERR = np.frombuffer(compressor.decode(rawE), dtype=np.float32).reshape(shape)[:N_AIA]
+        del raw, rawE
     except Exception as e:
         print(f"  error loading AIA: {e}")
         return
@@ -113,10 +118,11 @@ def handle(t):
     for c, (sy, sx) in enumerate(blocks):
         ind = i * numBlocksPerImage + c
         X[:, :, :, ind] = AIA[:, sy:sy+blockSize, sx:sx+blockSize]
+        E[:, :, :, ind] = ERR[:, sy:sy+blockSize, sx:sx+blockSize]
         Y[:, :, :, ind] = DEMData[:, sy//dec:sy//dec+dem_block, sx//dec:sx//dec+dem_block]
         M[:, :, ind]    = tolLevel[sy//dec:sy//dec+dem_block, sx//dec:sx//dec+dem_block]
 
-    del AIA, DEMData, tolLevel, blocks
+    del AIA, ERR, DEMData, tolLevel, blocks
     gc.collect()
 
 
@@ -144,6 +150,13 @@ def stage(src, npzs, target, phase, block_size, per_image):
                   shape=(N_AIA,  block_size, block_size, n_total),
                   chunks=(N_AIA, block_size, block_size, 1),
                   dtype='<f4', codecs=[tobytes, compressor])
+    # Per-pixel AIA uncertainties, same grid as X. The unsupervised losses build the
+    # feasibility band lb/ub = obs -/+ tolfac*err from these; without them neither the
+    # barrier nor the enet objective can be computed.
+    E = zarr.open(os.path.join(target, f'{phase}_e.zarr'), mode='w',
+                  shape=(N_AIA,  block_size, block_size, n_total),
+                  chunks=(N_AIA, block_size, block_size, 1),
+                  dtype='<f4', codecs=[tobytes, compressor])
     Y = zarr.open(os.path.join(target, f'{phase}_y.zarr'), mode='w',
                   shape=(N_BINS, dem_block, dem_block, n_total),
                   chunks=(N_BINS, dem_block, dem_block, 1),
@@ -157,7 +170,7 @@ def stage(src, npzs, target, phase, block_size, per_image):
                   chunks=(dem_block, dem_block, 1),
                   dtype='u1', codecs=[tobytes, compressor])
 
-    jobs = [(X, Y, M, i, os.path.join(src, fn), n_h, n_w, n_per, block_size, per_image, src)
+    jobs = [(X, E, Y, M, i, os.path.join(src, fn), n_h, n_w, n_per, block_size, per_image, src)
             for i, fn in enumerate(npzs)]
 
     pool = multiprocessing.Pool(N_WORKERS)

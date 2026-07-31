@@ -11,7 +11,17 @@
 #SBATCH --mail-type=FAIL
 #SBATCH --comment="preemption=yes;requeue=true"
 
-DATASET_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# sbatch copies the script into a spool dir, so BASH_SOURCE points at /opt/slurm/...,
+# not the repo. Prefer the exported SLURM_SCRIPT path, then the submit dir, and only
+# fall back to BASH_SOURCE when running this script directly outside SLURM.
+if [ -n "$SLURM_SCRIPT" ]; then
+  DATASET_DIR="$(cd "$(dirname "$SLURM_SCRIPT")" && pwd)"
+elif [ -d "$SLURM_SUBMIT_DIR/dataset" ]; then
+  DATASET_DIR="$SLURM_SUBMIT_DIR/dataset"
+else
+  DATASET_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+fi
+echo "DATASET_DIR=$DATASET_DIR"
 
 # get job list file from environment variable or use default
 JOB_LIST_FILE=${JOB_LIST_FILE:-$DATASET_DIR/jobs_bp_aia_hofdeconv_full.txt}

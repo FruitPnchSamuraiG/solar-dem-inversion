@@ -91,6 +91,62 @@ From the paper's "Future Work" section:
 
 ## Progress Log (most recent first)
 
+### 2026-07-31 — Scaled label generation LAUNCHED (BP + ENet, 2,446 jobs)
+
+Both arrays submitted on Torch: BP `15051547`, ENet `15051658`. 1,223 timestamps each,
+AIA-only, Hofmeister-deconvolved, **clean only** (no noise realizations). ~738 MB/file,
+~1.8 TB total, ~4 h at ~92 concurrent jobs. Outputs land in
+`$SCRATCH/dem/data/{lp,elasticnet}_AIA_hofdeconv_full/`.
+
+**`--zerochill` was discarding the most valuable pixels — fixed.** BP left 10.2% of pixels
+NaN (13.4% on-disk, 17.7% in the brightest decile). Mechanism: photon noise gives
+sigma ~ sqrt(counts), so the *relative* tolerance band shrinks as pixels brighten until it
+is narrower than the response matrix R's own accuracy and the LP goes infeasible — model
+mismatch at high SNR, not bad pixels. `--zerochill` disables BP's retry-at-wider-tolerance
+schedule. Dropping it: **10.2% -> 0.02% NaN for +90 s/job**, recovering exactly the
+active-region and flare pixels. Two hypotheses falsified first (deconvolution positivity
+clamp: `P(NaN|zeroed)` 10.5% vs 9.6%, no relationship; off-limb low signal: rate is
+*higher* on-disk). Still forced for AIA+XRT by the assert at `fullBP.py:691`.
+
+**Hofmeister deconvolution validated end to end.** PSFs staged and symlinked; runs on CPU
+(~4 min/job, no GPU); verified genuine via channel-wise change — 94A 32%, 131A 29%, 335A
+35% vs 171/193/211A 8-12%, i.e. largest corrections on the faintest channels, the correct
+scattered-light signature.
+
+**Measured costs**: BP 9.5 min/job, ENet 5.25 min/job (ENet solves ~2x faster than the LP).
+Per-job time scatters ~40% with node load. SSW error table is cached in `$HOME` (0.1 s), so
+it is not the hard blocker an earlier note claimed.
+
+**Code fixes (all pushed)**: `b565cbd` per-pixel `tolLevel` saved with every DEM (uint8:
+0 unsolved, 1 tight, 3 relaxed 3x, 5 relaxed 5x) plus a printed breakdown per run;
+`e2d3696` submit script takes solver/noise/relaxation/paths as flags, defaults to
+clean-only with relaxation on; `7a788ee` job script auto-selects singularity overlay or uv
+venv; `3479d8e` `DATASET_DIR` resolved from `SLURM_SCRIPT` rather than the sbatch spool
+copy; `95edc08` per-user `--account`/`--mail-user` removed from the script; `d15830d`
+staging carries the `tolLevel` mask into `{phase}_m.zarr` and derives `DATA_ROOT` from
+`$SCRATCH`.
+
+**Two supposed blockers resolved from the code, not from Samuel**: AIA(4096)/DEM(2048)
+alignment is plain subsampling (`fullBP.py:979`), so **DEM pixel (i,j) came from AIA pixel
+(2i,2j)** — the patch CNN should sample its 9x9 neighbourhood stride-2 to keep the same
+physical footprint as the validated 128x128-crop runs. Output head is **18 bins for
+AIA-only** (the top 8 of 26 are zeros stacked on at `fullBP.py:1013-1019`; a 26-bin head
+would waste capacity and break the Hoyer sparsity denominator), 26 only when XRT is present.
+
+**Open blocker before tomorrow's training runs**: the staged Zarr has AIA (`_x`), DEM
+(`_y`) and the mask (`_m`) but **no `AIAErrors`**. The barrier/enet losses need
+`lb`/`ub` = obs +/- tolfac*err, so unsupervised training cannot run off the Zarr as staged.
+Fix `stage_hofdeconv_full.py` to carry errors, or recompute them in the dataloader.
+
+**Still to confirm with Samuel**: his ENet hyperparameters (generation used the defaults
+`--fitlinearalpha 1`, `--fitlinearl1ratio 0.5` — if he validated different values those
+1,223 files need regenerating, ~2.5 h); whether the uncertainty head stays in scope given
+unsupervised-only training (it is the only reason to generate noisy realizations); whether
+AIA+XRT is in this round and how many timestamps have usable XRT coverage.
+
+Full detail in `results/meeting_20260728_scaling_brief.md` and
+`results/scaling_plan_20260728.md`.
+
 ### Current state (as of 2026-07-11)
 
 Both 2026-07-10 meeting priorities are answered (see 2026-07-11 entries below):

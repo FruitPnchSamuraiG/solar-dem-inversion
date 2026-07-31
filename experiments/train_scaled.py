@@ -342,14 +342,17 @@ def train(args):
         # validation value too: 15091457 slipped past a train-only check for a
         # full epoch because a few surviving units kept the train mean just
         # above 0 while every reported metric was already dead.
-        if rec["train_sparsity"] == 0.0 or tight["sp_coef"] == 0.0:
+        if rec["train_sparsity"] < 1e-3 or tight["sp_coef"] < 1e-3:
             raise RuntimeError(
                 f"collapsed at epoch {epoch+1}: prediction is identically zero "
                 f"(train sp {rec['train_sparsity']:.3e}, val sp "
                 f"{tight['sp_coef']:.3e}). Check the init-check line above: if "
                 f"|Dx| starts orders above the observations, the output head is "
                 f"initialised too large.")
-        if len(history) > 1 and rec["train_loss"] == history[-2]["train_loss"]:
+        # Relative, not exact: run 15091734_3 froze at 32.8399 but the values
+        # differed past the printed digits, so an == comparison never fired.
+        prev = history[-2]["train_loss"] if len(history) > 1 else None
+        if prev is not None and abs(rec["train_loss"] - prev) <= 1e-9 * abs(prev):
             raise RuntimeError(
                 f"collapsed at epoch {epoch+1}: train loss is bit-identical to "
                 f"the previous epoch, so gradients are exactly zero.")

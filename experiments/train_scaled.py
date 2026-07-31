@@ -219,7 +219,7 @@ def parse_args():
     p.add_argument("--num_workers", type=int, default=8)
     # model / optim
     p.add_argument("--channels", type=int, default=64)
-    p.add_argument("--epochs", type=int, default=20)
+    p.add_argument("--epochs", type=int, default=12)
     p.add_argument("--lr", type=float, default=3e-4)
     p.add_argument("--seed", type=int, default=42)
     # barrier

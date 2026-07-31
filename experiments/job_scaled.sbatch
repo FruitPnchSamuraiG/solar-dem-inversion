@@ -6,7 +6,7 @@
 #SBATCH --cpus-per-task=12
 #SBATCH --mem=64G
 #SBATCH --gres=gpu:1
-#SBATCH --time=08:00:00
+#SBATCH --time=12:00:00
 #SBATCH --array=0-3
 #SBATCH --mail-type=FAIL
 #
@@ -50,6 +50,6 @@ python3 -u experiments/train_scaled.py \
   --root "$DATA_ROOT/$DS" \
   --variant "$VARIANT" \
   --loss "$LOSS" \
-  --epochs "${EPOCHS:-20}" \
+  --epochs "${EPOCHS:-12}" \
   --num_workers 8 \
   $EXTRA_ARGS

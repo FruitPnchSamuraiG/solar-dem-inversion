@@ -91,6 +91,66 @@ From the paper's "Future Work" section:
 
 ## Progress Log (most recent first)
 
+### 2026-07-31 (afternoon) — Labels DONE, staged to zarr, 4 training runs LAUNCHED
+
+**Generation completed clean**: 1,223/1,223 files for both solvers, **zero errors**,
+888 GB each (1.74 TB total). Staged to zarr in ~16-25 min per solver
+(`dataset/job_stage_hofdeconv.sbatch`, jobs `15084625` / `15086053`) into
+`$SCRATCH/dem/data/{lp,elasticnet}_AIA_hofdeconv_full_DS/`. Four training runs
+(`{mlp6,cnn}` x `{barrier,enet}`) submitted as array `15088220`, 12 epochs / 12 h each.
+
+**New code** (all pushed): `src/zarr_data.py` (dataloader), `experiments/train_scaled.py`,
+`experiments/job_scaled.sbatch`, `dataset/job_stage_hofdeconv.sbatch`,
+`tests/test_zarr_data.py`.
+
+**A dataset item is one block, not one pixel.** Zarr chunks are `(..., 1)`, so reading a
+single pixel decompresses its whole 256x256 block. Each item samples 512 pixels from one
+block and the training loop flattens; per-pixel indexing would re-decompress the same chunk
+thousands of times per epoch.
+
+**Alignment verified end to end.** The dataloader subsamples AIA by 2 up front, after which
+AIA and DEM share a grid and patches are plain contiguous slices (identical pixel set to a
+stride-2 patch on the 4096 grid, far less to get wrong). `tests/test_zarr_data.py` stamps
+each synthetic AIA pixel with its own coordinate so a misaligned patch fails loudly; the
+real staged data passes with `max deviation 0.000e+00`.
+
+**Deconvolution positivity clamp zeroes bright channels — new finding.** ~4.4% of pixels
+carry a **hard zero in 171A or 193A, the two brightest channels** (medians 131 and 145).
+Faintness cannot do that; the positivity clamp after Hofmeister deconvolution can. BP
+returns a feasible DEM for them anyway (1,574 at tolLevel 1 vs 195 relaxed in a 40k sample),
+so `tolLevel` does **not** catch them — the label is fitted to a detector artifact. Now
+floored at `MIN_OBS = 1e-3`, three decades below the faintest channel's median (94A, 0.76),
+costing ~5% of pixels. Related to but distinct from the earlier NaN hypothesis: the clamp
+does not cause NaNs, it zeroes bright channels.
+
+**Two metric/parameter mismatches caught before the runs, not after:**
+- *ENet objective*: generation used `--fitlinearalpha 1 --fitlinearl1ratio 0.5`, but the
+  training default was `lam=0.9, C=1`. fullBP's `solveElasticNet` is
+  `1/(2N)||Dx-y||^2 + a*l*||x||_1 + a(1-l)*0.5*||x||^2` and scales D,y by `tol = meas - lb`
+  (= our sigma), so the loss form already matched; only the constants were wrong. Defaults
+  now `alpha=1, lam=0.5, C=n_obs`.
+- *Sparsity space*: every earlier result (ablation BP 1.79, cnn 1.70, mlp6 1.89) measured
+  Hoyer sparsity on the **54 basis coefficients**, and "MAE" meant **AIA resynthesis**
+  error. This script measured both on the 18-bin DEM, making `ref 5.32` look alarming when
+  it is simply a different quantity. Now reports both, labelled.
+
+**Measured**: full epoch ~46 min (64 blocks -> 3 s), hence 12 epochs / 12 h rather than 20.
+`temps: 18` confirmed at runtime, so the 18-bin head is right. Staging worker count is now
+`STAGE_WORKERS` (each worker holds ~1.3 GB of decompressed cubes, so 64 needs ~80 GB).
+
+**Scheduling lesson**: 32 CPU / 180 GB jobs sat in `(Priority)` indefinitely while
+16 CPU / 64 GB jobs started instantly, and `--partition=cpu_short` must be requested
+explicitly (the account only has QOS `normal`; `cpu48` etc. come from the partition).
+
+**Open**: training loss is ~345k where the crop runs converged near 1.4 — partly expected
+(the L1 term scales with observation magnitude, and this is full-frame rather than one
+on-disk crop), but it is **not verified** that the staged `AIACube` is in the same units
+`processIndAIAData` produced. Does not affect whether training works, but does affect
+whether `alpha_l1=1.0` still balances the barrier terms. Check before trusting the numbers.
+
+**Decision**: proceed with ENet defaults, report to Samuel with results, regenerate
+overnight only if he wants different alpha/lambda (~2.5 h + 40 min restage, ENet only).
+
 ### 2026-07-31 — Scaled label generation LAUNCHED (BP + ENet, 2,446 jobs)
 
 Both arrays submitted on Torch: BP `15051547`, ENet `15051658`. 1,223 timestamps each,

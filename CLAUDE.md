@@ -91,6 +91,54 @@ From the paper's "Future Work" section:
 
 ## Progress Log (most recent first)
 
+### 2026-07-31 (evening) — First scaled runs COLLAPSED; cause found and fixed
+
+Array `15088220` completed all four runs cleanly (exit 0, 12 epochs) and every
+checkpoint is **worthless**: the networks predict identically zero.
+
+**Symptom**: mean epoch-1 loss `1.18e10`, then a *bit-identical* `339.2775` for eleven
+epochs with `sp_coef=0.00`. Block sampling is deterministic (`rng` seeded per block index),
+so epochs differ only in order — an identical epoch mean means gradients are exactly zero.
+
+**Cause: raw DN input magnitude, visible at step 0 before any weight update.**
+`experiments/debug_collapse.py` on an untrained model:
+
+| step | loss | patch_max | \|Dx\|max | ub_max | z_min | gnorm |
+|---|---|---|---|---|---|---|
+| 0 | 5.3e13 | 8.8e3 | 5.4e4 | 7.9e3 | -139.8 | 2.0e13 |
+| 60 | 2.1e2 | 1.5e3 | 9.7e1 | 1.5e3 | -13244 | 3.3e4 |
+
+The architectures were validated on 128x128 **on-disk crops** spanning ~1 decade. Full-disk
+data spans ~6 (MIN_OBS 1e-3 off-limb to ~1e4 flare cores). Feeding that raw makes `|Dx|`
+overshoot `ub` ~7x at init, so `barrier_ub = sum relu(Dx-ub)^2/sigma^2` is 5e13. In float32
+`softplus(z)` underflows to a denormal below z ~ -90 where its gradient is **exactly 0** —
+`z_min` is already -139.8 on the first forward pass. Gradient clipping does not help (Adam
+discards magnitude). By step 60, 98.15% of outputs are dead.
+
+**Two hypotheses falsified first** (`experiments/diag_errors.py`, 655k pixels):
+- *Zero/degenerate staged errors dividing the barrier's sigma^2*: *zero* pixels have a
+  non-positive error in any channel. Per-channel sigma/obs is physical (94A 1.12, 131A 0.44,
+  171A 0.074, 193A 0.057, 211A 0.082, 335A 0.601) — faint channels genuinely noise-dominated.
+- *x=0 being feasible and L1-optimal*: `barrier_lb` at x=0 has mean 408, p100 9.9e3 — no
+  pixel in the data can produce more than 1e4, so the 1e10 could not come from the data.
+  (The converged 339.28 < 408.12 confirms the net sits just *below* true zero, not at it.)
+
+**Fixes** (`d5f8ae5`): `log1p` on the network input only — loss, lb/ub, D and all metrics
+stay in physical DN so numbers remain comparable to the crop runs; 500-step linear LR
+warmup; `ClampedSoftplus` (pre-activation floored at -20, output ~2e-9 but gradient finite)
+replacing `nn.Softplus` in every variant; and a guard that raises on zero sparsity or a
+bit-identical epoch loss. Checkpoints save the bare variant's `state_dict` plus
+`input_transform`, so eval code loads them unchanged.
+
+**Timing correction**: a full epoch over all 58,688 blocks is **~170 s**, not the 46 min
+estimated from the shakeout (whose 3 s for 64 blocks was startup-dominated). 30 epochs is
+~90 min. Job now `--time=01:45:00`, deliberately under **2 h** — jobs longer than that are
+subject to the GPU-utilisation policy, and this workload is data-loading bound.
+
+**Lesson**: a 64-block / 2-epoch shakeout cannot catch this. It showed loss 345k -> 195k
+with `sp=8.25`, i.e. genuinely training, because it never drew the bright pixels that
+detonate the barrier.
+
 ### 2026-07-31 (afternoon) — Labels DONE, staged to zarr, 4 training runs LAUNCHED
 
 **Generation completed clean**: 1,223/1,223 files for both solvers, **zero errors**,

@@ -6,10 +6,13 @@
 #SBATCH --cpus-per-task=16
 #SBATCH --mem=64G
 #SBATCH --time=02:00:00
-#SBATCH --account=torch_pr_41_general
-#SBATCH --mail-user=vp2435@nyu.edu
 #SBATCH --mail-type=FAIL
 #SBATCH --comment="preemption=yes;requeue=true"
+#
+# --account and --mail-user are deliberately NOT set here: they differ per user and
+# hardcoding them means every collaborator carries a local edit that blocks `git pull`.
+# Pass them on the sbatch command line instead, which overrides any directive:
+#   sbatch --account=<your_account> --mail-user=<you>@nyu.edu ...
 
 # sbatch copies the script into a spool dir, so BASH_SOURCE points at /opt/slurm/...,
 # not the repo. Prefer the exported SLURM_SCRIPT path, then the submit dir, and only

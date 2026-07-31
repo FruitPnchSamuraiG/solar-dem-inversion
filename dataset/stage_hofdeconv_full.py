@@ -30,7 +30,9 @@ N_BINS       = 26
 N_WORKERS    = 64
 
 REF_DS       = _HERE
-DATA_ROOT    = '/scratch/vp2435/workspace/dem/data'
+DATA_ROOT    = os.environ.get(
+    'DEM_DATA_ROOT',
+    os.path.join(os.environ.get('SCRATCH', '/scratch/' + os.environ.get('USER', '')), 'dem', 'data'))
 
 EXPECTED_TRAIN = 917
 EXPECTED_VAL   = 153
@@ -55,7 +57,7 @@ def filter_npzs(all_npzs, timestamps):
 
 
 def handle(t):
-    X, Y, i, fn, numBlocksPerH, numBlocksPerW, numBlocksPerImage, blockSize, perImage, src = t
+    X, Y, M, i, fn, numBlocksPerH, numBlocksPerW, numBlocksPerImage, blockSize, perImage, src = t
     compressor = Blosc(cname='zstd', clevel=4, shuffle=2)
     random.seed(i)
 
@@ -69,8 +71,14 @@ def handle(t):
                 return
             raw = d['DEMCube'].item() if d['DEMCube'].ndim == 0 else d['DEMCube'].copy()
             shape = tuple(d['DEMCubeShape'])
+            # tolLevel: 0 unsolved (DEM is NaN), 1 tight band, 3 relaxed 3x, 5 relaxed 5x.
+            # Written by fullBP.py since b565cbd; older files predate it, so fall back to
+            # deriving validity from the DEM itself.
+            tolLevel = d['tolLevel'].copy() if 'tolLevel' in d else None
         DEMData = np.frombuffer(compressor.decode(raw), dtype=np.float32).reshape(shape)
         del raw
+        if tolLevel is None:
+            tolLevel = np.where(np.isnan(DEMData[0]), 0, 1).astype(np.uint8)
     except Exception as e:
         print(f"  error loading DEM: {e}")
         return
@@ -106,8 +114,9 @@ def handle(t):
         ind = i * numBlocksPerImage + c
         X[:, :, :, ind] = AIA[:, sy:sy+blockSize, sx:sx+blockSize]
         Y[:, :, :, ind] = DEMData[:, sy//dec:sy//dec+dem_block, sx//dec:sx//dec+dem_block]
+        M[:, :, ind]    = tolLevel[sy//dec:sy//dec+dem_block, sx//dec:sx//dec+dem_block]
 
-    del AIA, DEMData, blocks
+    del AIA, DEMData, tolLevel, blocks
     gc.collect()
 
 
@@ -139,8 +148,16 @@ def stage(src, npzs, target, phase, block_size, per_image):
                   shape=(N_BINS, dem_block, dem_block, n_total),
                   chunks=(N_BINS, dem_block, dem_block, 1),
                   dtype='<f4', codecs=[tobytes, compressor])
+    # Per-pixel tolerance level on the DEM grid. 0 means the solver never found a feasible
+    # DEM, so Y is NaN there and the pixel must be excluded from any loss or metric.
+    # Levels 3 and 5 are valid but were only solved after relaxing the tolerance band, so
+    # they are weaker labels than level 1 and worth scoring separately.
+    M = zarr.open(os.path.join(target, f'{phase}_m.zarr'), mode='w',
+                  shape=(dem_block, dem_block, n_total),
+                  chunks=(dem_block, dem_block, 1),
+                  dtype='u1', codecs=[tobytes, compressor])
 
-    jobs = [(X, Y, i, os.path.join(src, fn), n_h, n_w, n_per, block_size, per_image, src)
+    jobs = [(X, Y, M, i, os.path.join(src, fn), n_h, n_w, n_per, block_size, per_image, src)
             for i, fn in enumerate(npzs)]
 
     pool = multiprocessing.Pool(N_WORKERS)

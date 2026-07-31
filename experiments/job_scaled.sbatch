@@ -6,7 +6,10 @@
 #SBATCH --cpus-per-task=12
 #SBATCH --mem=64G
 #SBATCH --gres=gpu:1
-#SBATCH --time=12:00:00
+# A full 30-epoch run is ~90 min (measured: ~170 s/epoch over 58,688 blocks).
+# Kept under 2 h deliberately -- jobs longer than that are subject to the GPU
+# utilisation policy, and this workload is data-loading bound.
+#SBATCH --time=01:45:00
 #SBATCH --array=0-3
 #SBATCH --mail-type=FAIL
 #
@@ -50,6 +53,7 @@ python3 -u experiments/train_scaled.py \
   --root "$DATA_ROOT/$DS" \
   --variant "$VARIANT" \
   --loss "$LOSS" \
-  --epochs "${EPOCHS:-12}" \
-  --num_workers 8 \
+  --epochs "${EPOCHS:-30}" \
+  --batch_blocks "${BATCH_BLOCKS:-16}" \
+  --num_workers 10 \
   $EXTRA_ARGS

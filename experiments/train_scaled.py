@@ -28,12 +28,95 @@ import time
 
 import numpy as np
 import torch
+import torch.nn as nn
+import torch.nn.functional as F
 
 from fullBP import getBasis
 from src.losses import barrier_loss_batch, enet_loss_batch
 from src.zarr_data import make_loader, flatten_blocks, N_AIA_BINS, MIN_OBS
 from experiments.train_neural_field import effective_sparsity, pick_device
 from experiments.train_ablations import build_model, VARIANTS
+
+
+class ClampedSoftplus(nn.Module):
+    """Softplus that cannot die.
+
+    Every variant ends in nn.Softplus to enforce x >= 0. In float32 softplus(z)
+    underflows to a denormal around z < -90, where its gradient is exactly 0 --
+    an unrecoverable dead unit. Array 15088220 hit exactly that: a mean epoch-1
+    loss of 1.2e10 followed by eleven epochs of a bit-identical 339.2775, i.e.
+    zero gradient everywhere. Clamping the pre-activation keeps the output tiny
+    (softplus(-20) ~ 2e-9, far below any DEM coefficient of interest) while
+    leaving a finite gradient to climb back out on.
+    """
+
+    def __init__(self, floor=-20.0):
+        super().__init__()
+        self.floor = floor
+
+    def forward(self, z):
+        return F.softplus(z.clamp(min=self.floor))
+
+    def extra_repr(self):
+        return f"floor={self.floor}"
+
+
+def harden_softplus(model, floor=-20.0):
+    """Replace every nn.Softplus in `model` in place. Returns how many."""
+    n = 0
+    for mod in model.modules():
+        for name, child in list(mod.named_children()):
+            if isinstance(child, nn.Softplus):
+                setattr(mod, name, ClampedSoftplus(floor))
+                n += 1
+    return n
+
+
+class NormalizedInput(nn.Module):
+    """Wraps a variant so it sees a compressed version of the AIA patch.
+
+    The architectures were validated on 128x128 on-disk crops, where the raw DN
+    values span about one order of magnitude. Full-disk data spans roughly six:
+    off-limb pixels sit at the MIN_OBS floor of 1e-3 while flare cores reach
+    1e4. Feeding that straight into Conv2d/Linear makes the initial forward pass
+    enormous for bright pixels, |Dx| overshoots ub by orders of magnitude, and
+    the barrier's relu(Dx-ub)^2/sigma^2 term explodes.
+
+    Only the network's *input representation* changes. The loss, lb/ub, D and
+    every reported metric stay in physical units, so numbers remain directly
+    comparable to the crop runs.
+    """
+
+    def __init__(self, inner, mode="log1p"):
+        super().__init__()
+        self.inner = inner
+        self.mode = mode
+
+    def forward(self, patch):
+        if self.mode == "log1p":
+            # patch is already floored at MIN_OBS > 0 by the dataloader's mask,
+            # but clamp anyway so an unmasked caller cannot produce NaN.
+            patch = torch.log1p(patch.clamp(min=0.0))
+        return self.inner(patch)
+
+
+def make_scheduler(optimizer, total_steps, warmup_steps, base_lr):
+    """Linear warmup then cosine decay.
+
+    Warmup exists to survive step 0: at initialisation the network's output is
+    unrelated to the data, so the first few gradients are far larger than any
+    seen later. Taking full-size Adam steps on them is what pushed the head into
+    the dead Softplus region.
+    """
+    warmup_steps = min(warmup_steps, max(total_steps - 1, 1))
+
+    def lr_lambda(step):
+        if step < warmup_steps:
+            return (step + 1) / warmup_steps
+        prog = (step - warmup_steps) / max(total_steps - warmup_steps, 1)
+        return 0.5 * (1.0 + np.cos(np.pi * min(prog, 1.0)))
+
+    return torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda)
 
 
 def make_loss_fn(args):
@@ -139,14 +222,20 @@ def train(args):
     perm = None
     if args.variant == "cnn_shuffled":
         perm = np.random.default_rng(args.seed).permutation(args.patch_size ** 2)
-    model = build_model(args.variant, n_basis, args.patch_size, args.channels,
-                        perm=perm).to(device)
-    print(f"Model params: {sum(p.numel() for p in model.parameters()):,}")
+    core = build_model(args.variant, n_basis, args.patch_size, args.channels,
+                       perm=perm)
+    n_sp = harden_softplus(core, args.softplus_floor)
+    model = NormalizedInput(core, args.input_transform).to(device)
+    print(f"Model params: {sum(p.numel() for p in model.parameters()):,}  "
+          f"input={args.input_transform}  softplus floor={args.softplus_floor} "
+          f"({n_sp} replaced)")
 
     loss_fn = make_loss_fn(args)
     optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
-    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
-        optimizer, T_max=args.epochs * len(train_loader))
+    total_steps = args.epochs * len(train_loader)
+    scheduler = make_scheduler(optimizer, total_steps, args.warmup_steps, args.lr)
+    print(f"{len(train_loader):,} steps/epoch, {total_steps:,} total, "
+          f"{args.warmup_steps:,} warmup")
 
     tag = f"scaled_{args.variant}_{args.loss}"
     out_dir = args.out_dir
@@ -184,14 +273,32 @@ def train(args):
               f"sp_dem nn/ref={tight['sp_dem']:.2f}/{tight['sp_ref']:.2f}  "
               f"mae_aia={tight['mae_aia']:.3f}  {rec['secs']:.0f}s")
 
-        torch.save({"model": model.state_dict(), "variant": args.variant,
+        # Save the bare variant's weights (not the NormalizedInput wrapper) so
+        # existing eval code loads them unchanged; input_transform records the
+        # representation those weights expect.
+        torch.save({"model": core.state_dict(), "variant": args.variant,
                     "loss": args.loss, "patch_size": args.patch_size,
                     "stride": args.stride, "channels": args.channels,
                     "n_bins": args.n_bins, "perm": perm, "epoch": epoch + 1,
+                    "input_transform": args.input_transform,
+                    "softplus_floor": args.softplus_floor,
                     "args": vars(args)},
                    os.path.join(out_dir, f"{tag}.pt"))
         with open(os.path.join(out_dir, f"{tag}_history.json"), "w") as f:
             json.dump(history, f, indent=2)
+
+        # Fail loudly on the 15088220 failure mode rather than logging eleven
+        # more identical epochs: an all-zero prediction has zero Hoyer sparsity,
+        # and a bit-identical loss means the weights have stopped moving (block
+        # sampling is deterministic, so epochs differ only in order).
+        if rec["train_sparsity"] == 0.0:
+            raise RuntimeError(
+                f"collapsed at epoch {epoch+1}: prediction is identically zero. "
+                f"Check the input transform and warmup before resubmitting.")
+        if len(history) > 1 and rec["train_loss"] == history[-2]["train_loss"]:
+            raise RuntimeError(
+                f"collapsed at epoch {epoch+1}: train loss is bit-identical to "
+                f"the previous epoch, so gradients are exactly zero.")
 
     print(f"\nSaved {os.path.join(out_dir, tag)}.pt")
     final = history[-1]["val"]
@@ -219,9 +326,16 @@ def parse_args():
     p.add_argument("--num_workers", type=int, default=8)
     # model / optim
     p.add_argument("--channels", type=int, default=64)
-    p.add_argument("--epochs", type=int, default=12)
+    p.add_argument("--epochs", type=int, default=30)
     p.add_argument("--lr", type=float, default=3e-4)
     p.add_argument("--seed", type=int, default=42)
+    p.add_argument("--input_transform", choices=["none", "log1p"], default="log1p",
+                   help="'none' reproduces the crop runs; full-disk data spans ~6 "
+                        "decades and needs compressing (see NormalizedInput)")
+    p.add_argument("--warmup_steps", type=int, default=500,
+                   help="linear LR warmup; 0 disables")
+    p.add_argument("--softplus_floor", type=float, default=-20.0,
+                   help="clamp on the output pre-activation, guards against dead units")
     # barrier
     p.add_argument("--alpha_l1", type=float, default=1.0)
     p.add_argument("--alpha_l2", type=float, default=0.0)

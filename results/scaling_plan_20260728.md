@@ -156,11 +156,40 @@ curl -L -O -J "https://dataverse.harvard.edu/api/access/dataset/:persistentId/?p
 ## 6. Still to confirm with Samuel
 
 - ENet hyperparameters (`fitlinearalpha`, `fitlinearl1ratio`).
-- 18-bin vs 26-bin output head for the AIA-only models (8 of the 26 bins are exactly
-  zero by construction when XRT is absent).
-- AIA/DEM resolution alignment convention for the dataloader.
 - Whether the existing `xrtData_lp_full` / `lp_AIA_notrunc_noisy_full` outputs are
   superseded by the Hofmeister re-run or still usable.
 - Who runs the generation jobs, and whose scratch they land on.
 - **Whether the uncertainty head stays in scope** given unsupervised-only training
   (section 2b). This determines whether we keep generating noisy realisations at all.
+- Whether AIA+XRT is in this round at all, and if so **how many of the 1,223 timestamps
+  actually have usable XRT coverage** (Hinode does not observe continuously). XRT also
+  forces `--zerochill` (`fullBP.py:691`), so the NaN fix does not apply there.
+
+---
+
+## 7. Resolved without needing Samuel
+
+Two items previously listed as blocking the dataloader turned out to be answerable from
+the code.
+
+### AIA(4096) / DEM(2048) alignment
+
+`fullBP.py:979` is `AIACube[:, ::decimate, ::decimate]` — plain subsampling, no averaging.
+So **DEM pixel (i, j) was computed from AIA pixel (2i, 2j)**, and 3 of every 4 saved AIA
+pixels have no corresponding label.
+
+Consequence for the patch CNN: its 9x9 neighbourhood should be sampled **stride-2** on the
+saved AIA grid (`AIA[2i-8 : 2i+9 : 2, ...]`, a 17x17 region), which preserves the same
+physical footprint as the validated 128x128-crop experiments and matches the information
+the solver actually had. A full-resolution 9x9 variant — denser, physically smaller, and
+carrying detail the solver never saw — is a worthwhile later ablation but a different
+question.
+
+### 18 vs 26 output bins
+
+18 for the AIA-only models. The top 8 bins are not predicted at all for AIA-only; they are
+zeros stacked on afterwards (`fullBP.py:1013-1019`) because AIA has no response above
+logT 7.3. A 26-bin head would spend capacity learning "output 0" and, worse, would break
+the sparsity metric — the Hoyer ratio divides by bin count, so 8 guaranteed zeros make
+every model look artificially sparse and make 18-bin and 26-bin numbers incomparable.
+The AIA+XRT models use 26 and stay comparable via their first 18 bins.

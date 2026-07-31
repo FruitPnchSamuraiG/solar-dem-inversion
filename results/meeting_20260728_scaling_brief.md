@@ -60,13 +60,33 @@ land on the two faintest channels, which is exactly where scattered light from t
 channels dominates — the correct physical signature, and a much larger effect than
 `aiapy`'s standard PSF deconvolution.
 
+### 2c. ElasticNet solver cost — MEASURED
+
+Same timestamp, same deconvolution, `--fitfn elasticnet --zerochill`:
+
+| | BP (LP) | ElasticNet |
+|---|---|---|
+| solve portion | 221 s | **107 s** |
+| wall time | 7 min 57 s | **5 min 14 s** |
+
+ENet solves **~2x faster** than the LP; most of its 5 min is the fixed ~4 min of
+deconvolution. Generating ENet labels therefore adds far less than doubling, and the
+section 3 cost concern in the scaling plan is closed.
+
 ### Extrapolation to the full run
 
-On the reduced evaluation-only job list (see `scaling_plan_20260728.md` section 2b —
-roughly 400 jobs rather than 6,115), at ~8 min/job with deconvolution that is about
-**53 job-hours** and well under 500 GB. Cost is no longer a constraint. For reference,
-the original full 6,115-job plan would have been ~815 job-hours and ~2.1 TB, against a
-5 TB quota on a filesystem currently 97% full with a 60-day no-access purge.
+Decision is clean-only (no noise realizations) across all 1,223 timestamps, both solvers:
+
+| | min/job | jobs | job-hours |
+|---|---|---|---|
+| BP, relaxation on | 9.5 | 1,223 | 194 |
+| ElasticNet | 5.25 | 1,223 | 107 |
+| **total** | | **2,446** | **~300** |
+
+~15 h wall-clock at 20 concurrent, ~1.75 TB. Per-job wall time scatters ~40% with node
+load (204 s vs 295 s for identical BP runs), well inside the 2 h SLURM limit. For
+reference, the original 6,115-job plan *with* noise realizations for both solvers would
+have been ~1,630 job-hours and ~4.6 TB against a 5 TB quota on a filesystem at 97%.
 
 ---
 
@@ -123,24 +143,49 @@ Two candidate causes were tested and **ruled out**: the deconvolution's positivi
 no relationship), and low-signal off-limb regions (the rate is *higher* on-disk).
 Unexplained: the turnover in the brightest decile (17.7% -> 10.8%).
 
-**So infeasibility is model mismatch at high SNR, not bad pixels.** BP's escalating
-tolerance schedule (1.4 -> 2.0 -> 2.8 -> 5.0) exists precisely to handle this, and
-`--zerochill` disables it. **Recommendation: drop `--zerochill`**, or raise the tolerance
-floor, and re-measure. He chose it deliberately so there will be a reason, but it is worth
-confirming he measured the rate *after* deconvolution.
+**So infeasibility is model mismatch at high SNR, not bad pixels.** BP's tolerance
+relaxation (retry failures at 3x, then 5x the error bar) exists precisely to handle this,
+and `--zerochill` disables it.
+
+### RESOLVED — dropping `--zerochill` fixes it
+
+Same timestamp, same deconvolution, relaxation enabled:
+
+```
+Cleaning up 428526 pixels     <- failed at 1.4 sigma (exactly the --zerochill NaN count)
+Cleaning up   7399 pixels     <- still failing at 4.2 sigma
+
+  tolerance level 0 (unsolved/NaN):      845 px   0.02%
+  tolerance level 1 (tight)       :  3765778 px  89.78%
+  tolerance level 3 (relaxed 3x)  :   421127 px  10.04%
+  tolerance level 5 (relaxed 5x)  :     6554 px   0.16%
+```
+
+**NaN 10.2% -> 0.02%**, a 507x reduction, recovering precisely the bright active-region
+pixels. The first cleanup count matching the `--zerochill` NaN count to the digit confirms
+the mechanism. Cost: 9 min 28 s vs 7 min 57 s, i.e. **+90 s**, since only the failing 10%
+are retried. Reproduced exactly across two runs (deterministic solver).
+
+**`--zerochill` is dropped for AIA-only generation.** It remains forced for AIA+XRT
+(`fullBP.py:691` asserts it), so the XRT models will still need masking.
+
+`fullBP.py` now saves a per-pixel `tolLevel` (uint8: 0 unsolved, 1 tight, 3 relaxed 3x,
+5 relaxed 5x) in every `.npz` and prints the breakdown per run (`b565cbd`). `tolLevel == 0`
+is the validity mask for staging; the levels also let evaluation separate confident labels
+from barely-feasible ones, since a pixel solved at 7 sigma satisfied a far weaker
+constraint than one solved at 1.4.
 
 **If NaNs remain, mask rather than interpolate.** Carry a validity mask into the Zarr and
 exclude those pixels from the loss. Interpolation invents labels BP never produced, and
 the NN would learn to imitate `nnInterpNaN` rather than the solver.
 
-### 4.3 Error table is fetched over the network on every job
-`fullBP.py:790` calls `get_error_table(source="SSW")`, which downloads. The pointing
-table and correction table are both already cached to local files (`--pointing_file`,
-`--corr_table`) precisely to avoid this; the error table was missed.
-
-Two consequences: it will **fail outright on GPU compute nodes** (no internet, and
-Hofmeister deconvolution requires a GPU), and 6,115 jobs hammering the SSW server will
-likely get rate-limited. Should be cached the same way as the other two.
+### 4.3 Error table fetch — DOWNGRADED, not a blocker
+`fullBP.py:790` calls `get_error_table(source="SSW")`, which downloads. Measured on a
+compute node: **0.1 s** — astropy has it cached in the home directory, which every compute
+node shares. So this neither fails nor rate-limits. (An earlier version of this brief
+claimed it would fail every job; that was wrong.) The only remaining care is to make sure
+the cache exists before submitting an array job, so thousands of tasks do not race to
+populate it simultaneously.
 
 ### 4.4 Storage and ownership
 ~2.1 TB of `.npz` plus the Zarr. Whose scratch does it land on? Scratch is 97% full

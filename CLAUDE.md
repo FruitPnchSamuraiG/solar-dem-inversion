@@ -91,6 +91,47 @@ From the paper's "Future Work" section:
 
 ## Progress Log (most recent first)
 
+### 2026-07-31 (night) — FIRST SCALED RESULTS: all four runs converged
+
+Array `15092854`, 40 epochs, 3,000-step warmup, ~1.5 h each. All `COMPLETED`, all
+converged (`val_loss` flat to 4 dp over the final 4 epochs).
+
+| variant | loss | sp_coef | sp_dem nn/ref | val_loss | mae_aia |
+|---------|------|---------|---------------|----------|---------|
+| mlp6 | barrier | **1.90** | 5.16/5.37 | **2.145** | 4.881 |
+| cnn  | barrier | 1.96 | 5.10/5.37 | 2.241 | 4.838 |
+| mlp6 | enet | 3.68 | 5.24/5.36 | **1.850** | 4.613 |
+| cnn  | enet | 3.61 | 5.14/5.36 | 1.858 | 4.745 |
+
+**The validation split is by timestamp** (staging split 1,223 files 917/153/153), so these
+are 153 **entirely unseen timestamps** — a true held-out evaluation, not held-out pixels of
+seen images as in the 2026-06-27 amortized run. The 153-timestamp test split is untouched.
+
+**Headline: the patch CNN's edge is absent at scale.** On the barrier loss mlp6 reaches
+sp_coef 1.90 vs cnn 1.96 (BP reference **1.79**), and mlp6 wins the actual training
+objective on both losses (2.145 vs 2.241; 1.850 vs 1.858). cnn is marginally better on AIA
+resynthesis under the barrier loss (4.838 vs 4.881) and worse under enet. This is the
+**fourth** independent look at the question (ablation in-sample, LOO held-out, the 30-epoch
+run, now converged at scale) and the third to find no CNN advantage — mlp6 is the
+production architecture unless something new argues otherwise.
+
+**ENet behaves exactly as the 2026-07-02 ablation predicted**: best val_loss and mae_aia,
+least sparse (3.6-3.7 vs 1.9-2.0) — the L2 smoothing tradeoff, not a defect.
+
+**The units question is resolved.** Losses sit at 2.1-2.8 against the crop runs' 1.43 —
+same ballpark. The earlier 345k was an artifact of the broken initialisation, not a unit
+mismatch between the staged `AIACube` and `processIndAIAData`.
+
+**Getting here took three failed submissions**, all the same collapse (see the entry
+below): `15088220` and `15090865` ran pre-fix code, `15091457` had `log1p` but still
+collapsed because the *output* head, not the input, dominated. `15091734` fixed that and
+3/4 converged; cnn+enet still died at init and needed warmup 500 -> 3000. All four then
+share identical settings, which is what makes the cnn-vs-mlp6 comparison valid.
+
+**Next**: evaluate on the untouched test split; per-pixel DEM curve plots vs BP for the
+paper; report to Samuel (ENet hyperparameters remain unconfirmed — these used
+`alpha=1, lam=0.5, C=n_obs` matching the generation defaults).
+
 ### 2026-07-31 (evening) — First scaled runs COLLAPSED; cause found and fixed
 
 Array `15088220` completed all four runs cleanly (exit 0, 12 epochs) and every

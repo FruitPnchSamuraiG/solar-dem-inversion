@@ -11,9 +11,14 @@
 # bimodal study are ~0.14 ms each. Kept under 2 h like the training jobs.
 #SBATCH --time=00:45:00
 #SBATCH --mail-type=FAIL
+#SBATCH --account=torch_pr_41_tandon_advanced
+#SBATCH --mail-user=hsr3649@nyu.edu
 #
-# --account and --mail-user differ per user; pass them on the sbatch line:
-#   mkdir -p logs/eval
+#   mkdir -p logs/eval && sbatch experiments/job_eval_scaled.sbatch
+#
+# The account/mail defaults above are hsr3649's. A collaborator on another
+# allocation overrides them on the command line -- sbatch CLI options beat
+# script directives -- rather than editing the file:
 #   sbatch --account=<acct> --mail-user=<you>@nyu.edu experiments/job_eval_scaled.sbatch
 #
 # No --partition: Torch's job-submit plugin routes to whatever pool is free.

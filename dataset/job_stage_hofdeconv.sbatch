@@ -7,12 +7,18 @@
 #SBATCH --mem=180G
 #SBATCH --time=06:00:00
 #SBATCH --mail-type=END,FAIL
+#SBATCH --account=torch_pr_41_tandon_advanced
+#SBATCH --mail-user=hsr3649@nyu.edu
 #
 # Stages the generated solver outputs into zarr for training. Both configs run
 # sequentially in one job: they read and write the same filesystem, so running
 # them concurrently just makes them contend for it.
 #
-#   mkdir -p logs/stage
+#   mkdir -p logs/stage && sbatch dataset/job_stage_hofdeconv.sbatch
+#
+# The account/mail defaults above are hsr3649's. A collaborator on another
+# allocation overrides them on the command line -- sbatch CLI options beat
+# script directives -- rather than editing the file:
 #   sbatch --account=<acct> --mail-user=<you>@nyu.edu dataset/job_stage_hofdeconv.sbatch
 #
 # Memory: each worker holds one decompressed DEM cube (26x2048^2 f32 ~ 436 MB)

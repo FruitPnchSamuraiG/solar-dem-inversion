@@ -12,9 +12,14 @@
 #SBATCH --time=01:45:00
 #SBATCH --array=0-3
 #SBATCH --mail-type=FAIL
+#SBATCH --account=torch_pr_41_tandon_advanced
+#SBATCH --mail-user=hsr3649@nyu.edu
 #
-# --account and --mail-user differ per user; pass them on the sbatch line:
-#   mkdir -p logs/scaled
+#   mkdir -p logs/scaled && sbatch experiments/job_scaled.sbatch
+#
+# The account/mail defaults below are hsr3649's. A collaborator on another
+# allocation overrides them on the command line -- sbatch CLI options beat
+# script directives -- rather than editing the file:
 #   sbatch --account=<acct> --mail-user=<you>@nyu.edu experiments/job_scaled.sbatch
 #
 # The four runs are {mlp6, cnn} x {barrier, enet}. All are AIA-only: the

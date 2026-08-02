@@ -76,10 +76,11 @@ def run_test_metrics(args, models, ckpts, D_t, B_t, device):
     results = {}
     for (variant, loss) in RUNS:
         root = args.bp_root if loss == "barrier" else args.enet_root
-        loader = make_loader(root, "test", batch_blocks=args.batch_blocks,
-                             num_workers=args.num_workers, shuffle=False,
-                             with_labels=True, pixels_per_block=args.pixels_per_block,
-                             max_blocks=args.max_blocks)
+        _, loader = make_loader(root, "test", batch_blocks=args.batch_blocks,
+                                num_workers=args.num_workers, shuffle=False,
+                                with_labels=True,
+                                pixels_per_block=args.pixels_per_block,
+                                max_blocks=args.max_blocks)
         loss_fn = make_loss_fn(Namespace(**ckpts[(variant, loss)]["args"]))
         out = evaluate(models[(variant, loss)], loader, D_t, B_t, loss_fn,
                        device, N_AIA_BINS)

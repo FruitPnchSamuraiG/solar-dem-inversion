@@ -143,7 +143,12 @@ def census(reader, block_ids, prominence, n_bins, models=None, B_t=None,
     tot = {"n": 0, "bimodal": 0}
     by_tol = {1: [0, 0], 3: [0, 0], 5: [0, 0]}
     bright_all, peaks_all = [], []
-    hits = []          # (block, i, j) of bimodal pixels, for phase 2
+    hits = []          # (block, i, j) of INTERIOR-bimodal pixels, for phase 2/3.
+                       # Filtered to interior on purpose: phases 2-3 study and plot
+                       # this sample, and 11.2% of the raw "npk>=2" set is boundary-
+                       # only (emission dumped at logT 5.5/7.2), which would make the
+                       # plot illustrate a different, weaker claim than the headline
+                       # 14.17% interior prevalence / 80.75% precision numbers.
     # confusion counts per network: [true pos, false pos, false neg, true neg],
     # kept twice -- once against any second peak, once against interior-only
     conf = {k: np.zeros(4, dtype=np.int64) for k in (models or {})}
@@ -181,7 +186,7 @@ def census(reader, block_ids, prominence, n_bins, models=None, B_t=None,
             by_tol[lvl][1] += int((npk[sel] >= 2).sum())
         bright_all.append(bright)
         peaks_all.append(npk)
-        for k in np.nonzero(npk >= 2)[0]:
+        for k in np.nonzero(npk_in >= 2)[0]:
             hits.append((int(b), int(rows[k]), int(cols[k]), float(bright[k]),
                          int(tl[k]), int(npk[k])))
 
@@ -395,7 +400,8 @@ def plot_records(records, logT, out_dir, args):
             ax.spines[side].set_visible(False)
         ax.grid(alpha=0.18, lw=0.5)
         ax.legend(fontsize=6.5, frameon=False, ncol=2)
-    fig.suptitle("Bimodal BP pixels on held-out test data", fontsize=10)
+    fig.suptitle("Interior-bimodal BP pixels on held-out test data "
+                "(both peaks off the logT 5.5/7.2 boundary bins)", fontsize=10)
     fig.tight_layout(rect=[0, 0, 1, 0.985])
     path = os.path.join(out_dir, "bimodal_scaled.png")
     fig.savefig(path, dpi=args.dpi)

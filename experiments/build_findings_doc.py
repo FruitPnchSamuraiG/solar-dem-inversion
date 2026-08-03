@@ -99,6 +99,138 @@ doc.add_paragraph()
 
 
 # ════════════════════════════════════════════════════════════════════════════
+# 2026-08-02 — Scaled models on the untouched test split + bimodal census
+# ════════════════════════════════════════════════════════════════════════════
+
+add_date_heading("2026-08-02 — Scaled 1.5M Models: Test-Split Results, Loss-Tail Fix, Bimodal Census")
+
+add_para(
+    "First evaluation of the four fully-scaled models (array 15092854: {mlp6, cnn} x "
+    "{barrier, enet}, AIA-only, full 1,223-timestamp dataset, 1.5M params each) against data "
+    "that has NEVER been touched by training or checkpoint selection: the 153-timestamp test "
+    "split (~5.0M pixels), held out separately from the 153-timestamp validation split used "
+    "to pick these checkpoints. Two things had never been run at scale before: test-split "
+    "metrics, and a bimodal-DEM census against the current models (the only prior bimodal "
+    "result, 2026-07-11 below, used 4 small crops and the pre-scaling architecture). "
+    "Implemented in experiments/eval_scaled.py, experiments/bimodal_scaled.py, "
+    "experiments/diag_loss_outliers.py; run on Torch (job_eval_scaled.sbatch)."
+)
+
+add_subheading("Test-split metrics (sp_coef vs BP reference 1.79; mae_aia = |reconstructed AIA - observed AIA|, the one metric directly comparable across both losses)")
+test_table = (
+    f"{'Variant':<8} {'Loss':<8} {'sp_coef':>8} {'sp_dem nn/ref':>14} {'mae_aia':>9} {'val sp_coef':>12}\n"
+    f"{'-'*64}\n"
+    f"{'mlp6':<8} {'barrier':<8} {'1.91':>8} {'5.15/5.33':>14} {'4.875':>9} {'1.90':>12}\n"
+    f"{'cnn':<8}  {'barrier':<8} {'1.98':>8} {'5.08/5.33':>14} {'4.830':>9} {'1.96':>12}\n"
+    f"{'mlp6':<8} {'enet':<8}    {'3.64':>8} {'5.23/5.21':>14} {'4.609':>9} {'3.68':>12}\n"
+    f"{'cnn':<8}  {'enet':<8}    {'3.57':>8} {'5.10/5.21':>14} {'4.699':>9} {'3.61':>12}\n"
+)
+mono = doc.add_paragraph()
+run = mono.add_run(test_table)
+run.font.name = "Courier New"
+run.font.size = Pt(8)
+
+add_finding(
+    "(1) No overfitting: every test-split number reproduces the validation number to the "
+    "third decimal across 153 entirely unseen timestamps. mlp6 is the clear winner on the "
+    "barrier/BP loss (closer to BP's 1.79 sparsity reference on both val and test). On the "
+    "enet/ElasticNet loss the comparison is mixed, not a clean win: mlp6 reconstructs the "
+    "actual AIA image slightly better (mae_aia 4.609 vs 4.699 — the correct absolute, "
+    "cross-loss-comparable metric, since it compares to the real observation rather than to "
+    "either solver's own DEM label), but cnn is marginally closer to ElasticNet's own sparsity "
+    "target (3.57 vs 3.64). This mixed enet result has not been deep-dived the way the barrier "
+    "loss has (below) and should be treated as provisional. "
+    "(2) A raw mean of the barrier training loss initially showed mlp6 at 44.32 vs cnn's "
+    "11.27 -- a reversal from validation that triggered a full investigation (next finding)."
+)
+
+add_subheading("Why the mean barrier loss was misleading, and why no retraining was needed")
+add_para(
+    "diag_loss_outliers.py dumps the worst individual pixels by loss contribution. The single "
+    "worst pixel out of 5,013,504 (211A: observed 0.062, network predicted 9,023 -- a 9,000x "
+    "over-prediction at a pixel carrying essentially no real signal) is 94% of mlp6's ENTIRE "
+    "summed loss. Once that one pixel is set aside, mlp6 is better than cnn at every "
+    "percentile: median 0.984 vs 1.007, p90 4.61 vs 4.72, p99 17.6 vs 18.4, p99.9 49.2 vs "
+    "57.2. Two candidate root causes were tested and ruled out: a near-zero error bar in the "
+    "loss's denominator (flooring it changes the mean by 0.07% -- not the mechanism), and "
+    "filtering on 'observation below its own noise' (lb < 0), which catches 89% of ALL pixels "
+    "since AIA's faint channels are genuinely noise-dominated by design, not a usable filter. "
+    "Conclusion: report percentiles, never the mean, for this objective; and no retraining is "
+    "needed -- at roughly one such pixel per 5-million-pixel epoch, with gradient clipping "
+    "already bounding its per-step influence, the four trained models are not meaningfully "
+    "affected."
+)
+
+add_subheading("Bimodal census on 190,337 held-out test pixels (vs the 2026-07-11 result on 4 small crops, below)")
+bimodal2_table = (
+    f"{'Metric':<46} {'2026-07-11 (crops)':>20} {'2026-08-02 (test split)':>26}\n"
+    f"{'-'*94}\n"
+    f"{'Bimodal prevalence':<46} {'5.1-9.1%':>20} {'15.96% (14.17% interior-only)':>26}\n"
+    f"{'Mean noise stability':<46} {'0.40-0.46':>20} {'0.68':>26}\n"
+    f"{'Stable pixels (>=0.8)':<46} {'6/120':>20} {'20/60':>26}\n"
+)
+mono = doc.add_paragraph()
+run = mono.add_run(bimodal2_table)
+run.font.name = "Courier New"
+run.font.size = Pt(8)
+
+nn_table = (
+    f"{'Network':<14} {'Recall':>8} {'Precision':>10}   (base rate 14.17%, interior peaks only)\n"
+    f"{'-'*46}\n"
+    f"{'mlp6_barrier':<14} {'29.85%':>8} {'80.75%':>10}\n"
+    f"{'cnn_barrier':<14}  {'11.88%':>8} {'83.70%':>10}\n"
+)
+mono = doc.add_paragraph()
+run = mono.add_run(nn_table)
+run.font.name = "Courier New"
+run.font.size = Pt(8)
+
+add_finding(
+    "(1) Bimodality is real, common, and NOT mostly a boundary artifact: an initial concern "
+    "that most 'second peaks' were emission dumped at the extreme ends of the temperature "
+    "range (logT 5.5 or 7.2, where AIA's 6 channels have almost no discriminating power) was "
+    "checked directly -- only 11.2% of the bimodal set is boundary-only; 14.17% of ALL held-out "
+    "pixels have genuine interior two-peak structure. This overturns the 2026-07-11 "
+    "small-sample conclusion that bimodality was 'mostly noise-driven degeneracy' -- prevalence "
+    "is 2-3x higher and stability is also substantially higher (0.68 vs 0.40-0.46 mean) at "
+    "this scale. Prevalence still rises monotonically with brightness (7.4% in the faintest "
+    "decile to 30.3% in the brightest) and is concentrated at tolLevel=1 (tight solver "
+    "tolerance, not a relaxed/degenerate fit). "
+    "(2) The barrier-loss-trained networks can predict WHERE bimodality occurs, at real "
+    "precision well above the base rate -- mlp6_barrier 80.75%, cnn_barrier 83.70% against a "
+    "14.17% background rate, with mlp6 recalling 2.5x more of the true bimodal pixels at "
+    "essentially the same precision. This directly contradicts the 2026-07-10 meeting's "
+    "working assumption that amortized point-estimate training makes learning this "
+    "impossible, and weakens the case for an immediate distribution-output-head redesign. "
+    "(3) The enet/ElasticNet-trained networks were NOT tested for this in a meaningful way: "
+    "ElasticNet's own L2 regularization term explicitly penalizes multi-peaked (non-smooth) "
+    "solutions, so an enet-trained network correctly reproducing its own solver's behavior "
+    "should rarely predict two peaks. This is expected model behavior, not a deficiency -- "
+    "'can it predict bimodality' is a meaningful question only for the barrier/BP-trained "
+    "pair, and should not be read as an enet shortcoming. "
+    "(4) Remaining real deficiency, unrelated to bimodality: at bright pixels the networks "
+    "under-reconstruct the hot channels (94A, 131A) and their DEM peaks sit ~0.1-0.15 lower "
+    "in logT than BP's -- the same peak-shift failure the 2026-07-11 flare fold (below) found "
+    "on unseen images, still present at full scale. This is the deficiency the in-progress "
+    "size sweep (mlp6 at 8 widths from 1.43M down to 10k params, both losses) is being judged "
+    "against, results pending."
+)
+
+add_subheading("Per-pixel DEM curves on held-out test pixels: BP (black) / ENet (black) vs mlp6 (blue) / cnn (orange)")
+for fname, cap in [
+    ("dem_curves_block05005.png", "Test block 5005"),
+    ("dem_curves_block06236.png", "Test block 6236"),
+    ("dem_curves_block08327.png", "Test block 8327"),
+]:
+    add_image(f"results/plots/10_scaled_test_20260802/{fname}", width_in=6.0, caption=cap)
+
+add_subheading("Bimodal pixels on held-out test data: perturbed BP solves (gray) vs real BP (black) vs all four networks")
+add_image("results/plots/10_scaled_test_20260802/bimodal_scaled.png", width_in=5.5)
+
+add_divider()
+
+
+# ════════════════════════════════════════════════════════════════════════════
 # 2026-07-11 — Leave-one-timestamp-out evaluation
 # ════════════════════════════════════════════════════════════════════════════
 

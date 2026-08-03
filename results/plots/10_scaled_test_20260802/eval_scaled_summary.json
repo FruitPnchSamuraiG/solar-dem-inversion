@@ -1,0 +1,351 @@
+{
+  "test_metrics": {
+    "mlp6_barrier": {
+      "loss": 44.319948333832954,
+      "1": {
+        "n": 4643049,
+        "sp_coef": 1.9115808530901515,
+        "sp_dem": 5.149619901319828,
+        "sp_ref": 5.332939583618706,
+        "mae_dem": 0.12371617196041625,
+        "mae_aia": 4.875343931881426
+      },
+      "relaxed": {
+        "n": 295703,
+        "sp_coef": 1.9052105761582026,
+        "sp_dem": 4.017223895160695,
+        "sp_ref": 3.983226773788068,
+        "mae_dem": 0.1485246396117408,
+        "mae_aia": 6.938485442540081
+      }
+    },
+    "cnn_barrier": {
+      "loss": 11.271069645784259,
+      "1": {
+        "n": 4643049,
+        "sp_coef": 1.9838854684561131,
+        "sp_dem": 5.0758532497651325,
+        "sp_ref": 5.332939583618706,
+        "mae_dem": 0.13765246953914545,
+        "mae_aia": 4.830295963654486
+      },
+      "relaxed": {
+        "n": 295703,
+        "sp_coef": 1.8415692546717788,
+        "sp_dem": 4.104231580966454,
+        "sp_ref": 3.983226773788068,
+        "mae_dem": 0.13941094670726736,
+        "mae_aia": 7.195578384359423
+      }
+    },
+    "mlp6_enet": {
+      "loss": 1.7852689487482207,
+      "1": {
+        "n": 4938752,
+        "sp_coef": 3.6425609212927172,
+        "sp_dem": 5.228386015459979,
+        "sp_ref": 5.210753068522549,
+        "mae_dem": 0.007375540229948185,
+        "mae_aia": 4.608852318058413
+      },
+      "relaxed": {
+        "n": 0,
+        "sp_coef": 0.0,
+        "sp_dem": 0.0,
+        "sp_ref": 0.0,
+        "mae_dem": 0.0,
+        "mae_aia": 0.0
+      }
+    },
+    "cnn_enet": {
+      "loss": 1.7933506514706643,
+      "1": {
+        "n": 4938752,
+        "sp_coef": 3.571206219977866,
+        "sp_dem": 5.098717557625135,
+        "sp_ref": 5.210753068522549,
+        "mae_dem": 0.011706658555015152,
+        "mae_aia": 4.698737433953773
+      },
+      "relaxed": {
+        "n": 0,
+        "sp_coef": 0.0,
+        "sp_dem": 0.0,
+        "sp_ref": 0.0,
+        "mae_dem": 0.0,
+        "mae_aia": 0.0
+      }
+    }
+  },
+  "loss_tail": {
+    "mlp6_barrier": {
+      "p50": 0.9843347072601318,
+      "p90": 4.622264862060547,
+      "p99": 17.931182861328125,
+      "p99.9": 50.9709358215332,
+      "p99.99": 147.53399658203125,
+      "mean": 44.31995391845703,
+      "max": 208994560.0,
+      "share_worst_1pct": 0.9612683057785034,
+      "share_worst_0p1pct": 0.9558473825454712,
+      "mean_l1": 1.8571524620056152,
+      "mean_below": 0.1510135382413864,
+      "mean_above": 42.311790466308594
+    },
+    "cnn_barrier": {
+      "p50": 1.0074207782745361,
+      "p90": 4.71828031539917,
+      "p99": 18.779865264892578,
+      "p99.9": 58.22734832763672,
+      "p99.99": 254.94239807128906,
+      "mean": 11.271069526672363,
+      "max": 6364682.5,
+      "share_worst_1pct": 0.8438483476638794,
+      "share_worst_0p1pct": 0.8208275437355042,
+      "mean_l1": 1.7916245460510254,
+      "mean_below": 0.28342950344085693,
+      "mean_above": 9.196014404296875
+    }
+  },
+  "curve_pixels": [
+    {
+      "block": 6236,
+      "i": 20,
+      "j": 118,
+      "tol": 1,
+      "sum_obs": 267.5628662109375,
+      "peaks_bp": 1,
+      "peaks_enet": 1,
+      "peaks_mlp6_barrier": 1,
+      "peaks_cnn_barrier": 1,
+      "peaks_mlp6_enet": 1,
+      "peaks_cnn_enet": 1
+    },
+    {
+      "block": 6236,
+      "i": 24,
+      "j": 83,
+      "tol": 1,
+      "sum_obs": 741.2763061523438,
+      "peaks_bp": 1,
+      "peaks_enet": 1,
+      "peaks_mlp6_barrier": 1,
+      "peaks_cnn_barrier": 1,
+      "peaks_mlp6_enet": 1,
+      "peaks_cnn_enet": 1
+    },
+    {
+      "block": 6236,
+      "i": 65,
+      "j": 1,
+      "tol": 1,
+      "sum_obs": 1314.2015380859375,
+      "peaks_bp": 1,
+      "peaks_enet": 1,
+      "peaks_mlp6_barrier": 1,
+      "peaks_cnn_barrier": 1,
+      "peaks_mlp6_enet": 1,
+      "peaks_cnn_enet": 1
+    },
+    {
+      "block": 6236,
+      "i": 53,
+      "j": 38,
+      "tol": 1,
+      "sum_obs": 1948.9842529296875,
+      "peaks_bp": 1,
+      "peaks_enet": 1,
+      "peaks_mlp6_barrier": 1,
+      "peaks_cnn_barrier": 1,
+      "peaks_mlp6_enet": 1,
+      "peaks_cnn_enet": 1
+    },
+    {
+      "block": 6236,
+      "i": 126,
+      "j": 13,
+      "tol": 1,
+      "sum_obs": 3057.85107421875,
+      "peaks_bp": 2,
+      "peaks_enet": 1,
+      "peaks_mlp6_barrier": 1,
+      "peaks_cnn_barrier": 1,
+      "peaks_mlp6_enet": 1,
+      "peaks_cnn_enet": 1
+    },
+    {
+      "block": 6236,
+      "i": 82,
+      "j": 59,
+      "tol": 1,
+      "sum_obs": 6212.95263671875,
+      "peaks_bp": 2,
+      "peaks_enet": 1,
+      "peaks_mlp6_barrier": 2,
+      "peaks_cnn_barrier": 1,
+      "peaks_mlp6_enet": 1,
+      "peaks_cnn_enet": 1
+    },
+    {
+      "block": 5005,
+      "i": 47,
+      "j": 78,
+      "tol": 1,
+      "sum_obs": 123.94011688232422,
+      "peaks_bp": 1,
+      "peaks_enet": 1,
+      "peaks_mlp6_barrier": 1,
+      "peaks_cnn_barrier": 1,
+      "peaks_mlp6_enet": 1,
+      "peaks_cnn_enet": 1
+    },
+    {
+      "block": 5005,
+      "i": 0,
+      "j": 37,
+      "tol": 1,
+      "sum_obs": 185.99891662597656,
+      "peaks_bp": 1,
+      "peaks_enet": 1,
+      "peaks_mlp6_barrier": 1,
+      "peaks_cnn_barrier": 1,
+      "peaks_mlp6_enet": 1,
+      "peaks_cnn_enet": 1
+    },
+    {
+      "block": 5005,
+      "i": 117,
+      "j": 96,
+      "tol": 1,
+      "sum_obs": 238.8558349609375,
+      "peaks_bp": 1,
+      "peaks_enet": 1,
+      "peaks_mlp6_barrier": 1,
+      "peaks_cnn_barrier": 1,
+      "peaks_mlp6_enet": 1,
+      "peaks_cnn_enet": 1
+    },
+    {
+      "block": 5005,
+      "i": 10,
+      "j": 56,
+      "tol": 1,
+      "sum_obs": 301.02001953125,
+      "peaks_bp": 1,
+      "peaks_enet": 1,
+      "peaks_mlp6_barrier": 1,
+      "peaks_cnn_barrier": 1,
+      "peaks_mlp6_enet": 1,
+      "peaks_cnn_enet": 1
+    },
+    {
+      "block": 5005,
+      "i": 108,
+      "j": 127,
+      "tol": 1,
+      "sum_obs": 421.1228942871094,
+      "peaks_bp": 1,
+      "peaks_enet": 1,
+      "peaks_mlp6_barrier": 1,
+      "peaks_cnn_barrier": 1,
+      "peaks_mlp6_enet": 1,
+      "peaks_cnn_enet": 1
+    },
+    {
+      "block": 5005,
+      "i": 95,
+      "j": 56,
+      "tol": 1,
+      "sum_obs": 801.5987548828125,
+      "peaks_bp": 2,
+      "peaks_enet": 1,
+      "peaks_mlp6_barrier": 1,
+      "peaks_cnn_barrier": 1,
+      "peaks_mlp6_enet": 1,
+      "peaks_cnn_enet": 1
+    },
+    {
+      "block": 8327,
+      "i": 13,
+      "j": 6,
+      "tol": 1,
+      "sum_obs": 233.92356872558594,
+      "peaks_bp": 1,
+      "peaks_enet": 1,
+      "peaks_mlp6_barrier": 1,
+      "peaks_cnn_barrier": 1,
+      "peaks_mlp6_enet": 1,
+      "peaks_cnn_enet": 1
+    },
+    {
+      "block": 8327,
+      "i": 80,
+      "j": 23,
+      "tol": 1,
+      "sum_obs": 306.1654052734375,
+      "peaks_bp": 1,
+      "peaks_enet": 1,
+      "peaks_mlp6_barrier": 1,
+      "peaks_cnn_barrier": 1,
+      "peaks_mlp6_enet": 1,
+      "peaks_cnn_enet": 1
+    },
+    {
+      "block": 8327,
+      "i": 62,
+      "j": 26,
+      "tol": 1,
+      "sum_obs": 361.46527099609375,
+      "peaks_bp": 2,
+      "peaks_enet": 1,
+      "peaks_mlp6_barrier": 2,
+      "peaks_cnn_barrier": 1,
+      "peaks_mlp6_enet": 1,
+      "peaks_cnn_enet": 1
+    },
+    {
+      "block": 8327,
+      "i": 87,
+      "j": 100,
+      "tol": 1,
+      "sum_obs": 429.44512939453125,
+      "peaks_bp": 1,
+      "peaks_enet": 1,
+      "peaks_mlp6_barrier": 1,
+      "peaks_cnn_barrier": 1,
+      "peaks_mlp6_enet": 1,
+      "peaks_cnn_enet": 1
+    },
+    {
+      "block": 8327,
+      "i": 72,
+      "j": 127,
+      "tol": 1,
+      "sum_obs": 517.02880859375,
+      "peaks_bp": 1,
+      "peaks_enet": 1,
+      "peaks_mlp6_barrier": 1,
+      "peaks_cnn_barrier": 1,
+      "peaks_mlp6_enet": 1,
+      "peaks_cnn_enet": 1
+    },
+    {
+      "block": 8327,
+      "i": 7,
+      "j": 126,
+      "tol": 3,
+      "sum_obs": 840.0015258789062,
+      "peaks_bp": 1,
+      "peaks_enet": 1,
+      "peaks_mlp6_barrier": 1,
+      "peaks_cnn_barrier": 1,
+      "peaks_mlp6_enet": 1,
+      "peaks_cnn_enet": 1
+    }
+  ],
+  "figures": [
+    "output/experiments/eval_scaled/dem_curves_block06236.png",
+    "output/experiments/eval_scaled/dem_curves_block05005.png",
+    "output/experiments/eval_scaled/dem_curves_block08327.png"
+  ]
+}

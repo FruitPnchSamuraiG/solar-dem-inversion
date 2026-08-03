@@ -91,6 +91,57 @@ From the paper's "Future Work" section:
 
 ## Progress Log (most recent first)
 
+### 2026-08-03 — WIDTH SWEEP DONE: h232 (176k, 8x smaller) is the production model
+
+Array `15185224` (16 runs: mlp6 x 8 widths x 2 losses, 40 epochs each) plus reruns
+`15195426`/`15195427`. All scored on the **untouched test split** by
+`experiments/eval_sweep.py` (job `15217470`, 10 min) — the sweep's own logs are
+validation numbers, and validation chose each run's saved epoch.
+
+**BARRIER (BP), test split:**
+
+| hidden | params | sp_coef | mae_dem | mae_aia | p99 | bimod recall | bimod prec |
+|---|---|---|---|---|---|---|---|
+| 680 | 1.43M | **1.904** | 0.1219 | 4.898 | 17.80 | 29.46% | 80.95% |
+| 480 | 722k | 1.913 | 0.1270 | 4.893 | 17.87 | 27.74% | 79.82% |
+| 336 | 360k | 1.981 | 0.1268 | 4.858 | 17.85 | 27.14% | 80.27% |
+| **232** | **176k** | 2.099 | 0.1266 | **4.792** | 17.90 | 26.33% | 79.01% |
+| 160 | 87k | 2.200 | 0.1386 | 4.823 | 18.64 | **8.10%** | 76.79% |
+| 108 | 42k | 2.280 | 0.1429 | 4.604 | 18.75 | 8.86% | **58.45%** |
+| 72 | 20k | 2.308 | 0.1451 | 4.499 | 19.07 | 7.57% | 55.08% |
+| 48 | 10k | 1.494 | 0.2637 | 7.814 | 57.1 | 21.37% | 23.84% |
+
+**ENET, test split:** healthy to h160; best of the whole sweep at **h232**
+(mae_dem 0.0077 and p99 41.29, both better than the 1.43M baseline's 0.0104/42.85).
+Collapses at h72 (mae_aia 8.85) and h48 (22.0).
+
+**The bimodality column decided it, and nothing else would have.** Between h232 and
+h160 recall crashes 26.33% -> **8.10%** (two thirds of the real multi-thermal pixels
+lost) while `mae_aia` *improves* and `sp_coef` drifts 0.1. Judging on aggregate metrics
+alone would have shipped h108 or h72 — averages over ~5M mostly-easy pixels cannot see a
+model dropping the hard ones. h48's 12.71% firing rate at 23.84% precision is guessing at
+roughly the base rate, not detection (same trap as its "improved" sp_coef).
+
+**Decision: h232 / 176k for both losses — 8x smaller, no meaningful loss.** Bimodality
+intact, better `mae_aia` than baseline on both, enet's best numbers of the sweep. The one
+honest cost is barrier `sp_coef` 1.904 -> 2.099, i.e. further from BP's 1.79 reference;
+**h336 (360k, 4x, sp_coef 1.981) is the conservative fallback if sparsity fidelity is the
+paper's headline claim.**
+
+**Two run failures, both understood.** `15185224_5` TIMEOUT at epoch 33/40 (rerun at
+2:15). `15185224_9` (h480 enet) died at epoch 1 with an identically-zero prediction — the
+sweep script omitted `--warmup_steps 3000` and fell back to the default 500, reproducing
+the July `15091457` collapse exactly. Fixed in `ed7a78a`. **The collapse guard did its
+job**: raised immediately rather than logging 39 silent dead epochs. Tasks 0-8 and 10-15
+ran under the old 500-step warmup and were unaffected — the instability is width-specific,
+not systemic.
+
+**New**: `experiments/eval_sweep.py` (all 16 checkpoints, one job; percentiles + bimodal
+cross-tab), `experiments/job_eval_sweep.sbatch`, `experiments/plot_final.py` (production
+figures: solver vs 1.43M vs 176k, plus clean interior-bimodal examples filtered by peak
+separation and mid-brightness). `--hidden` threads through `build_model`, the checkpoint
+tag and `load_scaled_model`; `--ckpt_suffix` selects a width for the eval scripts.
+
 ### 2026-08-02 — TEST SPLIT + bimodal census: mlp6 confirmed, two headline metrics were artifacts
 
 Evaluated all four checkpoints on the **untouched 153-timestamp test split** (~5.0M

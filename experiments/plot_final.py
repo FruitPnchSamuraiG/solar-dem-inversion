@@ -126,26 +126,48 @@ def plot_curves(args, models, B_t, logT, device, out_dir):
 
 # ── figure 2: clean interior-bimodal examples ─────────────────────────────────
 
-def find_clean_bimodal(reader, block_ids, args):
+def _two_peak_shape(curve, prominence, m, args):
+    """(separation, weaker/taller ratio, weaker peak height) or None.
+
+    Exactly two peaks required when args.exact_two: with 6 AIA channels the
+    data cannot resolve three independent temperature components, so a 3+ peak
+    solution is a sparsity artifact rather than a physical claim.
+    """
+    T = len(curve)
+    n, where = count_peaks(curve, prominence)
+    mid = where[(where >= m) & (where <= T - 1 - m)]
+    if len(mid) < 2 or (args.exact_two and len(mid) != 2):
+        return None
+    sep = int(mid.max() - mid.min())
+    if not (args.min_sep <= sep <= args.max_sep):
+        return None
+    h = curve[mid]
+    return sep, float(h.min() / max(h.max(), 1e-12)), float(h.min())
+
+
+@torch.no_grad()
+def find_clean_bimodal(reader, block_ids, args, model=None, B_t=None,
+                       device=None, chunk=4096):
     """Pixels showing two genuine, comparable temperature components.
 
-    Four filters. The first version of this figure got each of them wrong in an
-    instructive way:
+    Filters, each of which replaced one that selected the wrong pixels:
 
-      * MIDDLE, not merely interior. Excluding only the outermost bin still
-        admits peaks one step in, which ride the same loss of AIA sensitivity.
-        Both peaks must sit in bins [edge_margin, T-1-edge_margin].
-      * Separation BOUNDED above as well as below. With 18 bins, "15 apart"
-        means bin 1 and bin 16 -- end-to-end, i.e. the boundary case again.
-        Ranking by widest separation actively selected for it.
-      * The weaker peak must be a real component, not a ripple: its height is
-        at least `--min_ratio` of the taller one. This is what "two temperature
-        components" actually means, and it is the ranking key.
-      * Brightness from the upper tail. The first attempt used a mid quantile
-        and drew pixels at sum(obs) ~35, where the DEM is ~0.1 and BP's own
-        perturbed solves scatter freely (stability 0.37-0.63). Faintness was
-        never the problem the mid-band was meant to solve; boundary peaks were,
-        and the middle-bin filter handles those directly.
+      * Peaks inside [edge_margin, T-1-edge_margin]. Excluding only the
+        outermost bin still admits peaks one step in, riding the same loss of
+        AIA sensitivity.
+      * Separation bounded ABOVE as well as below. With 18 bins, "15 apart" is
+        bin 1 and bin 16 -- end-to-end, the boundary case again. Ranking by
+        widest separation actively selected for it.
+      * Weaker peak at least `--min_ratio` of the taller, which is what "two
+        components" means rather than one peak plus a ripple.
+      * Brightness from the upper tail. A mid quantile drew pixels at sum(obs)
+        ~35 where the DEM is ~0.1 and BP's own perturbed solves scatter freely.
+
+    With `model` given, keeps only pixels where the NETWORK is also bimodal.
+    Without it the ranking finds BP's strongest double peaks, which are
+    overwhelmingly hot-second-peak cases the network misses -- a true picture of
+    the 29.85% recall, but it shows the model failing at every panel. Both
+    groups are real and the honest figure needs each labelled.
     """
     hits = []
     for b in block_ids:
@@ -158,52 +180,42 @@ def find_clean_bimodal(reader, block_ids, args):
         _, npk_in = count_peaks_batch(curves, args.prominence, interior=True)
         bright = obs[:, rows, cols].sum(axis=0)
         lo, hi = np.quantile(bright, [args.bright_lo, args.bright_hi])
-        T = curves.shape[1]
         m = args.edge_margin
 
+        cand = []
         for k in np.nonzero(npk_in >= 2)[0]:
             if not (lo <= bright[k] <= hi):
                 continue
-            n, where = count_peaks(curves[k], args.prominence)
-            mid = where[(where >= m) & (where <= T - 1 - m)]
-            if len(mid) < 2:
+            shape = _two_peak_shape(curves[k], args.prominence, m, args)
+            if shape is None or shape[1] < args.min_ratio:
                 continue
-            sep = int(mid.max() - mid.min())
-            if not (args.min_sep <= sep <= args.max_sep):
-                continue
-            heights = curves[k][mid]
-            ratio = float(heights.min() / max(heights.max(), 1e-12))
-            if ratio < args.min_ratio:
-                continue
+            cand.append((int(k), shape))
+        if not cand:
+            continue
+
+        if model is not None:
+            idx = np.array([k for k, _ in cand])
+            px = reader.gather(obs, err, tol, None, rows[idx], cols[idx])
+            patch = px["patch"]
+            keep = np.zeros(len(idx), dtype=bool)
+            for s in range(0, len(idx), chunk):
+                x = model(patch[s:s + chunk].to(device))
+                pred = (x @ B_t.T)[:, :N_AIA_BINS].cpu().numpy()
+                for t in range(pred.shape[0]):
+                    sh = _two_peak_shape(pred[t], args.prominence, m, args)
+                    keep[s + t] = sh is not None and sh[1] >= args.nn_min_ratio
+            cand = [c for c, kp in zip(cand, keep) if kp]
+
+        for k, (sep, ratio, weak_h) in cand:
             hits.append((int(b), int(rows[k]), int(cols[k]), float(bright[k]),
-                         sep, ratio))
+                         sep, ratio, weak_h))
     return hits
 
 
 @torch.no_grad()
-def plot_bimodal(args, models, D_t, B_t, logT, device, out_dir):
-    reader = BlockReader(args.bp_root, "test", patch_size=args.patch_size)
-    rng = np.random.default_rng(args.seed)
-    block_ids = rng.choice(len(reader), size=min(args.n_blocks_bimodal, len(reader)),
-                           replace=False)
-
-    hits = find_clean_bimodal(reader, block_ids, args)
-    print(f"  {len(hits)} candidates (both peaks in bins "
-          f"[{args.edge_margin},{N_AIA_BINS-1-args.edge_margin}], sep "
-          f"{args.min_sep}-{args.max_sep}, weaker peak >= {args.min_ratio:.2f} "
-          f"of taller, brightness {args.bright_lo:.2f}-{args.bright_hi:.2f} quantile)")
-    if not hits:
-        print("  none found; skipping bimodal figure")
-        return [], []
-
-    # Strongest weaker-peak first: the clearest cases of two comparable
-    # components. NOT widest separation -- that ranked end-to-end pairs top.
-    hits = sorted(hits, key=lambda h: -h[5])[:args.n_plot]
-    D64 = D_t.cpu().numpy().astype(np.float64)
-    B_np = B_t.cpu().numpy()
-
+def _build_records(reader, hits, models, B_t, D64, B_np, rng, args, device, group):
     recs = []
-    for (b, i, j, bright, sep, ratio) in sorted(hits, key=lambda h: h[0]):
+    for (b, i, j, bright, sep, ratio, weak_h) in sorted(hits, key=lambda h: h[0]):
         obs_a, err_a, tol_a, dem_a = reader.read_block(b)
         obs = obs_a[:, i, j].astype(np.float64)
         err = err_a[:, i, j].astype(np.float64)
@@ -226,13 +238,60 @@ def plot_bimodal(args, models, D_t, B_t, logT, device, out_dir):
         pred = {k: ((m(patch) @ B_t.T)[:, :N_AIA_BINS]).cpu().numpy()[0]
                 for k, m in models.items()}
         recs.append({"block": b, "i": i, "j": j, "bright": bright, "sep": sep,
-                     "ratio": ratio,
+                     "ratio": ratio, "group": group,
                      "stab": n_still / max(len(perturbed), 1),
                      "dem_bp": np.maximum(B_np @ x_bp, 0),
                      "perturbed": perturbed, "pred": pred})
+    return recs
 
+
+def plot_bimodal(args, models, D_t, B_t, logT, device, out_dir):
+    """Two groups, labelled: pixels the network reproduces, and pixels it misses.
+
+    Showing only one group misleads in opposite directions -- agreements alone
+    hide the 29.85% recall, misses alone hide the 80.75% precision. Both are
+    real and the figure has to carry both.
+    """
+    reader = BlockReader(args.bp_root, "test", patch_size=args.patch_size)
+    rng = np.random.default_rng(args.seed)
+    block_ids = rng.choice(len(reader), size=min(args.n_blocks_bimodal, len(reader)),
+                           replace=False)
+
+    crit = (f"peaks in bins [{args.edge_margin},{N_AIA_BINS-1-args.edge_margin}], "
+            f"sep {args.min_sep}-{args.max_sep}, weaker >= {args.min_ratio:.2f} "
+            f"of taller"
+            + (", exactly 2 peaks" if args.exact_two else ""))
+
+    agree = find_clean_bimodal(reader, block_ids, args,
+                               model=models[("barrier", "small")],
+                               B_t=B_t, device=device)
+    allhits = find_clean_bimodal(reader, block_ids, args)
+    agree_key = {(h[0], h[1], h[2]) for h in agree}
+    miss = [h for h in allhits if (h[0], h[1], h[2]) not in agree_key]
+    print(f"  {crit}")
+    print(f"  {len(agree)} where the {args.width_label} network is ALSO bimodal, "
+          f"{len(miss)} where it is not")
+    if not agree and not miss:
+        print("  none found; skipping bimodal figure")
+        return [], []
+
+    # Tallest weaker peak first -- visually unambiguous double peaks, and for
+    # the agreement group the ones that best show the model reproducing both.
+    n_each = max(args.n_plot // 2, 1)
+    picks = ([( "agrees", h) for h in sorted(agree, key=lambda h: -h[6])[:n_each]]
+             + [("misses", h) for h in sorted(miss, key=lambda h: -h[6])[:n_each]])
+
+    D64 = D_t.cpu().numpy().astype(np.float64)
+    B_np = B_t.cpu().numpy()
+    recs = []
+    for group in ("agrees", "misses"):
+        hs = [h for g, h in picks if g == group]
+        if hs:
+            recs += _build_records(reader, hs, models, B_t, D64, B_np, rng,
+                                   args, device, group)
     if not recs:
         return [], []
+    recs.sort(key=lambda r: (r["group"] != "agrees",))
 
     fig, axes = plt.subplots(len(recs), 1, figsize=(9.5, 3.0 * len(recs)),
                              squeeze=False)
@@ -245,9 +304,11 @@ def plot_bimodal(args, models, D_t, B_t, logT, device, out_dir):
                 **STYLE["base"])
         ax.plot(logT, r["pred"][("barrier", "small")],
                 label=f"mlp6 {args.width_label}", **STYLE["small"])
-        ax.set_title(f"block {r['block']} px ({r['i']},{r['j']})  "
+        tag = ("NETWORK REPRODUCES BOTH PEAKS" if r["group"] == "agrees"
+               else "NETWORK MISSES THE SECOND PEAK")
+        ax.set_title(f"[{tag}]  block {r['block']} px ({r['i']},{r['j']})  "
                      f"sum(obs)={r['bright']:.3g}  sep {r['sep']} bins  "
-                     f"weaker/taller peak {r['ratio']:.2f}  "
+                     f"weaker/taller {r['ratio']:.2f}  "
                      f"gray: {len(r['perturbed'])} perturbed BP solves",
                      fontsize=8)
         ax.set_xlabel("log T", fontsize=7)
@@ -258,8 +319,9 @@ def plot_bimodal(args, models, D_t, B_t, logT, device, out_dir):
         ax.grid(alpha=0.18, lw=0.5)
         ax.legend(fontsize=7, frameon=False, ncol=3)
 
-    fig.suptitle("Clean interior-bimodal pixels: two well-separated temperature "
-                 "components, mid-brightness", fontsize=10)
+    fig.suptitle("Bimodal BP pixels: where the network reproduces both "
+                 "components (top) and where it misses the hot one (bottom)",
+                 fontsize=10)
     fig.tight_layout(rect=[0, 0, 1, 0.985])
     p = os.path.join(out_dir, "final_bimodal.png")
     fig.savefig(p, dpi=args.dpi)
@@ -322,6 +384,13 @@ def parse_args():
                    help="peaks must sit in bins [margin, T-1-margin]")
     p.add_argument("--min_ratio", type=float, default=0.25,
                    help="weaker peak as a fraction of the taller one")
+    p.add_argument("--nn_min_ratio", type=float, default=0.15,
+                   help="same test on the network's curve; looser because the "
+                        "network's second peak is systematically shallower")
+    p.add_argument("--exact_two", action="store_true", default=True,
+                   help="require exactly 2 peaks: 6 AIA channels cannot resolve "
+                        "3 independent temperature components")
+    p.add_argument("--allow_three_plus", dest="exact_two", action="store_false")
     p.add_argument("--bright_lo", type=float, default=0.90)
     p.add_argument("--bright_hi", type=float, default=0.999)
     p.add_argument("--dpi", type=int, default=150)

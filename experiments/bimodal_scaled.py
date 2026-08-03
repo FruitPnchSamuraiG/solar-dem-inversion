@@ -60,7 +60,7 @@ from experiments.eval_scaled import RUNS, STYLE, find_ckpt
 C_PERTURB = "#b9b9b9"
 
 
-def count_peaks_batch(dems, prominence_frac=0.15):
+def count_peaks_batch(dems, prominence_frac=0.15, interior=False):
     """Peak count for [P, T] curves.
 
     Two stages because the census runs over hundreds of thousands of pixels and
@@ -68,22 +68,36 @@ def count_peaks_batch(dems, prominence_frac=0.15):
     (cheap, ignores prominence), then the real prominence-aware count only on
     curves with more than one raw maximum. Curves with <=1 raw maximum cannot
     gain a peak by adding a prominence threshold, so the shortcut is exact.
+
+    With interior=True, also returns the count restricted to bins 1..T-2. The
+    first and last logT bins sit at the ends of AIA's temperature response,
+    where six EUV channels have almost no discriminating power, and the padding
+    above makes a curve that merely rises into a boundary bin register a peak
+    there. The test-split plots show most of BP's second peaks are exactly that
+    -- emission dumped at logT 5.5 or 7.2 -- which is a known inversion artifact
+    rather than a second thermal component, so the two must be counted apart.
     """
     P, T = dems.shape
     out = np.zeros(P, dtype=np.int16)
+    inn = np.zeros(P, dtype=np.int16)
     pos = dems.max(axis=1) > 0
     if not pos.any():
-        return out
+        return (out, inn) if interior else out
 
     z = np.zeros((P, 1), dtype=dems.dtype)
     padded = np.concatenate([z, dems, z], axis=1)
-    raw = ((padded[:, 1:-1] > padded[:, :-2]) &
-           (padded[:, 1:-1] >= padded[:, 2:])).sum(axis=1)
+    ismax = ((padded[:, 1:-1] > padded[:, :-2]) &
+             (padded[:, 1:-1] >= padded[:, 2:]))          # [P, T]
+    raw = ismax.sum(axis=1)
 
-    out[pos & (raw == 1)] = 1
+    single = pos & (raw == 1)
+    out[single] = 1
+    inn[single] = ismax[single, 1:T - 1].sum(axis=1)
     for k in np.nonzero(pos & (raw >= 2))[0]:
-        out[k] = count_peaks(dems[k], prominence_frac)[0]
-    return out
+        n, where = count_peaks(dems[k], prominence_frac)
+        out[k] = n
+        inn[k] = int(((where >= 1) & (where <= T - 2)).sum())
+    return (out, inn) if interior else out
 
 
 def solve_bp(D64, obs, err, tolfacs=(1.4, 2.0, 2.8, 5.0)):
@@ -113,11 +127,13 @@ def _network_peaks(reader, obs, err, tol, rows, cols, models, B_t, device,
     out = {}
     for key, model in models.items():
         peaks = np.empty(len(rows), dtype=np.int16)
+        inner = np.empty(len(rows), dtype=np.int16)
         for s in range(0, len(rows), chunk):
             x = model(patch[s:s + chunk].to(device))
             pred = (x @ B_t.T)[:, :n_bins].cpu().numpy()
-            peaks[s:s + chunk] = count_peaks_batch(pred, prominence)
-        out[key] = peaks
+            peaks[s:s + chunk], inner[s:s + chunk] = count_peaks_batch(
+                pred, prominence, interior=True)
+        out[key] = (peaks, inner)
     return out
 
 
@@ -128,8 +144,11 @@ def census(reader, block_ids, prominence, n_bins, models=None, B_t=None,
     by_tol = {1: [0, 0], 3: [0, 0], 5: [0, 0]}
     bright_all, peaks_all = [], []
     hits = []          # (block, i, j) of bimodal pixels, for phase 2
-    # confusion counts per network: [true pos, false pos, false neg, true neg]
+    # confusion counts per network: [true pos, false pos, false neg, true neg],
+    # kept twice -- once against any second peak, once against interior-only
     conf = {k: np.zeros(4, dtype=np.int64) for k in (models or {})}
+    conf_in = {k: np.zeros(4, dtype=np.int64) for k in (models or {})}
+    interior_all = []
 
     for b in block_ids:
         obs, err, tol, dem = reader.read_block(b)
@@ -138,19 +157,21 @@ def census(reader, block_ids, prominence, n_bins, models=None, B_t=None,
         if len(rows) == 0:
             continue
         curves = np.ascontiguousarray(dem[:, rows, cols].T)      # [P, n_bins]
-        npk = count_peaks_batch(curves, prominence)
+        npk, npk_in = count_peaks_batch(curves, prominence, interior=True)
         bright = obs[:, rows, cols].sum(axis=0)
         tl = tol[rows, cols]
+        interior_all.append(npk_in)
 
         if models:
-            ref_bi = npk >= 2
+            ref_bi, ref_bi_in = npk >= 2, npk_in >= 2
             nn_peaks = _network_peaks(reader, obs, err, tol, rows, cols,
                                       models, B_t, device, n_bins, prominence)
-            for key, pk in nn_peaks.items():
-                nn_bi = pk >= 2
-                conf[key] += np.array([
-                    int((nn_bi & ref_bi).sum()), int((nn_bi & ~ref_bi).sum()),
-                    int((~nn_bi & ref_bi).sum()), int((~nn_bi & ~ref_bi).sum())])
+            for key, (pk, pk_in) in nn_peaks.items():
+                for tgt, nn_bi, bp_bi in ((conf, pk >= 2, ref_bi),
+                                          (conf_in, pk_in >= 2, ref_bi_in)):
+                    tgt[key] += np.array([
+                        int((nn_bi & bp_bi).sum()), int((nn_bi & ~bp_bi).sum()),
+                        int((~nn_bi & bp_bi).sum()), int((~nn_bi & ~bp_bi).sum())])
 
         tot["n"] += len(rows)
         tot["bimodal"] += int((npk >= 2).sum())
@@ -166,9 +187,18 @@ def census(reader, block_ids, prominence, n_bins, models=None, B_t=None,
 
     bright_all = np.concatenate(bright_all)
     peaks_all = np.concatenate(peaks_all)
+    interior_all = np.concatenate(interior_all)
     frac = tot["bimodal"] / max(tot["n"], 1)
+    n_in = int((interior_all >= 2).sum())
+    frac_in = n_in / max(tot["n"], 1)
     print(f"Scanned {tot['n']:,} valid pixels over {len(block_ids)} test blocks")
     print(f"  bimodal (>=2 peaks): {tot['bimodal']:,}  ({100*frac:.2f}%)")
+    print(f"  of which INTERIOR (both peaks off the boundary bins): "
+          f"{n_in:,}  ({100*frac_in:.2f}% of all pixels)")
+    print(f"  boundary-only second peak: {tot['bimodal']-n_in:,}  "
+          f"({100*(tot['bimodal']-n_in)/max(tot['bimodal'],1):.1f}% of the bimodal set)"
+          f"\n    -- emission at logT 5.5 or 7.2, the ends of AIA's response, is a"
+          f"\n       known inversion artifact rather than a second thermal component")
     print(f"  (2026-07-11 on 4 crop timestamps, 1,000 px each: 5.1-9.1%)")
 
     print("\nBy tolLevel:")
@@ -188,26 +218,31 @@ def census(reader, block_ids, prominence, n_bins, models=None, B_t=None,
            "frac_bimodal": float(frac),
            "by_tol": {str(k): v for k, v in by_tol.items()}}
 
-    if conf:
-        print(f"\nCan the networks PREDICT bimodality? (all {tot['n']:,} pixels, "
-              f"BP base rate {100*frac:.2f}%)")
+    for label, table, base, dkey in (
+            ("ANY second peak", conf, frac, "predict"),
+            ("INTERIOR peaks only", conf_in, frac_in, "predict_interior")):
+        if not table:
+            continue
+        print(f"\nCan the networks PREDICT bimodality -- {label}? "
+              f"({tot['n']:,} pixels, BP base rate {100*base:.2f}%)")
         print(f"  {'network':>13}  {'rate':>6}  {'recall':>7}  {'prec':>6}   "
               f"{'TP':>7} {'FP':>7} {'FN':>7}")
-        out["predict"] = {}
-        for key, (tp, fp, fn, tn) in conf.items():
+        out[dkey] = {}
+        for key, (tp, fp, fn, tn) in table.items():
             name = f"{key[0]}_{key[1]}"
             rate = (tp + fp) / max(tp + fp + fn + tn, 1)
             rec = tp / max(tp + fn, 1)
             prec = tp / max(tp + fp, 1)
             print(f"  {name:>13}  {100*rate:>5.2f}%  {100*rec:>6.2f}%  "
                   f"{100*prec:>5.2f}%   {tp:>7,} {fp:>7,} {fn:>7,}")
-            out["predict"][name] = {"rate": float(rate), "recall": float(rec),
-                                    "precision": float(prec),
-                                    "tp": int(tp), "fp": int(fp),
-                                    "fn": int(fn), "tn": int(tn)}
-        print("  precision vs the BP base rate is the test: a network at the base "
-              "rate\n  is guessing, one well above it has learned where bimodality "
-              "lives.")
+            out[dkey][name] = {"rate": float(rate), "recall": float(rec),
+                               "precision": float(prec), "tp": int(tp),
+                               "fp": int(fp), "fn": int(fn), "tn": int(tn)}
+        print(f"  precision against the {100*base:.2f}% base rate is the test: at "
+              f"the base rate\n  the network is guessing; well above it, it has "
+              f"learned where these live.")
+    out["n_interior_bimodal"] = n_in
+    out["frac_interior_bimodal"] = float(frac_in)
 
     return out, hits
 

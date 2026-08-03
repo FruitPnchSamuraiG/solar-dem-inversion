@@ -54,18 +54,24 @@ RUNS = [("mlp6", "barrier"), ("cnn", "barrier"),
         ("mlp6", "enet"), ("cnn", "enet")]
 
 
-def find_ckpt(ckpt_dir, variant, loss):
-    """Checkpoints are named by train_scaled's tag; accept the usual spellings."""
-    for name in (f"scaled_{variant}_{loss}.pt", f"{variant}_{loss}.pt"):
+def find_ckpt(ckpt_dir, variant, loss, suffix=""):
+    """Checkpoints are named by train_scaled's tag; accept the usual spellings.
+
+    `suffix` selects a sweep run explicitly (e.g. "_h160" for the 87k-parameter
+    width). Without it the substring fallback would match several sweep
+    checkpoints at once and silently evaluate whichever sorted first.
+    """
+    for name in (f"scaled_{variant}_{loss}{suffix}.pt", f"{variant}_{loss}{suffix}.pt"):
         path = os.path.join(ckpt_dir, name)
         if os.path.exists(path):
             return path
     hits = [f for f in os.listdir(ckpt_dir)
-            if f.endswith(".pt") and variant in f and loss in f]
+            if f.endswith(f"{suffix}.pt") and variant in f and loss in f]
     if len(hits) == 1:
         return os.path.join(ckpt_dir, hits[0])
     raise FileNotFoundError(
-        f"no unique checkpoint for {variant}/{loss} in {ckpt_dir} (found {hits})")
+        f"no unique checkpoint for {variant}/{loss}{suffix} in {ckpt_dir} "
+        f"(found {hits})")
 
 
 # ── part 1: aggregate metrics on the test split ───────────────────────────────
@@ -290,7 +296,7 @@ def main():
 
     models, ckpts = {}, {}
     for key in RUNS:
-        path = find_ckpt(args.ckpt_dir, *key)
+        path = find_ckpt(args.ckpt_dir, *key, suffix=args.ckpt_suffix)
         m, c = load_scaled_model(path, n_basis, device)
         models[key], ckpts[key] = m, c
         print(f"  loaded {describe_ckpt(c)}   <- {os.path.basename(path)}")
@@ -336,6 +342,8 @@ def parse_args():
                    help="how many test blocks to draw curve pixels from")
     p.add_argument("--pixels_per_panel", type=int, default=6)
     p.add_argument("--n_align_check", type=int, default=4)
+    p.add_argument("--ckpt_suffix", default="",
+                   help="select a sweep width, e.g. _h160")
     p.add_argument("--skip_metrics", action="store_true")
     p.add_argument("--skip_tail", action="store_true")
     p.add_argument("--skip_curves", action="store_true")

@@ -42,7 +42,8 @@ def load_scaled_model(ckpt_path, n_basis, device):
 
     ckpt = torch.load(ckpt_path, map_location="cpu", weights_only=False)
     core = build_model(ckpt["variant"], n_basis, ckpt["patch_size"],
-                       ckpt["channels"], perm=ckpt.get("perm"))
+                       ckpt["channels"], perm=ckpt.get("perm"),
+                       hidden=ckpt.get("hidden"))
     # The saved weights come from a model whose Softplus was already replaced, so
     # rebuild that structure before load_state_dict (it is parameter-free, but
     # skipping it would silently restore the module that died in 15088220).

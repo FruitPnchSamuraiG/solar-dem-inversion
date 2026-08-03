@@ -6,15 +6,28 @@ being *better* than cnn at the median, p90, p99, p99.9 and p99.99. The whole
 reversal lives beyond the 99.99th percentile -- a few hundred pixels out of
 5,013,504, with a maximum of 2.09e8.
 
-The suspected mechanism is the barrier's normalisation. Each channel's penalty
-is (violation)^2 / sigma^2 with sigma = (ub - lb)/2 = tolfac * err, so a pixel
-whose staged error is near zero divides by near zero and any miss at all becomes
-enormous. The 2026-07-31 diag_errors.py established that no staged error is
-*non-positive*; it did not ask whether some are merely tiny.
+ANSWER (2026-08-02, full test split). Not the normalisation. The suspected
+mechanism was a near-zero sigma in the denominator; the worst pixel has a
+perfectly healthy one:
 
-This matters beyond reporting, because those pixels are in the training set too:
-a pixel contributing 1e8 dominates the gradient for its whole batch, so the
-network may be spending capacity fitting error bars that are not real.
+    211A  obs=0.062  err=0.611  band=[-0.793, 0.917]  Dx=9023
+
+The observation carries no signal, the error bar is ten times larger, and the
+network over-predicts by 9000x. Flooring sigma changes the mean by 0.07%.
+
+*A single pixel is 94% of mlp6's mean loss* (2.09e8 of a 2.22e8 total over
+5,013,504 pixels), which is the whole 44.32-vs-11.27 gap against cnn -- mlp6 is
+better at the median, p90, p99, p99.9 and p99.99. Report percentiles, never the
+mean, for this objective.
+
+Nor is it a training problem: at ~1 pathological pixel per epoch with gradient
+clipping already bounding its step, the four trained models are unaffected.
+
+The `lb < 0` criterion is *not* a usable filter either -- it catches 89% of
+pixels, because AIA's faint channels are genuinely noise-dominated (94A has a
+median of ~0.76 DN against a read-noise floor of the same size). The narrow
+population worth excluding is near-zero readings in the *bright* channels
+(171/193/211A), which is the deconvolution positivity clamp.
 
 Three outputs:
 
@@ -220,7 +233,7 @@ def main():
     D_t, B_t, n_basis, logT = load_operators(device)
     out = {}
     for variant in args.variants:
-        path = find_ckpt(args.ckpt_dir, variant, "barrier")
+        path = find_ckpt(args.ckpt_dir, variant, "barrier", suffix=args.ckpt_suffix)
         model, ckpt = load_scaled_model(path, n_basis, device)
         print(f"\nloaded {describe_ckpt(ckpt)}")
         a = Namespace(**ckpt["args"])
@@ -250,6 +263,8 @@ def parse_args():
     p.add_argument("--bp_root", required=True)
     p.add_argument("--ckpt_dir", default="output/experiments")
     p.add_argument("--out_dir", default="output/experiments/eval_scaled")
+    p.add_argument("--ckpt_suffix", default="",
+                   help="select a sweep width, e.g. _h160")
     p.add_argument("--phase", default="test")
     p.add_argument("--variants", nargs="+", default=["mlp6", "cnn"])
     p.add_argument("--batch_blocks", type=int, default=16)

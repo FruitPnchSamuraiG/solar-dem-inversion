@@ -257,7 +257,7 @@ def train(args):
     if args.variant == "cnn_shuffled":
         perm = np.random.default_rng(args.seed).permutation(args.patch_size ** 2)
     core = build_model(args.variant, n_basis, args.patch_size, args.channels,
-                       perm=perm)
+                       perm=perm, hidden=args.hidden)
     n_sp = harden_softplus(core, args.softplus_floor)
     init_output_head(core, args.init_bias, args.init_weight_scale)
     model = NormalizedInput(core, args.input_transform).to(device)
@@ -284,7 +284,11 @@ def train(args):
     print(f"{len(train_loader):,} steps/epoch, {total_steps:,} total, "
           f"{args.warmup_steps:,} warmup")
 
+    # The width suffix keeps a sweep's checkpoints from overwriting the 1.5M
+    # baseline, whose tag stays exactly what array 15092854 wrote.
     tag = f"scaled_{args.variant}_{args.loss}"
+    if args.hidden is not None:
+        tag += f"_h{args.hidden}"
     out_dir = args.out_dir
     os.makedirs(out_dir, exist_ok=True)
     history = []
@@ -327,6 +331,7 @@ def train(args):
                     "loss": args.loss, "patch_size": args.patch_size,
                     "stride": args.stride, "channels": args.channels,
                     "n_bins": args.n_bins, "perm": perm, "epoch": epoch + 1,
+                    "hidden": args.hidden,
                     "input_transform": args.input_transform,
                     "softplus_floor": args.softplus_floor,
                     "args": vars(args)},
@@ -367,6 +372,8 @@ def parse_args():
     p.add_argument("--root", required=True, help="staged zarr dir (…_DS)")
     p.add_argument("--variant", choices=VARIANTS, default="mlp6")
     p.add_argument("--loss", choices=["barrier", "enet"], default="barrier")
+    p.add_argument("--hidden", type=int, default=None,
+                   help="mlp6 hidden width; None = the 1.5M capacity-matched 680")
     p.add_argument("--out_dir", default="output/experiments")
     # data
     p.add_argument("--patch_size", type=int, default=9)

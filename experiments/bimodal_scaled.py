@@ -416,7 +416,7 @@ def main():
 
     models = {}
     for key in RUNS:
-        path = find_ckpt(args.ckpt_dir, *key)
+        path = find_ckpt(args.ckpt_dir, *key, suffix=args.ckpt_suffix)
         m, c = load_scaled_model(path, n_basis, device)
         models[key] = m
         print(f"  loaded {describe_ckpt(c)}")
@@ -459,6 +459,8 @@ def parse_args():
     p.add_argument("--enet_root", required=False)
     p.add_argument("--ckpt_dir", default="output/experiments")
     p.add_argument("--out_dir", default="output/experiments/bimodal_scaled")
+    p.add_argument("--ckpt_suffix", default="",
+                   help="select a sweep width, e.g. _h160")
     p.add_argument("--patch_size", type=int, default=9)
     p.add_argument("--n_blocks", type=int, default=20,
                    help="test blocks for the census (~16k pixels each)")

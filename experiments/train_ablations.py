@@ -106,11 +106,13 @@ class ShuffledPatchCNN(nn.Module):
 VARIANTS = ["cnn", "mlp6", "mlp_patch", "cnn_shuffled"]
 
 
-def build_model(variant, n_basis, patch_size, channels, perm=None):
+def build_model(variant, n_basis, patch_size, channels, perm=None, hidden=None):
     if variant == "cnn":
         return PatchDEMNet(n_basis=n_basis, patch_size=patch_size, channels=channels)
     if variant == "mlp6":
-        return CenterMLP(n_basis=n_basis, patch_size=patch_size)
+        # hidden is the size sweep's knob; None keeps the capacity-matched 680.
+        return CenterMLP(n_basis=n_basis, patch_size=patch_size,
+                         **({} if hidden is None else {"hidden": hidden}))
     if variant == "mlp_patch":
         return FlatPatchMLP(n_basis=n_basis, patch_size=patch_size)
     if variant == "cnn_shuffled":

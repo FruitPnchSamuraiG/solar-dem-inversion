@@ -261,3 +261,84 @@ reference. If sparsity fidelity is the paper's headline claim, **h336 (360k, 4x 
   them. Small population, not blocking, but it is the residue of the Step 19 investigation.
 - **Uncertainty head** — still unbuilt, and now less motivated: the bimodality result says
   a point estimate already locates multi-thermal pixels at 80% precision.
+
+---
+
+## Step 26 — The metric was measuring the label, not the model
+
+The sweep left one number unexplained: `mae_dem` is ~3x worse where BP is bimodal
+(0.29 vs 0.10), and that penalty is **constant** from 1.43M parameters down to 20k
+(2.89x-3.11x). Capacity is not the bottleneck. That leaves the amortization or the
+target.
+
+BP solves each pixel independently from a *noisy* observation, so it has its own
+reproducibility floor. `experiments/bp_self_consistency.py` measures it: 80 unimodal
+and 80 bimodal bright test pixels, 30 BP re-solves each under photon noise, all
+quantities in DEM units.
+
+| | BP self-scatter | mean \|BP\| | noise share | \|NN−BP\| | ratio |
+|---|---|---|---|---|---|
+| unimodal | 0.3097 | 0.8351 | 37.1% | 0.2135 | **0.69x** |
+| bimodal | 0.6027 | 1.3963 | 43.2% | 0.5895 | **0.98x** |
+
+**43% of BP's own signal at bimodal pixels is noise-driven.** Re-solving the same
+pixel under one realistic noise draw moves BP's answer by 0.60; our prediction
+differs from it by 0.59. At unimodal pixels the network is *closer to BP than BP is
+to itself*.
+
+So the 3x penalty is the label's irreproducibility, not the model's error — BP's
+self-scatter also roughly doubles at bimodal pixels (0.31 -> 0.60), which is the
+whole effect. The gray perturbation spaghetti in `final_bimodal.png` had been showing
+this all along; it now has a number attached.
+
+**Residual genuine gap**: hot bins at bimodal pixels, **1.17x**. That is the
+94A/131A undershoot, and it is the only part of the bimodal deficit that is ours.
+Much smaller than the raw 3x implied.
+
+**h232 is equally inside the envelope** (0.72x / 0.98x vs 0.69x / 0.98x), so the 8x
+reduction costs nothing on this measure either.
+
+**A hypothesis of ours, falsified.** We expected the network — which minimises the
+objective, not the label — to sit closer to the *mean* of BP's noise ensemble than to
+any single solve, i.e. to be estimating the expectation. It does not: `|NN−ens|`
+(1.10x) is worse than `|NN−BP|` (0.98x). It tracks the clean solve better.
+
+**Flaw to fix**: the `enet_*` rows compare ENet-trained models against *BP's* labels,
+which is not their target. Those rows are not meaningful as written.
+
+---
+
+## Step 27 — How the bimodality result must be stated
+
+The 80.75% precision figure is real but narrower than it sounds. Precision measures
+*co-occurrence of a binary shape property* — the network's curve has two local maxima
+and so does BP's. It is not curve agreement, and `final_bimodal.png` shows panels
+passing that test while the network draws a broad smooth blob against BP's sharp
+spikes.
+
+Supported: the network **flags** multi-thermal pixels at 79-81% precision against a
+14.17% base rate. Useful as a detector.
+
+Not supported: the network **reproduces** bimodal DEMs. It is ~3x worse there — though
+per Step 26 that gap is within BP's own reproducibility, so it is not a model failure
+either.
+
+Two further caveats: recall is only ~30%, and on the *strongest* double peaks (weaker
+peak >= 25% of the taller) agreement falls to ~14% (328 of 2,372), so the cases it
+catches skew toward subtle ones.
+
+**Also corrected**: the h160 "cliff" (recall 26.33% -> 8.10%) is substantially a
+detection-threshold effect. `mae_dem` at bimodal pixels rises only 0.293 -> 0.332
+(13%) across that step — h160's curves are nearly as close to BP, but smoothed just
+enough that the second bump stops registering as a local maximum at 15% prominence.
+h232 remains the better choice (better `sp_coef`, `mae_dem` and recall), but the cliff
+is less dramatic than peak-counting made it look.
+
+---
+
+## The result, stated plainly
+
+**Production model: mlp6 at hidden=232, 176,374 parameters** — 8.1x smaller than the
+1.43M baseline, for both the BP and ENet tracks. On 153 timestamps never used for
+training or checkpoint selection it matches the baseline on every metric that
+survives scrutiny, and it sits inside BP's own reproducibility envelope.

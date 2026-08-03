@@ -91,6 +91,41 @@ From the paper's "Future Work" section:
 
 ## Progress Log (most recent first)
 
+### 2026-08-03 (late) — The bimodal deficit is the LABEL's, not the model's
+
+`experiments/bp_self_consistency.py`, 80 unimodal + 80 bimodal bright test pixels,
+30 BP re-solves each under photon noise. All quantities in DEM units.
+
+| | BP self-scatter | mean \|BP\| | noise share | \|NN−BP\| | **ratio** |
+|---|---|---|---|---|---|
+| unimodal | 0.3097 | 0.8351 | 37.1% | 0.2135 | **0.69x** |
+| bimodal | 0.6027 | 1.3963 | 43.2% | 0.5895 | **0.98x** |
+
+**Re-solving the same pixel under one noise draw moves BP's own answer as much as our
+prediction differs from it.** At unimodal pixels the network is *closer to BP than BP is
+to itself*. The 3x bimodal penalty measured earlier (mae_dem 0.10 -> 0.29) is almost
+entirely BP's own irreproducibility: its self-scatter also roughly doubles there
+(0.31 -> 0.60). `mae_dem` at bimodal pixels was substantially measuring solver noise.
+
+**Residual genuine gap**: hot bins at bimodal pixels, **1.17x** — the 94A/131A undershoot,
+now bounded and much smaller than the raw 3x suggested.
+
+**h232 is equally inside the envelope**: 0.72x/0.98x vs the baseline's 0.69x/0.98x.
+
+**Falsified**: the network is *not* estimating the noise expectation. `|NN−ens|` (1.10x)
+is worse than `|NN−BP|` (0.98x) — it tracks the clean solve better than the ensemble mean.
+
+**How to state the bimodality result** (the 80.75% precision figure needs this framing):
+the network *flags* multi-thermal pixels at high precision (79-81% vs a 14.17% base rate)
+but low recall (~30%, and only ~14% on the strongest double peaks); it *reproduces* their
+DEM about 3x worse than unimodal pixels, and that gap is within BP's own reproducibility.
+"We capture bimodality" would not survive scrutiny; peak co-occurrence is a binary shape
+test, not curve agreement — the final figure shows panels passing it while drawing a broad
+blob against BP's spikes.
+
+**Known flaw**: the script's `enet_*` rows compare ENet-trained models to *BP* labels,
+which is not their target. Those two rows are meaningless as written.
+
 ### 2026-08-03 — WIDTH SWEEP DONE: h232 (176k, 8x smaller) is the production model
 
 Array `15185224` (16 runs: mlp6 x 8 widths x 2 losses, 40 epochs each) plus reruns

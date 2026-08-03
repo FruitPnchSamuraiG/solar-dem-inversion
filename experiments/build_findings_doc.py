@@ -105,25 +105,42 @@ doc.add_paragraph()
 add_date_heading("2026-08-02 — Scaled 1.5M Models: Test-Split Results, Loss-Tail Fix, Bimodal Census")
 
 add_para(
-    "First evaluation of the four fully-scaled models (array 15092854: {mlp6, cnn} x "
-    "{barrier, enet}, AIA-only, full 1,223-timestamp dataset, 1.5M params each) against data "
-    "that has NEVER been touched by training or checkpoint selection: the 153-timestamp test "
-    "split (~5.0M pixels), held out separately from the 153-timestamp validation split used "
-    "to pick these checkpoints. Two things had never been run at scale before: test-split "
-    "metrics, and a bimodal-DEM census against the current models (the only prior bimodal "
-    "result, 2026-07-11 below, used 4 small crops and the pre-scaling architecture). "
-    "Implemented in experiments/eval_scaled.py, experiments/bimodal_scaled.py, "
+    "Four models were trained (array 15092854): {mlp6, cnn} architectures x {barrier/BP, "
+    "enet/ElasticNet} losses, AIA-only, ~1.5M params each, on the full 1,223-timestamp "
+    "dataset (917 train / 153 val / 153 test, split by timestamp). This is their first "
+    "evaluation on the 153-timestamp TEST split -- ~5.0 million pixels the models have never "
+    "seen and that were never used to pick the checkpoint, as distinct from the 153-timestamp "
+    "validation split that WAS used for that. Two things had never been run at this scale "
+    "before: test-split metrics, and a bimodal-DEM census against the current models (the "
+    "only prior bimodal result, 2026-07-11 below, used 4 small crops and the pre-scaling "
+    "architecture). Implemented in experiments/eval_scaled.py, experiments/bimodal_scaled.py, "
     "experiments/diag_loss_outliers.py; run on Torch (job_eval_scaled.sbatch)."
 )
 
-add_subheading("Test-split metrics (sp_coef vs BP reference 1.79; mae_aia = |reconstructed AIA - observed AIA|, the one metric directly comparable across both losses)")
+add_subheading("Test-split metrics, and which one is the right yardstick per loss")
+add_para(
+    "The four metrics answer different questions and are not interchangeable. sp_coef "
+    "(Hoyer sparsity of the 54 basis coefficients, BP's own reference value 1.79) measures "
+    "how SPARSE the solution is -- this is the right yardstick for the barrier/BP-trained "
+    "pair, because BP's objective explicitly seeks the sparsest feasible solution. It is NOT "
+    "the right yardstick for the enet/ElasticNet-trained pair: ElasticNet's L2 term "
+    "deliberately trades sparsity for smoothness, so a LOWER sp_coef there is not obviously "
+    "better -- as the 2026-07-02 ablation already found, 'MAE-vs-BP is a misleading metric' "
+    "for a model that was never trying to match BP's sparsity in the first place. For the "
+    "enet pair, the right yardstick is mae_dem: mean absolute distance to ElasticNet's OWN "
+    "DEM label, i.e. how well the network reproduces the solver it was actually trained to "
+    "match. mae_aia (|reconstructed AIA - real observed AIA|) is the one metric comparable "
+    "ACROSS both losses, since it is scored against the same real image regardless of which "
+    "solver a model targets -- useful as a sanity check, not as the primary ranking metric "
+    "for either."
+)
 test_table = (
-    f"{'Variant':<8} {'Loss':<8} {'sp_coef':>8} {'sp_dem nn/ref':>14} {'mae_aia':>9} {'val sp_coef':>12}\n"
-    f"{'-'*64}\n"
-    f"{'mlp6':<8} {'barrier':<8} {'1.91':>8} {'5.15/5.33':>14} {'4.875':>9} {'1.90':>12}\n"
-    f"{'cnn':<8}  {'barrier':<8} {'1.98':>8} {'5.08/5.33':>14} {'4.830':>9} {'1.96':>12}\n"
-    f"{'mlp6':<8} {'enet':<8}    {'3.64':>8} {'5.23/5.21':>14} {'4.609':>9} {'3.68':>12}\n"
-    f"{'cnn':<8}  {'enet':<8}    {'3.57':>8} {'5.10/5.21':>14} {'4.699':>9} {'3.61':>12}\n"
+    f"{'Variant':<8} {'Loss':<8} {'sp_coef':>8} {'mae_dem':>9} {'mae_aia':>9} {'val sp_coef':>12}\n"
+    f"{'-'*58}\n"
+    f"{'mlp6':<8} {'barrier':<8} {'1.91':>8} {'0.124':>9} {'4.875':>9} {'1.90':>12}\n"
+    f"{'cnn':<8}  {'barrier':<8} {'1.98':>8} {'0.138':>9} {'4.830':>9} {'1.96':>12}\n"
+    f"{'mlp6':<8} {'enet':<8}    {'3.64':>8} {'0.007':>9} {'4.609':>9} {'3.68':>12}\n"
+    f"{'cnn':<8}  {'enet':<8}    {'3.57':>8} {'0.012':>9} {'4.699':>9} {'3.61':>12}\n"
 )
 mono = doc.add_paragraph()
 run = mono.add_run(test_table)
@@ -132,15 +149,17 @@ run.font.size = Pt(8)
 
 add_finding(
     "(1) No overfitting: every test-split number reproduces the validation number to the "
-    "third decimal across 153 entirely unseen timestamps. mlp6 is the clear winner on the "
-    "barrier/BP loss (closer to BP's 1.79 sparsity reference on both val and test). On the "
-    "enet/ElasticNet loss the comparison is mixed, not a clean win: mlp6 reconstructs the "
-    "actual AIA image slightly better (mae_aia 4.609 vs 4.699 — the correct absolute, "
-    "cross-loss-comparable metric, since it compares to the real observation rather than to "
-    "either solver's own DEM label), but cnn is marginally closer to ElasticNet's own sparsity "
-    "target (3.57 vs 3.64). This mixed enet result has not been deep-dived the way the barrier "
-    "loss has (below) and should be treated as provisional. "
-    "(2) A raw mean of the barrier training loss initially showed mlp6 at 44.32 vs cnn's "
+    "third decimal across 153 entirely unseen timestamps. "
+    "(2) mlp6 wins on the correct per-loss yardstick for BOTH losses. Barrier/BP: mlp6 is "
+    "closer to BP's 1.79 sparsity reference (1.91 vs 1.98) and closer to BP's own DEM label "
+    "(mae_dem 0.124 vs 0.138). Enet/ElasticNet: sp_coef alone made this look mixed (cnn's "
+    "3.57 is marginally closer to BP's reference than mlp6's 3.64) -- but sp_coef vs a BP "
+    "reference is the wrong yardstick here, since ElasticNet is not trying to match BP's "
+    "sparsity. On the metric that actually matters -- distance to ElasticNet's own DEM -- "
+    "mlp6 wins clearly (mae_dem 0.007 vs 0.012, nearly 2x better) and also reconstructs the "
+    "real AIA image better (4.609 vs 4.699). mlp6 is the production architecture for both "
+    "losses, cleanly. "
+    "(3) A raw mean of the barrier training loss initially showed mlp6 at 44.32 vs cnn's "
     "11.27 -- a reversal from validation that triggered a full investigation (next finding)."
 )
 
@@ -196,19 +215,18 @@ add_finding(
     "this scale. Prevalence still rises monotonically with brightness (7.4% in the faintest "
     "decile to 30.3% in the brightest) and is concentrated at tolLevel=1 (tight solver "
     "tolerance, not a relaxed/degenerate fit). "
-    "(2) The barrier-loss-trained networks can predict WHERE bimodality occurs, at real "
+    "(2) The barrier/BP-trained networks can predict WHERE bimodality occurs, at real "
     "precision well above the base rate -- mlp6_barrier 80.75%, cnn_barrier 83.70% against a "
     "14.17% background rate, with mlp6 recalling 2.5x more of the true bimodal pixels at "
     "essentially the same precision. This directly contradicts the 2026-07-10 meeting's "
     "working assumption that amortized point-estimate training makes learning this "
     "impossible, and weakens the case for an immediate distribution-output-head redesign. "
-    "(3) The enet/ElasticNet-trained networks were NOT tested for this in a meaningful way: "
-    "ElasticNet's own L2 regularization term explicitly penalizes multi-peaked (non-smooth) "
-    "solutions, so an enet-trained network correctly reproducing its own solver's behavior "
-    "should rarely predict two peaks. This is expected model behavior, not a deficiency -- "
-    "'can it predict bimodality' is a meaningful question only for the barrier/BP-trained "
-    "pair, and should not be read as an enet shortcoming. "
-    "(4) Remaining real deficiency, unrelated to bimodality: at bright pixels the networks "
+    "This check is NOT meaningful for the enet/ElasticNet pair and was not run for them: "
+    "ElasticNet's own L2 term explicitly penalizes multi-peaked solutions, so an enet-trained "
+    "network correctly reproducing its own solver SHOULD rarely predict two peaks -- that "
+    "would be expected behavior, not a deficiency, and 'can it predict bimodality' is only a "
+    "fair question for the pair actually trained to match BP. "
+    "(3) Remaining real deficiency, unrelated to bimodality: at bright pixels the networks "
     "under-reconstruct the hot channels (94A, 131A) and their DEM peaks sit ~0.1-0.15 lower "
     "in logT than BP's -- the same peak-shift failure the 2026-07-11 flare fold (below) found "
     "on unseen images, still present at full scale. This is the deficiency the in-progress "
@@ -224,7 +242,13 @@ for fname, cap in [
 ]:
     add_image(f"results/plots/10_scaled_test_20260802/{fname}", width_in=6.0, caption=cap)
 
-add_subheading("Bimodal pixels on held-out test data: perturbed BP solves (gray) vs real BP (black) vs all four networks")
+add_subheading("Interior-bimodal pixels on held-out test data: perturbed BP solves (gray) vs real BP (black) vs all four networks")
+add_para(
+    "Note: this plot was regenerated after an initial version was found to sample from ALL "
+    "bimodal pixels including the 11.2% boundary-only artifacts, which made it look weaker "
+    "than the interior-only numbers above actually support. It now draws only from the "
+    "genuine interior-bimodal set the headline numbers describe.", italic=True
+)
 add_image("results/plots/10_scaled_test_20260802/bimodal_scaled.png", width_in=5.5)
 
 add_divider()

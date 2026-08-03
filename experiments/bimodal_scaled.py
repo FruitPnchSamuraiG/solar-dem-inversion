@@ -297,6 +297,11 @@ def stability(reader, hits, D64, args, rng):
                         "dem_bp": np.maximum(args.B @ x_bp, 0)})
 
     stab_arr = np.array([r["stab"] for r in records])
+    if not records:
+        # --n_study 0 runs the census and the cross-tab only, which is the cheap
+        # path: phase 2 is the one that re-solves the LP.
+        print("no pixels studied (--n_study 0); skipping the perturbation phases")
+        return records
     print(f"Studied {len(records)} bimodal pixels, {args.n_perturb} noise draws each")
     print(f"  mean fraction still bimodal: {stab_arr.mean():.2f}")
     print(f"  stable (>=0.8): {(stab_arr >= 0.8).sum()}   "
@@ -429,8 +434,10 @@ def main():
         return
 
     records = stability(reader, hits, D64, args, rng)
-    model_behaviour(reader, records, models, D_t, B_t, device, args)
-    figs = plot_records(records, logT, args.out_dir, args)
+    figs = []
+    if records:
+        model_behaviour(reader, records, models, D_t, B_t, device, args)
+        figs = plot_records(records, logT, args.out_dir, args)
 
     stats["stability"] = [
         {k: v for k, v in r.items()

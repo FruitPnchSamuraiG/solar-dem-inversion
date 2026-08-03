@@ -81,6 +81,11 @@ def scan(model, loader, D_t, device, a_l1, mu, topn):
     tiny = {t: 0 for t in (1e-4, 1e-3, 1e-2)}   # pixels with min err/obs below t
     floor_sums = {f: 0.0 for f in FLOORS}
     floor_all = {f: [] for f in FLOORS}
+    # Pixels whose band straddles zero: lb = obs - tolfac*err < 0 in some channel,
+    # so the constraint degenerates to "emit less than ub" and carries no lower
+    # information, while still able to generate unbounded loss upward.
+    neg = {"n": 0, "sum": 0.0, "vals": []}
+    pos = {"n": 0, "sum": 0.0, "vals": []}
 
     for batch in loader:
         patch, obs, lb, ub, dem, tol = (t.to(device) for t in flatten_blocks(batch))
@@ -93,6 +98,14 @@ def scan(model, loader, D_t, device, a_l1, mu, topn):
             floor_all[f].append(lo[::37].cpu().numpy())
             if f == 0.0:
                 loss0, per_ch0, Dx0 = lo, per_ch, Dx
+
+        good = (lb > 0).all(dim=1)
+        for tgt, sel in ((neg, ~good), (pos, good)):
+            tgt["n"] += int(sel.sum())
+            if sel.any():
+                v = loss0[sel]
+                tgt["sum"] += float(v.sum())
+                tgt["vals"].append(v[::7].cpu().numpy())
 
         err = (ub - lb) / 2 / 1.4                      # back out the staged error
         ratio = (err / obs.clamp(min=1e-12)).cpu().numpy()
@@ -123,8 +136,17 @@ def scan(model, loader, D_t, device, a_l1, mu, topn):
         order = np.argsort(-keep["loss"])[:topn]
         keep = {k2: v[order] for k2, v in keep.items()}
 
+    def _grp(g):
+        v = np.concatenate(g["vals"]) if g["vals"] else np.zeros(1)
+        return {"n": g["n"], "frac": g["n"] / max(n_seen, 1),
+                "mean": g["sum"] / max(g["n"], 1),
+                "share_of_total": g["sum"] / max(neg["sum"] + pos["sum"], 1e-12),
+                "pct": np.percentile(v, [50, 90, 99, 99.9, 100]).tolist()}
+
     stats = {
         "n": n_seen,
+        "neg_band": _grp(neg),
+        "pos_band": _grp(pos),
         "err_ratio_mean": (err_ratio_sum / max(n_seen, 1)).tolist(),
         "err_ratio_min": err_ratio_min.tolist(),
         "tiny": {str(t): c for t, c in tiny.items()},
@@ -162,6 +184,20 @@ def report(name, keep, stats, args):
     print("  pixels whose *smallest* err/obs falls below:")
     for t, c in stats["tiny"].items():
         print(f"    {float(t):>8.0e}: {c:>10,}  ({100*c/max(stats['n'],1):.4f}%)")
+
+    print("\nPixels whose tolerance band straddles zero (lb < 0 in some channel):")
+    print(f"  {'group':>12}  {'n':>10}  {'frac':>7}  {'mean':>12}  "
+          f"{'of total':>9}  {'median':>8}  {'p99':>9}  {'max':>12}")
+    for label, key in (("lb < 0", "neg_band"), ("lb > 0", "pos_band")):
+        g = stats[key]
+        print(f"  {label:>12}  {g['n']:>10,}  {100*g['frac']:>6.2f}%  "
+              f"{g['mean']:>12.4g}  {100*g['share_of_total']:>8.2f}%  "
+              f"{g['pct'][0]:>8.4f}  {g['pct'][2]:>9.3f}  {g['pct'][4]:>12.4g}")
+    print("  lb = obs - 1.4*err < 0 means the observation is below its own noise: "
+          "the\n  constraint degenerates to 'stay under ub' and carries no lower "
+          "information,\n  while still able to generate unbounded loss upward. "
+          "These are the\n  deconvolution positivity-clamp pixels MIN_OBS=1e-3 was "
+          "meant to exclude.")
 
     print("\nCounterfactual -- sigma floored at frac * obs:")
     print(f"  {'floor':>7}  {'mean':>12}  {'median':>9}  {'p90':>8}  {'p99':>9}  "

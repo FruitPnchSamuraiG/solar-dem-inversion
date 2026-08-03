@@ -43,7 +43,7 @@ from src.scaled_eval import BlockReader, load_scaled_model
 from experiments.train_neural_field import effective_sparsity, pick_device
 from experiments.train_scaled import load_operators
 from experiments.eval_scaled import barrier_terms, find_ckpt
-from experiments.bimodal_scaled import _network_peaks, count_peaks_batch
+from experiments.bimodal_scaled import count_peaks_batch
 
 WIDTHS = [680, 480, 336, 232, 160, 108, 72, 48]
 PARAMS = {680: "1.43M", 480: "722k", 336: "360k", 232: "176k",
@@ -102,7 +102,8 @@ def test_metrics(model, ckpt, loader, D_t, B_t, device):
 
 
 @torch.no_grad()
-def bimodal_census(reader, block_ids, models, B_t, device, prominence):
+def bimodal_census(reader, block_ids, models, B_t, device, prominence, logT,
+                   hot_logT=6.5):
     """Interior-bimodal cross-tab for every model, on one shared set of pixels.
 
     Interior-only: the boundary bins sit at the ends of AIA's temperature
@@ -110,6 +111,15 @@ def bimodal_census(reader, block_ids, models, B_t, device, prominence):
     """
     conf = {k: np.zeros(4, dtype=np.int64) for k in models}
     n_tot = n_bi = 0
+
+    # mae_dem accumulated by how many peaks BP found. Peak counting is a weak
+    # proxy: a broad smooth curve with two local maxima passes the test while
+    # matching BP's sharp spikes poorly, which the final figure shows plainly.
+    # The MAE says by how much, in DEM units, without any thresholding.
+    groups = ("uni", "bi", "tri+")
+    mae = {k: {g: [0.0, 0] for g in groups} for k in models}
+    mae_hot = {k: {g: [0.0, 0] for g in groups} for k in models}
+    hot = np.asarray(logT[:N_AIA_BINS]) >= hot_logT
 
     for b in block_ids:
         obs, err, tol, dem = reader.read_block(b)
@@ -122,22 +132,59 @@ def bimodal_census(reader, block_ids, models, B_t, device, prominence):
         ref_bi = ref_in >= 2
         n_tot += len(rows)
         n_bi += int(ref_bi.sum())
+        sel = {"uni": ref_in <= 1, "bi": ref_in == 2, "tri+": ref_in >= 3}
 
-        peaks = _network_peaks(reader, obs, err, tol, rows, cols, models,
-                               B_t, device, N_AIA_BINS, prominence)
-        for key, (_, pk_in) in peaks.items():
+        peaks, preds = _network_peaks_and_pred(reader, obs, err, tol, rows, cols,
+                                               models, B_t, device, prominence)
+        for key in models:
+            pk_in = peaks[key]
             nn_bi = pk_in >= 2
             conf[key] += np.array([
                 int((nn_bi & ref_bi).sum()), int((nn_bi & ~ref_bi).sum()),
                 int((~nn_bi & ref_bi).sum()), int((~nn_bi & ~ref_bi).sum())])
 
+            d = np.abs(preds[key] - curves)                    # [P, n_bins]
+            per_px = d.mean(axis=1)
+            per_px_hot = d[:, hot].mean(axis=1)
+            for g in groups:
+                s = sel[g]
+                if s.any():
+                    mae[key][g][0] += float(per_px[s].sum())
+                    mae[key][g][1] += int(s.sum())
+                    mae_hot[key][g][0] += float(per_px_hot[s].sum())
+                    mae_hot[key][g][1] += int(s.sum())
+
     base = n_bi / max(n_tot, 1)
     out = {}
     for key, (tp, fp, fn, tn) in conf.items():
+        m = {g: mae[key][g][0] / max(mae[key][g][1], 1) for g in groups}
+        mh = {g: mae_hot[key][g][0] / max(mae_hot[key][g][1], 1) for g in groups}
         out[key] = {"recall": tp / max(tp + fn, 1),
                     "precision": tp / max(tp + fp, 1),
-                    "rate": (tp + fp) / max(tp + fp + fn + tn, 1)}
+                    "rate": (tp + fp) / max(tp + fp + fn + tn, 1),
+                    "mae_dem": m, "mae_dem_hot": mh,
+                    "n": {g: mae[key][g][1] for g in groups},
+                    "penalty": m["bi"] / max(m["uni"], 1e-12)}
     return out, base, n_tot
+
+
+@torch.no_grad()
+def _network_peaks_and_pred(reader, obs, err, tol, rows, cols, models, B_t,
+                            device, prominence, chunk=8192):
+    """Interior peak count AND the predicted DEM for every model, one gather."""
+    px = reader.gather(obs, err, tol, None, rows, cols)
+    patch = px["patch"]
+    peaks, preds = {}, {}
+    for key, model in models.items():
+        pk = np.empty(len(rows), dtype=np.int16)
+        pr = np.empty((len(rows), N_AIA_BINS), dtype=np.float32)
+        for s in range(0, len(rows), chunk):
+            x = model(patch[s:s + chunk].to(device))
+            p = (x @ B_t.T)[:, :N_AIA_BINS].cpu().numpy()
+            pr[s:s + chunk] = p
+            _, pk[s:s + chunk] = count_peaks_batch(p, prominence, interior=True)
+        peaks[key], preds[key] = pk, pr
+    return peaks, preds
 
 
 def main():
@@ -201,7 +248,8 @@ def main():
     block_ids = rng.choice(len(reader), size=min(args.n_blocks, len(reader)),
                            replace=False)
     bim, base, n_scanned = bimodal_census(reader, block_ids, models, B_t,
-                                          device, args.prominence)
+                                          device, args.prominence, logT,
+                                          args.hot_logT)
     print(f"\nScanned {n_scanned:,} pixels; BP interior-bimodal base rate "
           f"{100*base:.2f}%  (1.43M baseline: 80.75% precision, 29.85% recall)")
     for loss in LOSSES:
@@ -214,6 +262,26 @@ def main():
             results[f"h{w}_{loss}"]["bimodal"] = d
             print(f"  {w:>7} {PARAMS.get(w, '?'):>7} {100*d['rate']:>6.2f}% "
                   f"{100*d['recall']:>7.2f}% {100*d['precision']:>9.2f}%")
+
+    # The magnitude question. Peak counting is binary and forgiving -- a broad
+    # smooth curve with two local maxima counts as a hit while matching BP's
+    # sharp spikes poorly. mae_dem by BP peak count says how much worse the
+    # prediction actually is where BP is multi-thermal, with no threshold.
+    print("\n" + "=" * 100)
+    print("mae_dem BY BP PEAK COUNT -- how much worse are we where BP is bimodal?")
+    print("=" * 100)
+    for loss in LOSSES:
+        print(f"\n{loss.upper()}   (hot = logT >= {args.hot_logT})")
+        print(f"  {'hidden':>7} {'params':>7} {'uni':>9} {'bi':>9} {'tri+':>9} "
+              f"{'bi/uni':>7} {'uni hot':>9} {'bi hot':>9} {'n bi':>8}")
+        for w in widths:
+            if (w, loss) not in bim:
+                continue
+            d = bim[(w, loss)]
+            m, mh = d["mae_dem"], d["mae_dem_hot"]
+            print(f"  {w:>7} {PARAMS.get(w, '?'):>7} {m['uni']:>9.4f} "
+                  f"{m['bi']:>9.4f} {m['tri+']:>9.4f} {d['penalty']:>7.2f}x "
+                  f"{mh['uni']:>9.4f} {mh['bi']:>9.4f} {d['n']['bi']:>8,}")
 
     os.makedirs(args.out_dir, exist_ok=True)
     path = os.path.join(args.out_dir, "eval_sweep_summary.json")
@@ -240,6 +308,9 @@ def parse_args():
     p.add_argument("--n_blocks", type=int, default=20,
                    help="test blocks for the bimodal census")
     p.add_argument("--prominence", type=float, default=0.15)
+    p.add_argument("--hot_logT", type=float, default=6.5,
+                   help="bins at or above this count as the hot component, "
+                        "where the missed second peaks concentrate")
     p.add_argument("--seed", type=int, default=0)
     return p.parse_args()
 

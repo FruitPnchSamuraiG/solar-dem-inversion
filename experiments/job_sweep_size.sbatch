@@ -31,6 +31,12 @@
 #
 # 680 is the baseline already trained, rerun here so the whole curve comes from
 # one submission under identical conditions rather than being stitched together.
+#
+# --warmup_steps 3000 matches the baseline (15092854): train_scaled's own default
+# is 500, the same value that killed cnn+enet in job 15091457 (dead Softplus at
+# init). Omitting it here reproduced that exact collapse on task 9 (mlp6 h480
+# enet) on the first submission of this script -- the guard raised loudly rather
+# than writing silent zero epochs, but the fix is the flag, not the guard.
 
 set -e
 
@@ -70,5 +76,6 @@ python3 -u experiments/train_scaled.py \
   --epochs "${EPOCHS:-40}" \
   --batch_blocks "${BATCH_BLOCKS:-16}" \
   --num_workers 10 \
+  --warmup_steps "${WARMUP_STEPS:-3000}" \
   --out_dir "${OUT_DIR:-output/experiments/sweep}" \
   $EXTRA_ARGS

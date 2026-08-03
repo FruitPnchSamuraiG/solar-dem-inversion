@@ -245,9 +245,16 @@ for fname, cap in [
 add_subheading("Interior-bimodal pixels on held-out test data: perturbed BP solves (gray) vs real BP (black) vs all four networks")
 add_para(
     "Note: this plot was regenerated after an initial version was found to sample from ALL "
-    "bimodal pixels including the 11.2% boundary-only artifacts, which made it look weaker "
-    "than the interior-only numbers above actually support. It now draws only from the "
-    "genuine interior-bimodal set the headline numbers describe.", italic=True
+    "bimodal pixels including the 11.2% boundary-only artifacts. It now draws only from the "
+    "genuine interior-bimodal set. Read this as illustrative, not as the evidence itself -- "
+    "8 examples selected by brightness/stability, not a random sample. Two panels (block "
+    "6225 px 98,87 and block 8313 px 121,40) show clean, well-separated double peaks; a few "
+    "others have their second peak one bin in from the boundary, technically interior but "
+    "close enough to warrant caution; one (block 6225 px 98,87's mlp6 curve) shows the "
+    "network visibly failing to resolve a real double peak despite the strong aggregate "
+    "number. The 80.75% precision figure above, computed over all 190,337 census pixels, is "
+    "the actual evidence; this plot is a sanity check on what that number looks like, not a "
+    "replacement for it.", italic=True
 )
 add_image("results/plots/10_scaled_test_20260802/bimodal_scaled.png", width_in=5.5)
 

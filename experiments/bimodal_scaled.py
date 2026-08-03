@@ -98,12 +98,38 @@ def solve_bp(D64, obs, err, tolfacs=(1.4, 2.0, 2.8, 5.0)):
 
 # ── phase 1 ───────────────────────────────────────────────────────────────────
 
-def census(reader, block_ids, prominence, n_bins):
+@torch.no_grad()
+def _network_peaks(reader, obs, err, tol, rows, cols, models, B_t, device,
+                   n_bins, prominence, chunk=8192):
+    """Peak count for every network at every valid pixel of one block.
+
+    Recall alone cannot answer "can the network predict bimodality": a network
+    that emitted two peaks everywhere would match BP at every bimodal pixel and
+    be worthless. So the census scores each network over *all* valid pixels,
+    which gives false positives and hence precision.
+    """
+    px = reader.gather(obs, err, tol, None, rows, cols)
+    patch = px["patch"]
+    out = {}
+    for key, model in models.items():
+        peaks = np.empty(len(rows), dtype=np.int16)
+        for s in range(0, len(rows), chunk):
+            x = model(patch[s:s + chunk].to(device))
+            pred = (x @ B_t.T)[:, :n_bins].cpu().numpy()
+            peaks[s:s + chunk] = count_peaks_batch(pred, prominence)
+        out[key] = peaks
+    return out
+
+
+def census(reader, block_ids, prominence, n_bins, models=None, B_t=None,
+           device=None):
     print(f"\n{'='*78}\nPHASE 1 -- BIMODAL CENSUS on stored BP solutions\n{'='*78}")
     tot = {"n": 0, "bimodal": 0}
     by_tol = {1: [0, 0], 3: [0, 0], 5: [0, 0]}
     bright_all, peaks_all = [], []
     hits = []          # (block, i, j) of bimodal pixels, for phase 2
+    # confusion counts per network: [true pos, false pos, false neg, true neg]
+    conf = {k: np.zeros(4, dtype=np.int64) for k in (models or {})}
 
     for b in block_ids:
         obs, err, tol, dem = reader.read_block(b)
@@ -115,6 +141,16 @@ def census(reader, block_ids, prominence, n_bins):
         npk = count_peaks_batch(curves, prominence)
         bright = obs[:, rows, cols].sum(axis=0)
         tl = tol[rows, cols]
+
+        if models:
+            ref_bi = npk >= 2
+            nn_peaks = _network_peaks(reader, obs, err, tol, rows, cols,
+                                      models, B_t, device, n_bins, prominence)
+            for key, pk in nn_peaks.items():
+                nn_bi = pk >= 2
+                conf[key] += np.array([
+                    int((nn_bi & ref_bi).sum()), int((nn_bi & ~ref_bi).sum()),
+                    int((~nn_bi & ref_bi).sum()), int((~nn_bi & ~ref_bi).sum())])
 
         tot["n"] += len(rows)
         tot["bimodal"] += int((npk >= 2).sum())
@@ -148,9 +184,32 @@ def census(reader, block_ids, prominence, n_bins):
             print(f"  d{k+1:>2} [{edges[k]:>10.3g},{edges[k+1]:>10.3g}]: "
                   f"{100*(peaks_all[sel] >= 2).mean():>5.2f}%  (n={sel.sum():,})")
 
-    return {"n_scanned": int(tot["n"]), "n_bimodal": int(tot["bimodal"]),
-            "frac_bimodal": float(frac),
-            "by_tol": {str(k): v for k, v in by_tol.items()}}, hits
+    out = {"n_scanned": int(tot["n"]), "n_bimodal": int(tot["bimodal"]),
+           "frac_bimodal": float(frac),
+           "by_tol": {str(k): v for k, v in by_tol.items()}}
+
+    if conf:
+        print(f"\nCan the networks PREDICT bimodality? (all {tot['n']:,} pixels, "
+              f"BP base rate {100*frac:.2f}%)")
+        print(f"  {'network':>13}  {'rate':>6}  {'recall':>7}  {'prec':>6}   "
+              f"{'TP':>7} {'FP':>7} {'FN':>7}")
+        out["predict"] = {}
+        for key, (tp, fp, fn, tn) in conf.items():
+            name = f"{key[0]}_{key[1]}"
+            rate = (tp + fp) / max(tp + fp + fn + tn, 1)
+            rec = tp / max(tp + fn, 1)
+            prec = tp / max(tp + fp, 1)
+            print(f"  {name:>13}  {100*rate:>5.2f}%  {100*rec:>6.2f}%  "
+                  f"{100*prec:>5.2f}%   {tp:>7,} {fp:>7,} {fn:>7,}")
+            out["predict"][name] = {"rate": float(rate), "recall": float(rec),
+                                    "precision": float(prec),
+                                    "tp": int(tp), "fp": int(fp),
+                                    "fn": int(fn), "tn": int(tn)}
+        print("  precision vs the BP base rate is the test: a network at the base "
+              "rate\n  is guessing, one well above it has learned where bimodality "
+              "lives.")
+
+    return out, hits
 
 
 # ── phase 2 ───────────────────────────────────────────────────────────────────
@@ -328,7 +387,8 @@ def main():
     block_ids = rng.choice(len(reader), size=min(args.n_blocks, len(reader)),
                            replace=False)
 
-    stats, hits = census(reader, block_ids, args.prominence, N_AIA_BINS)
+    stats, hits = census(reader, block_ids, args.prominence, N_AIA_BINS,
+                         models=models, B_t=B_t, device=device)
     if not hits:
         print("no bimodal pixels found; nothing to study")
         return

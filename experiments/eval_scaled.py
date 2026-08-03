@@ -34,7 +34,7 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
-from src.zarr_data import make_loader, N_AIA_BINS
+from src.zarr_data import make_loader, flatten_blocks, N_AIA_BINS
 from src.scaled_eval import (BlockReader, assert_same_observations, count_peaks,
                              describe_ckpt, load_scaled_model)
 from experiments.train_neural_field import pick_device
@@ -90,6 +90,88 @@ def run_test_metrics(args, models, ckpts, D_t, B_t, device):
               f"sp_coef={t['sp_coef']:.2f} (hist: BP 1.79)  "
               f"sp_dem nn/ref={t['sp_dem']:.2f}/{t['sp_ref']:.2f}  "
               f"mae_aia={t['mae_aia']:.3f}  n(tol=1)={t['n']:,}")
+    return results
+
+
+# ── part 1b: where the barrier loss actually lives ────────────────────────────
+
+def barrier_terms(x, D_t, lb, ub, a_l1=1.0, mu=1.0):
+    """Per-pixel barrier components, matching barrier_loss_batch term for term
+    (which returns only the batch mean, so it cannot show a tail)."""
+    sigma2 = ((ub - lb) / 2) ** 2 + 1e-8
+    Dx = x @ D_t.T
+    l1 = a_l1 * x.abs().sum(dim=1)
+    below = mu * (torch.relu(lb - Dx) ** 2 / sigma2).sum(dim=1)
+    above = mu * (torch.relu(Dx - ub) ** 2 / sigma2).sum(dim=1)
+    return l1, below, above
+
+
+@torch.no_grad()
+def run_loss_tail(args, models, ckpts, D_t, device):
+    """Decompose the barrier objective per pixel.
+
+    Motivation: on the test split mlp6/barrier scores 44.32 against cnn's 11.27,
+    while sp_coef and mae_aia agree to the third decimal. The barrier is a sum of
+    squared constraint violations divided by sigma^2, so it is heavy-tailed by
+    construction and a mean says nothing about whether the gap is a broad
+    regression or a handful of catastrophic pixels. This separates the two.
+    """
+    print(f"\n{'='*78}\nBARRIER LOSS TAIL -- per-pixel decomposition\n{'='*78}")
+    results = {}
+    for (variant, loss) in RUNS:
+        if loss != "barrier":
+            continue                      # the enet runs minimise a different objective
+        a = Namespace(**ckpts[(variant, loss)]["args"])
+        _, loader = make_loader(args.bp_root, "test", batch_blocks=args.batch_blocks,
+                                num_workers=args.num_workers, shuffle=False,
+                                with_labels=True,
+                                pixels_per_block=args.pixels_per_block,
+                                max_blocks=args.max_blocks)
+        tot, l1s, lbs, ubs, brights = [], [], [], [], []
+        for batch in loader:
+            patch, obs, lb, ub, dem, tol = (t.to(device) for t in flatten_blocks(batch))
+            x = models[(variant, loss)](patch)
+            l1, below, above = barrier_terms(x, D_t, lb, ub,
+                                             a_l1=getattr(a, "alpha_l1", 1.0),
+                                             mu=getattr(a, "mu", 1.0))
+            tot.append((l1 + below + above).cpu().numpy())
+            l1s.append(l1.cpu().numpy())
+            lbs.append(below.cpu().numpy())
+            ubs.append(above.cpu().numpy())
+            brights.append(obs.sum(dim=1).cpu().numpy())
+
+        tot = np.concatenate(tot)
+        l1s, lbs, ubs = (np.concatenate(v) for v in (l1s, lbs, ubs))
+        bright = np.concatenate(brights)
+        order = np.argsort(tot)
+        share = lambda frac: float(tot[order][-max(int(len(tot) * frac), 1):].sum()
+                                   / max(tot.sum(), 1e-12))
+        q = {f"p{p}": float(np.percentile(tot, p))
+             for p in (50, 90, 99, 99.9, 99.99)}
+
+        print(f"\n{variant} / barrier   mean={tot.mean():.3f}")
+        print(f"  median={q['p50']:.3f}  p90={q['p90']:.3f}  p99={q['p99']:.3f}  "
+              f"p99.9={q['p99.9']:.2f}  p99.99={q['p99.99']:.2f}  "
+              f"max={tot.max():.4g}")
+        print(f"  share of total loss from the worst 1%: {100*share(0.01):.1f}%   "
+              f"worst 0.1%: {100*share(0.001):.1f}%")
+        print(f"  mean by term:  l1={l1s.mean():.3f}  "
+              f"below-lb={lbs.mean():.3f}  above-ub={ubs.mean():.3f}")
+        # A tail concentrated in the bright decile is a targeted failure (flare
+        # cores); one spread across deciles is a broad regression.
+        edges = np.quantile(bright, np.linspace(0, 1, 11))
+        print("  mean loss by brightness decile:")
+        for k in range(10):
+            sel = (bright >= edges[k]) & (bright <= edges[k + 1])
+            if sel.sum():
+                print(f"    d{k+1:>2} [{edges[k]:>9.3g},{edges[k+1]:>9.3g}]: "
+                      f"mean={tot[sel].mean():>9.3f}  p99={np.percentile(tot[sel], 99):>10.3f}")
+
+        results[f"{variant}_barrier"] = dict(
+            q, mean=float(tot.mean()), max=float(tot.max()),
+            share_worst_1pct=share(0.01), share_worst_0p1pct=share(0.001),
+            mean_l1=float(l1s.mean()), mean_below=float(lbs.mean()),
+            mean_above=float(ubs.mean()))
     return results
 
 
@@ -220,6 +302,13 @@ def main():
     if not args.skip_metrics:
         summary["test_metrics"] = run_test_metrics(args, models, ckpts,
                                                    D_t, B_t, device)
+    if not args.skip_tail:
+        summary["loss_tail"] = run_loss_tail(args, models, ckpts, D_t, device)
+
+    if args.skip_curves:
+        with open(os.path.join(out_dir, "eval_scaled_summary.json"), "w") as f:
+            json.dump(summary, f, indent=2)
+        return
 
     print(f"\n{'='*78}\nPER-PIXEL DEM CURVES\n{'='*78}")
     figs, rows_meta = plot_curves(args, models, D_t, B_t, logT, device, out_dir)
@@ -248,6 +337,8 @@ def parse_args():
     p.add_argument("--pixels_per_panel", type=int, default=6)
     p.add_argument("--n_align_check", type=int, default=4)
     p.add_argument("--skip_metrics", action="store_true")
+    p.add_argument("--skip_tail", action="store_true")
+    p.add_argument("--skip_curves", action="store_true")
     p.add_argument("--dpi", type=int, default=150)
     p.add_argument("--seed", type=int, default=0)
     return p.parse_args()

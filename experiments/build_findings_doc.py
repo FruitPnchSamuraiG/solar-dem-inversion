@@ -99,6 +99,150 @@ doc.add_paragraph()
 
 
 # ════════════════════════════════════════════════════════════════════════════
+# 2026-08-03 — Width sweep, production model, and BP self-consistency
+# ════════════════════════════════════════════════════════════════════════════
+
+add_date_heading("2026-08-03 — Production Model: mlp6 @ 176k params (8x smaller), and What the Bimodal Gap Actually Was")
+
+add_para(
+    "Two questions closed. (1) How small can the model be? A sweep of mlp6 at 8 widths "
+    "(1.43M / 722k / 360k / 176k / 87k / 42k / 20k / 10k) x both losses, 40 epochs each to "
+    "match the 2026-07-31 baseline exactly, all rescored on the untouched 153-timestamp "
+    "TEST split. (2) The sweep found the network is ~3x worse at reproducing BP's DEM "
+    "where BP is bimodal -- but with the penalty essentially CONSTANT from 1.43M down to "
+    "20k parameters, so capacity was not the bottleneck. That left the amortization or the "
+    "labels, and the second turned out to be the answer. "
+    "Implemented in experiments/job_sweep_size.sbatch, experiments/eval_sweep.py, "
+    "experiments/bp_self_consistency.py, experiments/plot_final.py."
+)
+
+add_subheading("Width sweep on the test split (BARRIER / BP track; bimodality vs a 14.17% base rate)")
+sweep_table = (
+    f"{'hidden':>7} {'params':>7} {'sp_coef':>8} {'mae_dem':>8} {'mae_aia':>8} {'p99':>7} {'bimod recall':>13} {'precision':>10}\n"
+    f"{'-'*82}\n"
+    f"{'680':>7} {'1.43M':>7} {'1.904':>8} {'0.1219':>8} {'4.898':>8} {'17.80':>7} {'29.46%':>13} {'80.95%':>10}\n"
+    f"{'480':>7} {'722k':>7} {'1.913':>8} {'0.1270':>8} {'4.893':>8} {'17.87':>7} {'27.74%':>13} {'79.82%':>10}\n"
+    f"{'336':>7} {'360k':>7} {'1.981':>8} {'0.1268':>8} {'4.858':>8} {'17.85':>7} {'27.14%':>13} {'80.27%':>10}\n"
+    f"{'232':>7} {'176k':>7} {'2.099':>8} {'0.1266':>8} {'4.792':>8} {'17.90':>7} {'26.33%':>13} {'79.01%':>10}\n"
+    f"{'160':>7} {'87k':>7} {'2.200':>8} {'0.1386':>8} {'4.823':>8} {'18.64':>7} {'8.10%':>13} {'76.79%':>10}\n"
+    f"{'108':>7} {'42k':>7} {'2.280':>8} {'0.1429':>8} {'4.604':>8} {'18.75':>7} {'8.86%':>13} {'58.45%':>10}\n"
+    f"{'72':>7} {'20k':>7} {'2.308':>8} {'0.1451':>8} {'4.499':>8} {'19.07':>7} {'7.57%':>13} {'55.08%':>10}\n"
+    f"{'48':>7} {'10k':>7} {'1.494':>8} {'0.2637':>8} {'7.814':>8} {'57.12':>7} {'21.37%':>13} {'23.84%':>10}\n"
+)
+mono = doc.add_paragraph()
+run = mono.add_run(sweep_table)
+run.font.name = "Courier New"
+run.font.size = Pt(8)
+
+add_finding(
+    "(1) PRODUCTION MODEL: mlp6 at hidden=232, 176,374 parameters -- 8.1x smaller than the "
+    "1.43M baseline -- for BOTH the BP and ENet tracks. On the ENet track h232 is the best "
+    "width of the entire sweep (mae_dem 0.0077, p99 41.29, both better than the 1.43M "
+    "baseline's 0.0104/42.85); on the BP track it has the best mae_aia of any healthy width "
+    "and holds bimodality detection at 79.01% precision / 26.33% recall against the "
+    "baseline's 80.95% / 29.46%. "
+    "(2) The one honest cost is BP-track sparsity: sp_coef drifts 1.904 -> 2.099, i.e. "
+    "further from BP's own 1.79 reference. If sparsity fidelity is the paper's headline "
+    "claim, h336 (360k, 4x smaller, sp_coef 1.981) is the conservative fallback. "
+    "(3) h48 (10k) is degenerate, not good: its 'improved' sp_coef of 1.494 comes with "
+    "mae_aia 7.814 and a 12.71% bimodal firing rate at 23.84% precision -- guessing near the "
+    "base rate. A metric moving in the good direction because the model stopped fitting is "
+    "not an improvement, the same trap as the sp_coef reading at h72 on the ENet track. "
+    "(4) CORRECTION to an earlier reading of this table: the apparent 'cliff' between h232 "
+    "and h160 (recall 26.33% -> 8.10%) is substantially a DETECTION-THRESHOLD effect, not a "
+    "collapse in accuracy. mae_dem at bimodal pixels rises only 0.293 -> 0.332 (13%) across "
+    "that step -- h160's curves stay nearly as close to BP, but smooth just enough that the "
+    "second bump stops registering as a local maximum at 15% prominence. h232 is still the "
+    "better choice (better sp_coef, mae_dem and recall), but the cliff is less dramatic than "
+    "peak-counting made it look."
+)
+
+add_subheading("BP against itself: 43% of the solver's own signal at bimodal pixels is noise-driven")
+add_para(
+    "The sweep showed mae_dem is ~3x worse where BP is bimodal (0.29 vs 0.10) and that the "
+    "penalty barely moves across a 70x parameter range (2.89x-3.11x). Capacity being ruled "
+    "out, the remaining candidate was the target itself: BP solves each pixel independently "
+    "from a NOISY observation, so it has its own reproducibility floor. "
+    "experiments/bp_self_consistency.py measures it directly -- 80 unimodal and 80 bimodal "
+    "bright test pixels, 30 BP re-solves each under simulated photon noise, everything in "
+    "DEM units so the quantities are directly comparable."
+)
+selfcons_table = (
+    f"{'':<11} {'BP self-scatter':>16} {'mean |BP|':>10} {'noise share':>12} {'|NN-BP|':>9} {'ratio':>7}\n"
+    f"{'-'*70}\n"
+    f"{'unimodal':<11} {'0.3097':>16} {'0.8351':>10} {'37.1%':>12} {'0.2135':>9} {'0.69x':>7}\n"
+    f"{'bimodal':<11} {'0.6027':>16} {'1.3963':>10} {'43.2%':>12} {'0.5895':>9} {'0.98x':>7}\n"
+)
+mono = doc.add_paragraph()
+run = mono.add_run(selfcons_table)
+run.font.name = "Courier New"
+run.font.size = Pt(8)
+
+add_finding(
+    "(1) THE BIMODAL DEFICIT IS THE LABEL'S, NOT THE MODEL'S. Re-solving the same pixel "
+    "under one realistic photon-noise draw moves BP's own answer by 0.60 at bimodal pixels, "
+    "while our prediction differs from BP by 0.59 -- a ratio of 0.98x, i.e. the network sits "
+    "exactly at the solver's reproducibility floor. At unimodal pixels it is CLOSER to BP "
+    "than BP is to itself (0.69x). The 3x mae_dem penalty is almost entirely explained by "
+    "BP's own self-scatter roughly doubling at those pixels (0.31 -> 0.60); mae_dem there was "
+    "substantially measuring solver noise rather than model error. The gray perturbation "
+    "spaghetti in the figures below had been showing this all along -- it now has a number. "
+    "(2) The residual GENUINE gap is small and specific: hot bins (logT >= 6.5) at bimodal "
+    "pixels, 1.17x. That is the 94A/131A undershoot found on 2026-08-02, now bounded, and it "
+    "is the only part of the bimodal deficit that is ours to fix. "
+    "(3) h232 is equally inside the envelope (0.72x / 0.98x vs the baseline's 0.69x / 0.98x), "
+    "so the 8x reduction costs nothing on this measure either. "
+    "(4) A HYPOTHESIS OF OURS, FALSIFIED. The network minimises the objective rather than the "
+    "label, so we expected it to sit closer to the MEAN of BP's noise ensemble than to any "
+    "single solve -- i.e. to be estimating the expectation, something mae_dem structurally "
+    "cannot reward. It does not: |NN-ens| (1.10x) is worse than |NN-BP| (0.98x). It tracks "
+    "the clean solve better. "
+    "(5) KNOWN FLAW in the current script: the enet_* rows compare ENet-trained models "
+    "against BP's labels, which is not their target. Those two rows are not meaningful as "
+    "written and are excluded from the numbers above."
+)
+
+add_subheading("How the bimodality result must be stated")
+add_para(
+    "The 80.75% precision figure (2026-08-02, below) is real but narrower than it sounds. "
+    "Precision measures CO-OCCURRENCE OF A BINARY SHAPE PROPERTY -- the network's curve has "
+    "two local maxima and so does BP's. It is not curve agreement, and the figure below "
+    "contains panels that pass that test while the network draws a broad smooth blob against "
+    "BP's sharp spikes. "
+    "SUPPORTED: the network FLAGS multi-thermal pixels at 79-81% precision against a 14.17% "
+    "base rate -- useful as a detector, e.g. to select regions for a full solver run. "
+    "NOT SUPPORTED: the network REPRODUCES bimodal DEMs; it is ~3x worse there, though per "
+    "the finding above that gap is within BP's own reproducibility. "
+    "Two further caveats: recall is only ~30%, and on the STRONGEST double peaks (weaker "
+    "peak >= 25% of the taller) agreement falls to ~14% (328 of 2,372 candidates), so the "
+    "cases it catches skew toward subtle ones. Leading with 'we capture bimodality' would "
+    "not survive scrutiny."
+)
+
+add_subheading("Held-out test pixels: solver (black) vs 1.43M baseline (blue) vs 176k production model (orange)")
+for fname, cap in [
+    ("final_dem_curves_block06237.png", "Test block 6237 — BP left, ENet right, same pixel both sides"),
+    ("final_dem_curves_block08328.png", "Test block 8328 — BP left, ENet right, same pixel both sides"),
+]:
+    add_image(f"results/plots/11_final_h232_20260803/{fname}", width_in=6.0, caption=cap)
+
+add_subheading("Bimodal pixels: where the network reproduces both components, and where it misses the hot one")
+add_para(
+    "Top panels are pixels where the 176k network is also bimodal, bottom panels where it is "
+    "not; both groups are shown because either alone misleads (agreements hide the ~30% "
+    "recall, misses hide the 79% precision). The gray curves are 30 BP re-solves under "
+    "photon noise -- their spread is the 43% self-scatter quantified above, and it is why "
+    "the misses are not straightforwardly model error. Note also that the ENet track is "
+    "correctly NOT expected to show bimodality: ElasticNet's L2 term explicitly penalises "
+    "multi-peaked solutions, so an enet-trained network reproducing its own solver should "
+    "rarely predict two peaks.", italic=True
+)
+add_image("results/plots/11_final_h232_20260803/final_bimodal.png", width_in=5.5)
+
+add_divider()
+
+
+# ════════════════════════════════════════════════════════════════════════════
 # 2026-08-02 — Scaled models on the untouched test split + bimodal census
 # ════════════════════════════════════════════════════════════════════════════
 

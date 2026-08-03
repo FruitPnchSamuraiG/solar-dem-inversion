@@ -91,6 +91,73 @@ From the paper's "Future Work" section:
 
 ## Progress Log (most recent first)
 
+### 2026-08-02 — TEST SPLIT + bimodal census: mlp6 confirmed, two headline metrics were artifacts
+
+Evaluated all four checkpoints on the **untouched 153-timestamp test split** (~5.0M
+pixels). New code: `src/scaled_eval.py`, `experiments/eval_scaled.py`,
+`experiments/bimodal_scaled.py`, `experiments/diag_loss_outliers.py`,
+`experiments/job_eval_scaled.sbatch`. Plots in `results/plots/10_scaled_test_20260802/`.
+
+**Test reproduces val to the third decimal** — no overfitting across 153 unseen timestamps:
+
+| run | sp_coef test/val | mae_aia test/val |
+|---|---|---|
+| mlp6 barrier | 1.91 / 1.90 | 4.875 / 4.881 |
+| cnn barrier | 1.98 / 1.96 | 4.830 / 4.838 |
+| mlp6 enet | 3.64 / 3.68 | 4.609 / 4.613 |
+| cnn enet | 3.57 / 3.61 | 4.699 / 4.745 |
+
+**`test_loss` is not a usable statistic — one pixel in five million decides it.**
+mlp6 scored 44.32 against cnn's 11.27, yet is *better* at every percentile:
+median 0.984/1.007, p90 4.62/4.72, p99 17.9/18.8, p99.9 51.0/58.2, p99.99 148/255.
+The single worst pixel is 2.09e8 of mlp6's 2.22e8 total = **94.0% of the mean**.
+**Report percentiles, never means, for the barrier objective.** The val numbers
+(2.145 vs 2.241) ranked correctly by luck.
+
+**The tail is not a sigma problem** (`experiments/diag_loss_outliers.py`). Worst pixel:
+211A `obs=0.062 err=0.611 band=[-0.793,0.917] Dx=9023` — healthy denominator, 9000x
+over-prediction at a pixel carrying no signal. Flooring sigma at 0.5-10% of obs moves
+the mean by 0.07%. **`lb<0` is not a usable filter either: it catches 89% of pixels**,
+because AIA's faint channels are genuinely noise-dominated (94A median ~0.76 DN against
+a read-noise floor of the same size; `err` is *exactly* 0.6103 in 211A and 0.8749 in
+193A across many pixels). The narrow population worth excluding is near-zero readings in
+the **bright** channels (171/193/211A) — the deconvolution positivity clamp again.
+**No retrain needed**: ~1 pathological pixel per epoch with clipping already bounding it.
+
+**Bimodality is real, common, and predictable — this overturns 2026-07-11.**
+Census over 190k held-out pixels (the solver already ran on every one, so no re-solving):
+**15.96% bimodal, 14.17% with both peaks interior** (only 11.2% of the bimodal set was a
+boundary artifact at logT 5.5/7.2 — a suspicion raised from the plots and then falsified).
+Prevalence rises monotonically with brightness to 30.3% in the top decile, and is
+concentrated in `tol=1` (16.87% vs 0.38% at tol=3), so it is not an artifact of relaxed
+tolerances. Perturbation stability **0.68 mean, 20/60 stable** vs 0.40-0.46 and 6/120 in
+the crop study.
+
+**The networks can predict it**, which the 2026-07-10 amortization argument said was
+impossible (interior-only, base rate 14.17%):
+
+| network | rate | recall | precision |
+|---|---|---|---|
+| mlp6_barrier | 5.24% | 29.85% | **80.75%** |
+| cnn_barrier | 2.01% | 11.88% | 83.70% |
+| mlp6_enet | 3.21% | 7.90% | 34.87% |
+| cnn_enet | 2.22% | 6.19% | 39.54% |
+
+mlp6 has 2.5x cnn's recall at the same precision. ENet nets sit near 35-40% — above base
+rate but far weaker, as the L2 term smooths peaks together by construction. At the stable
+pixels mlp6_barrier beats **BP's own barrier loss in 20/20** (mean -12.9), so where it
+answers unimodally the two solutions are degenerate and BP broke the tie differently.
+
+**Remaining real deficiency: hot-channel undershoot.** At bright pixels the networks
+resynthesize 94A/131A far too faint (obs 1491, band [1440,1540], Dx 330) and their DEM
+peaks sit ~0.1-0.15 lower in logT than BP's — the same peak-shift the 2026-07-11 flare
+fold found, still present at scale. This is what the size sweep should track.
+
+**Decisions**: mlp6 is the production architecture; no retrain; report percentiles.
+**Launched**: width sweep `15185224`, mlp6 x 8 widths (1.43M/722k/360k/176k/87k/42k/20k/10k)
+x both losses, 40 epochs, `--array=0-15%4` (the group GPU quota, not the node count, is the
+binding constraint). Re-evaluate each width with `--ckpt_suffix _h<width>`.
+
 ### 2026-07-31 (night) — FIRST SCALED RESULTS: all four runs converged
 
 Array `15092854`, 40 epochs, 3,000-step warmup, ~1.5 h each. All `COMPLETED`, all

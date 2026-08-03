@@ -4,7 +4,9 @@
 #SBATCH --error=logs/eval/eval_%j.err
 #SBATCH --nodes=1
 #SBATCH --cpus-per-task=12
-#SBATCH --mem=64G
+# 64G peaked at 61G (job 15179492): the persistent dataloader workers each hold
+# decompressed 256^2 blocks across four sequential passes. Headroom, not need.
+#SBATCH --mem=96G
 #SBATCH --gres=gpu:1
 # Both scripts together are well under an hour: the test split is ~9.8k blocks
 # (~30 s at the measured 170 s/58,688 blocks) and the LP re-solves in the
@@ -50,6 +52,14 @@ python3 -u experiments/eval_scaled.py \
   --out_dir "${OUT_DIR:-output/experiments/eval_scaled}" \
   --n_blocks "${N_BLOCKS:-3}" --pixels_per_panel "${N_PIXELS:-6}" \
   $EVAL_ARGS
+
+if [ -n "$RUN_OUTLIERS" ]; then
+  python3 -u experiments/diag_loss_outliers.py \
+    --bp_root "$BP_ROOT" \
+    --ckpt_dir "${CKPT_DIR:-output/experiments}" \
+    --out_dir "${OUT_DIR:-output/experiments/eval_scaled}" \
+    $OUTLIER_ARGS
+fi
 
 python3 -u experiments/bimodal_scaled.py \
   --bp_root "$BP_ROOT" --enet_root "$ENET_ROOT" \

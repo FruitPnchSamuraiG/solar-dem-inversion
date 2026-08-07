@@ -122,8 +122,12 @@ Two traps to report rather than hide: h48 posts the *closest* sparsity in the wh
 sweep (1.494) while being completely broken, and the apparent recall cliff at h160
 is substantially a detection-threshold artifact of the 15% prominence criterion,
 not a capacity cliff — `mae_dem` moves only 13% across that step.
-**[PENDING — array `job_sweep_big.sbatch`, 2.85M/5.72M/11.4M]** extends this curve
-upward so the size axis is bounded on both ends.
+The axis is now bounded on both ends, 10k → 11.2M, and going upward exposes a
+**tradeoff invisible in the downward sweep**: `sp_coef` improves monotonically
+toward BP's 1.79 with size (2.099 → 1.826) while `mae_aia` degrades monotonically
+(4.792 → 4.980), with `mae_dem` and p99 flat throughout. Sparsity fidelity and
+resynthesis quality are bought against each other along the size axis, and 176k
+sits at the resynthesis end of it.
 
 ### R4 — Multi-thermal plasma: detected, not reproduced
 *Claim: state precisely and defensibly what the network does with bimodality.*
@@ -140,10 +144,23 @@ shape test, not curve agreement. Figure panels pass it while the network draws a
 broad blob against BP's two spikes. We write "detects at high precision, low
 recall", never "captures bimodality".
 
+**Which multimodal structure survives** — the part that makes the recall figure
+interpretable instead of just low. Grading all 82,863 BP-multimodal pixels by peak
+separation and by weaker/stronger peak height ratio, recall runs *upward* in both:
+12.6% at 2–5 bins of separation → **45.6%** at 6–7, and 20.8% at ratio 0.15–0.33 →
+33.4% at 0.51–0.74. `mae_dem` agrees exactly (0.456 → 0.223). Recall on 3+ modes
+(42.2%) exceeds recall on 2 (28.6%).
+So the network is **best on well-separated, comparable-height components and worst
+on shoulders of a dominant peak** — it misses the marginal end, which is also the
+end where BP is most likely tie-breaking at the noise level. We predicted the
+opposite before measuring; report that we tested it.
+
 ### R5 — Most of the residual gap belongs to the label
 *Claim: the reframe. This is the most interesting result and should read that way.*
-`mae_dem` is 3× worse at bimodal pixels (0.29 vs 0.10) — and **flat from 1.43M
-down to 20k parameters**, which rules out capacity and points at the target.
+`mae_dem` is 3× worse at bimodal pixels (0.29 vs 0.10) — and **flat at 3.0–3.2×
+across the entire size axis, 20k to 11.2M**, 500× the parameters with no movement.
+Recall saturates too, peaking at 2.83M (29.9%) and *declining* above it. Capacity
+is ruled out from both directions, which points at the target.
 So we measured BP against itself: 80 unimodal + 80 bimodal bright test pixels,
 30 re-solves each under simulated photon noise.
 

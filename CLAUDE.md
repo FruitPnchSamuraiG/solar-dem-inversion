@@ -91,6 +91,70 @@ From the paper's "Future Work" section:
 
 ## Progress Log (most recent first)
 
+### 2026-08-07 — CAPACITY CEILING CONFIRMED, and the missed peaks are the *marginal* ones
+
+Array `15497859` (mlp6 barrier at h960/h1360/h1920 = 2.83M/5.64M/11.18M), all
+`COMPLETED`, all converged (val_loss flat to 4 dp over the final 4 epochs — and
+*rising* slightly at h960, so 40 epochs was not the binding constraint). Scored by
+`experiments/eval_sweep.py` and the new `experiments/eval_multimodal.py` on the test
+split. The size axis now spans **10k to 11.2M parameters as one curve**.
+
+**8x MORE capacity than the baseline buys nothing on multimodality.** Recall over
+82,863 BP-multimodal pixels (60 blocks, 610,640 scanned, 13.57% multimodal):
+
+| params | 176k | 360k | 722k | 1.43M | 2.83M | 5.64M | 11.18M |
+|---|---|---|---|---|---|---|---|
+| recall | 26.4% | 27.5% | 28.4% | 29.3% | **29.9%** | 28.5% | 28.7% |
+| precision | 81.8% | 82.5% | 81.5% | 82.7% | 81.6% | 81.7% | 80.8% |
+| penalty | 3.02x | 3.12x | 3.06x | 3.11x | 3.12x | 3.19x | 3.19x |
+
+Recall **peaks at 2.83M and declines**. The `mae_dem` penalty is pinned at
+**3.0-3.2x from 20k to 11.2M** — 500x the parameters, no movement. Combined with
+the 2026-08-03 self-consistency result (ratio 0.98x), the multi-thermal deficit is
+now bounded from both sides: not capacity, and mostly the label's own noise floor.
+**The amortization ceiling is a measured number, not an argument.**
+
+**The peak-quality grading FALSIFIES the "we only catch the weak smooth ones"
+hypothesis — recall runs the other way.** At h680, by separation between outermost
+interior peaks: **12.6%** (2-5 bins) / 25.0% (5-6) / **45.6%** (6-7) / 30.7% (7-15).
+By weaker/stronger peak height ratio: **20.8%** (0.15-0.33) / 32.2% / 33.4% /
+30.8% (0.74-1). `mae_dem` agrees exactly — lowest at sep 6-7 (0.223), highest at
+sep 2-5 (0.456).
+
+So the network is **best on well-separated, comparable-height double peaks and
+worst on close, unequal ones** — i.e. it misses shoulders on a dominant peak, the
+marginal end, which is also the end most likely to be BP tie-breaking at the noise
+level. This *strengthens* the reportable claim rather than weakening it. (The
+falloff at sep 7-15 is the one unexplained feature; those pairs likely have a
+component adjacent to a boundary bin.)
+
+**Recall on 3+ modes is HIGHER than on 2 modes** — 42.2% vs 28.6% at h680, stable
+across every width above h232. Counterintuitive, consistent with the above: three
+resolved components are unambiguous, and ambiguity, not complexity, is what defeats
+the network.
+
+**New tradeoff, visible only going upward: sparsity and AIA fidelity trade off
+along the size axis.** `sp_coef` improves monotonically toward BP's 1.79 with size
+(2.099 @176k -> 1.904 @1.43M -> 1.881 -> 1.856 -> **1.826** @11.2M) while `mae_aia`
+degrades monotonically (**4.792** @176k -> 4.898 -> 4.927 -> 4.953 -> 4.980 @11.2M).
+`mae_dem` (0.1219-0.1240) and p99 (~17.80) are flat above 176k. **This revises the
+h336 fallback**: if BP sparsity fidelity is the paper's headline, the answer is not
+360k, it is the largest model — at a real cost in resynthesis.
+
+**h232 remains the production choice.** Nothing above it improves what we report,
+and it holds the best `mae_aia` of the entire sweep in both directions.
+
+**The h160 cliff is confirmed but is a detection-threshold effect, as suspected.**
+On this larger sample recall goes 8.2% (h160) -> 26.4% (h232), a 3x jump, while
+`mae_multi` moves only 0.409 -> 0.356 (13%). h48 stays degenerate: 22.3% precision
+at a 12.71% firing rate, and its quality tiers run *backward* (28.2% at sep 2-5
+falling to 9.8% at sep 7-15) — the signature of guessing at the base rate.
+
+**New**: `experiments/job_sweep_big.sbatch` (upward sweep, barrier only, with the
+prediction recorded in the header before running), `experiments/eval_multimodal.py`
+(peak descriptors — mode count, separation, weak/strong ratio — then recall and
+`mae_dem` per quality tier per parameter count, plus the 4-panel size figure).
+
 ### 2026-08-03 (late) — The bimodal deficit is the LABEL's, not the model's
 
 `experiments/bp_self_consistency.py`, 80 unimodal + 80 bimodal bright test pixels,

@@ -137,8 +137,10 @@ rejected). Prevalence rises monotonically with brightness, 7.4% → 30.3%, and
 concentrates at *tight* tolerance, so it is not an artifact of relaxed solving.
 The network **flags** these at 79–81% precision against that 14.17% base rate —
 5.6× better than chance, and contrary to the amortization argument that predicted
-it impossible. But recall is ~30%, and drops to ~14% on the *strongest*,
-best-separated double peaks.
+it impossible. But recall is only ~30%.
+*(An earlier read of a filtered figure selection suggested ~14% on the strongest
+double peaks. The systematic grading below supersedes it and points the other way
+— do not carry the 14% figure forward.)*
 **The sentence the whole section exists to earn**: peak co-occurrence is a binary
 shape test, not curve agreement. Figure panels pass it while the network draws a
 broad blob against BP's two spikes. We write "detects at high precision, low
@@ -220,7 +222,8 @@ by scale, unchanged by capacity.
 
 1. Solver vs 1.43M vs 176k DEM curves, BP and ENet side by side *(exists,
    `results/plots/11_final_h232_20260803/`)*
-2. Width sweep: metric vs parameter count, both directions **[pending big sweep]**
+2. Size axis 10k → 11.2M: detection, `mae_dem`, and recall by peak-quality tier
+   *(exists, `results/plots/12_multimodal_size_20260807/multimodal_vs_size.png`)*
 3. Bimodal examples, both groups: reproduced and missed *(exists)*
 4. BP self-consistency: perturbation spaghetti with the network overlaid — the
    figure that makes R5 visual rather than tabular

@@ -27,6 +27,38 @@ reproducing this will hit the same four.
 
 ---
 
+## The production model — final, as of 2026-08-07
+
+**mlp6, hidden = 232, 176,374 parameters.** Per-pixel MLP, no spatial context,
+one for each solver track. 8.11x smaller than the 1,430,774-parameter baseline
+and 63x smaller than the largest model trained.
+
+| | BP track | ENet track |
+|---|---|---|
+| `sp_coef` (BP reference 1.79) | 2.099 | 3.699 |
+| `mae_dem` | 0.1266 | **0.0077** |
+| `mae_aia` | **4.792** | **4.641** |
+| loss p50 / p99 | 0.965 / 17.90 | 1.152 / 41.29 |
+| multimodal precision / recall | 81.8% / 26.4% | 36.0% / 6.9% |
+| `mae_dem` penalty at multimodal pixels | 3.02x | 2.63x |
+
+Bolded values are the best in the entire 11-width sweep, in both directions.
+`mae_aia` is the one metric with no solver in it, and 176k holds the sweep's best
+value on both tracks; the ENet track's `mae_dem` and p99 are also outright sweep
+bests, beating the 1.43M baseline (0.0104 / 42.85).
+
+**The single honest cost**: barrier `sp_coef` 1.904 (1.43M) -> 2.099 (176k),
+i.e. further from BP's 1.79. Everything else is flat or better.
+
+**If BP sparsity fidelity is the headline claim, this decision flips** — and not
+to the 360k fallback quoted before 2026-08-07. The upward sweep showed `sp_coef`
+keeps improving past the baseline (1.904 -> 1.881 -> 1.856 -> **1.826** at 11.2M),
+so the alternative is the *largest* model, bought at 4% worse resynthesis
+(`mae_aia` 4.792 -> 4.980). One trade, two defensible ends, no third option: every
+other metric is flat across that range.
+
+---
+
 ## METHODS
 
 ### M1 — Problem setup

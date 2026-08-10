@@ -5,7 +5,8 @@ __pycache__/
 *.fits
 data/
 output/
-2602.08029v2.pdf
-7909_Revealing_the_3D_Cosmic_W.pdf
+papers/2602.08029v2.pdf
+papers/7909_Revealing_the_3D_Cosmic_W.pdf
 results/findings_log.docx
 dem-handoff.md
+.DS_Store

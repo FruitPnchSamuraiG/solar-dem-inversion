@@ -26,6 +26,11 @@ case "${TRACK:?set TRACK=bp or TRACK=enet}" in
   *) echo "TRACK must be bp or enet" >&2; exit 2 ;;
 esac
 
-python3 -u experiments/eval_full_paper_test.py \
-  --model "$MODEL" --data "$DATA" --reference "$TRACK" \
+ARGS=(
+  --model "$MODEL" --data "$DATA" --reference "$TRACK"
   --output "output/experiments/paper_eval/${TRACK}_h232_full.json"
+)
+if [ -n "${MAX_BLOCKS:-}" ]; then
+  ARGS+=(--max_blocks "$MAX_BLOCKS")
+fi
+python3 -u experiments/eval_full_paper_test.py "${ARGS[@]}"

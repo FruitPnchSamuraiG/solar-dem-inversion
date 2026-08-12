@@ -48,5 +48,5 @@ On your local machine, in another terminal:
   ssh -N -L 8000:127.0.0.1:8000 torch
 
 Then open (replace TIMESTAMP with any rendered date):
-  http://localhost:8000/webapp/compare.html?model1=bp_solver/TIMESTAMP&model2=bp_mlp6_h232/TIMESTAMP&mode=dems
+  http://localhost:8000/webapp/compare.html?solver=bp_solver&model=bp_mlp6_h232&date=TIMESTAMP&mode=dems
 EOF

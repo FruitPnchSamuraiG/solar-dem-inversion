@@ -63,7 +63,6 @@ function render(leftModel, rightModel, mode, table) {
   table.innerHTML = "";
 
   const descriptors = {
-    metrics: ["mae", "mse"],
     dems: ["mean_logt.png", "std_logt.png", ...Array.from({ length: 18 }, (_, i) => `dem_${i}.png`)],
     aia: [0, 1, 2, 3, 4, 5].map(i => `aia_${i}_resynth.png`),
     jpdfs: [0, 1, 2, 3, 4, 5].map(i => `aia_${i}_resynth_jpdf.png`)
@@ -76,23 +75,6 @@ function render(leftModel, rightModel, mode, table) {
     ...Array.from({ length: 18 }, (_, i) => `logT = ${(5.5 + 0.1 * i).toFixed(1)}`)
     ];
 
-
-  if (mode === "metrics") {
-    Promise.all([leftModel, rightModel].map(m => fetch(`${path}${m}/metrics.json`).then(r => r.json())))
-      .then(([left, right]) => {
-        const rows = ["mae", "mse"].map((metric) => {
-          return `
-            <tr>
-              <td class="pr-4 text-sm text-gray-500">${metric}</td>
-              <td class="border px-4 py-2 text-center">${left[metric]}</td>
-              <td class="border px-4 py-2 text-center">${right[metric]}</td>
-              <td></td>
-            </tr>`;
-        });
-        table.innerHTML = rows.join("");
-      });
-    return;
-  }
 
   const files = descriptors[mode];
   for (let i = 0; i < files.length; i++) {

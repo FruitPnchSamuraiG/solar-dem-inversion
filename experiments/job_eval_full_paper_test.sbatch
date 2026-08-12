@@ -17,6 +17,7 @@ set -euo pipefail
 cd "${SLURM_SUBMIT_DIR:-$HOME/projects/dem}"
 source env.sh
 mkdir -p logs/eval output/experiments/paper_eval
+OUTPUT_TAG=${OUTPUT_TAG:-full}
 
 case "${TRACK:?set TRACK=bp or TRACK=enet}" in
   bp)   DATA=/projects/rps/dff6142/fouheylab/solar_dem/bp_AIA_hofdeconv_full_DS
@@ -28,7 +29,7 @@ esac
 
 ARGS=(
   --model "$MODEL" --data "$DATA" --reference "$TRACK"
-  --output "output/experiments/paper_eval/${TRACK}_h232_full.json"
+  --output "output/experiments/paper_eval/${TRACK}_h232_${OUTPUT_TAG}.json"
 )
 if [ -n "${MAX_BLOCKS:-}" ]; then
   ARGS+=(--max_blocks "$MAX_BLOCKS")

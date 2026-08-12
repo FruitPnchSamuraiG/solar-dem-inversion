@@ -66,39 +66,77 @@ def predict_block(model, basis_t, x_block, pixel_batch):
 
 
 def empty_acc():
-    return {"sq": 0.0, "rel": 0.0, "w1": 0.0, "n_bins": 0, "n_px": 0, "n_w1": 0}
+    return {"sq": 0.0, "rel": 0.0, "w1": 0.0, "n_bins": 0, "n_px": 0, "n_w1": 0,
+            # Exact largest *per-pixel* DEM SSE.  Retaining one candidate makes
+            # the leave-one-out diagnostic constant-memory over the full set.
+            "worst": {"sq": -np.inf, "rel": 0.0, "w1": 0.0, "w1_valid": False,
+                      "block": -1, "row": -1, "col": -1}}
 
 
-def add_metrics(acc, pred, truth, mask, logt):
+def add_metrics(acc, pred, truth, mask, logt, block_index):
     """Accumulate paper metrics over a [18,H,W] prediction/reference pair."""
     if not mask.any():
         return
     p = pred[:, mask].T.astype(np.float64, copy=False)
     y = truth[:, mask].T.astype(np.float64, copy=False)
     diff = p - y
-    acc["sq"] += float(np.square(diff).sum())
-    acc["rel"] += float((np.abs(diff) / (np.abs(y) + REL_FLOOR)).sum())
+    per_px_sq = np.square(diff).sum(axis=1)
+    per_px_rel = (np.abs(diff) / (np.abs(y) + REL_FLOOR)).sum(axis=1)
+    acc["sq"] += float(per_px_sq.sum())
+    acc["rel"] += float(per_px_rel.sum())
     acc["n_bins"] += int(p.size)
     acc["n_px"] += int(p.shape[0])
 
     # 1-D Wasserstein distance over a common logT support: L1 CDF distance.
     psum, ysum = p.sum(axis=1), y.sum(axis=1)
     ok = (psum > 0) & (ysum > 0)
+    per_px_w1 = np.zeros(len(p), dtype=np.float64)
     if ok.any():
         pcdf = np.cumsum(np.clip(p[ok], 0, None) / psum[ok, None], axis=1)
         ycdf = np.cumsum(np.clip(y[ok], 0, None) / ysum[ok, None], axis=1)
-        acc["w1"] += float((np.abs(pcdf[:, :-1] - ycdf[:, :-1]) * np.diff(logt)[None]).sum())
+        per_px_w1[ok] = (np.abs(pcdf[:, :-1] - ycdf[:, :-1]) * np.diff(logt)[None]).sum(axis=1)
+        acc["w1"] += float(per_px_w1.sum())
         acc["n_w1"] += int(ok.sum())
+
+    # Recover the spatial location corresponding to the flattened valid set.
+    # It is only retained for the single global worst pixel, not all pixels.
+    worst_local = int(np.argmax(per_px_sq))
+    if per_px_sq[worst_local] > acc["worst"]["sq"]:
+        row, col = np.nonzero(mask)
+        acc["worst"] = {
+            "sq": float(per_px_sq[worst_local]),
+            "rel": float(per_px_rel[worst_local]),
+            "w1": float(per_px_w1[worst_local]),
+            "w1_valid": bool(ok[worst_local]),
+            "block": int(block_index), "row": int(row[worst_local]), "col": int(col[worst_local]),
+        }
 
 
 def finish(acc):
-    return {
+    base = {
         "dem_mse": acc["sq"] / max(acc["n_bins"], 1),
         "dem_rel_err_pct": 100 * acc["rel"] / max(acc["n_bins"], 1),
         "w1_dex": acc["w1"] / max(acc["n_w1"], 1),
         "n_pixels": acc["n_px"],
         "n_w1_pixels": acc["n_w1"],
     }
+    w = acc["worst"]
+    if acc["n_px"] <= 1:
+        base["leave_one_worst_pixel_out"] = None
+        return base
+    # Remove all 18 bin errors belonging to the single largest-SSE pixel.
+    loo_sq = (acc["sq"] - w["sq"]) / max(acc["n_bins"] - N_AIA_BINS, 1)
+    loo_rel = 100 * (acc["rel"] - w["rel"]) / max(acc["n_bins"] - N_AIA_BINS, 1)
+    loo_w1 = (acc["w1"] - (w["w1"] if w["w1_valid"] else 0.0)) / max(
+        acc["n_w1"] - int(w["w1_valid"]), 1)
+    base["leave_one_worst_pixel_out"] = {
+        "dem_mse": loo_sq,
+        "dem_rel_err_pct": loo_rel,
+        "w1_dex": loo_w1,
+        "worst_pixel": w,
+        "worst_pixel_mse_share_pct": 100 * w["sq"] / max(acc["sq"], 1e-12),
+    }
+    return base
 
 
 def main():
@@ -132,11 +170,11 @@ def main():
         pred, obs = predict_block(model, basis_t, x[:, :, :, i], args.pixel_batch)
         truth = np.asarray(y[:N_AIA_BINS, :, :, i], dtype=np.float32)
         valid = np.isfinite(truth).all(axis=0) & np.isfinite(pred).all(axis=0)
-        add_metrics(acc["full"], pred, truth, valid, logt[:N_AIA_BINS])
+        add_metrics(acc["full"], pred, truth, valid, logt[:N_AIA_BINS], i)
         if thresholds is not None:
             bright = (obs >= thresholds[:, None, None]).any(axis=0) & valid
-            add_metrics(acc["bright"], pred, truth, bright, logt[:N_AIA_BINS])
-            add_metrics(acc["quiet"], pred, truth, valid & ~bright, logt[:N_AIA_BINS])
+            add_metrics(acc["bright"], pred, truth, bright, logt[:N_AIA_BINS], i)
+            add_metrics(acc["quiet"], pred, truth, valid & ~bright, logt[:N_AIA_BINS], i)
         if i % 100 == 0 or i + 1 == n_blocks:
             print(f"  {i + 1:,}/{n_blocks:,} blocks", flush=True)
 

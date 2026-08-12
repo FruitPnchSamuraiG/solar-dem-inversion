@@ -42,8 +42,12 @@ SOLVER_OUT="$ROOT/assets/${LABEL}_solver/${TIMESTAMP}"
 MODEL_OUT="$ROOT/assets/${LABEL}_mlp6_h232/${TIMESTAMP}"
 mkdir -p "$(dirname "$EXPORT")"
 
-python3 -u experiments/export_mlp6_full_disk.py \
-  --model "$MODEL" --input_npz "$INPUT" --output "$EXPORT"
+if [ ! -f "$EXPORT" ] || [ "${FORCE_EXPORT:-0}" = 1 ]; then
+  python3 -u experiments/export_mlp6_full_disk.py \
+    --model "$MODEL" --input_npz "$INPUT" --output "$EXPORT"
+else
+  echo "reusing existing DEM export: $EXPORT"
+fi
 python3 -u experiments/render_full_disk_visuals.py \
   --input "$EXPORT" --source reference --output "$SOLVER_OUT"
 python3 -u experiments/render_full_disk_visuals.py \

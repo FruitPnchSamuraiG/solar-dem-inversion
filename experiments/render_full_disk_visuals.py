@@ -77,7 +77,11 @@ def main():
     response = (rdata["R"][:, :18] * 1e26).astype(np.float32)
     resynth = np.tensordot(response, dem, axes=(1, 0))
     for i, wavelength in enumerate(WAVELENGTHS):
-        cmap = f"sdoaia{wavelength}"
+        # Samuel's container registered SunPy's ``sdoaia*`` colormaps at
+        # import time.  Our uv environment intentionally does not depend on
+        # that optional registration; use a built-in, portable sequential map
+        # so asset generation works on every Torch node.
+        cmap = "magma"
         scale = np.sqrt(np.maximum(aia[i], 0))
         vmin, vmax = np.percentile(scale[np.isfinite(scale)], (20, 99.99))
         save_image(os.path.join(args.output, f"aia_{i}_resynth.png"), np.sqrt(np.maximum(resynth[i], 0)), cmap, vmin, vmax)

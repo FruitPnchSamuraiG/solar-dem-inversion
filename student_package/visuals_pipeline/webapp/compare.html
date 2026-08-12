@@ -17,31 +17,18 @@
   </head>
   <body class="bg-white text-black flex flex-col min-h-screen">
 
-    <!-- header -->
-    <header class="px-4 sm:px-16 md:px-32 lg:px-64 pt-8 sm:pt-12 md:pt-16 pb-8 sm:pb-12 md:pb-16">
-      <nav class="mt-6 text-center text-base flex flex-col sm:flex-row sm:justify-between items-center">
-        <div class="flex items-center space-x-4">
-          <img src="assets/logo.png" alt="Logo" class="h-16 w-16" />
-          <a href="index.html" class="italic mb-4 sm:mb-0">demdemo</a>
-        </div>
-        <div class="space-x-4 sm:space-x-8">
-          <a href="dashboard.html" class="hover:underline">dashboard</a>
-          <a href="compare.html" class="hover:underline">compare</a>
-        </div>
-      </nav>
-    </header>
-
     <!-- main compare section -->
-    <main class="flex-grow px-4 sm:px-16 md:px-32 lg:px-64">
-      <h2 class="serif text-4xl font-light mb-8 text-center">Compare Models</h2>
+    <main class="flex-grow px-4 sm:px-16 md:px-32 lg:px-64 pt-12">
+      <h1 class="serif text-4xl font-light mb-2 text-center">DEM comparison</h1>
+      <p class="text-center text-gray-600 mb-8">Reference solver versus unsupervised mlp6 (176k parameters)</p>
 
       <div class="flex flex-wrap justify-center gap-6 mb-10">
         <div class="text-center">
-          <label for="select1" class="block mb-2 font-light serif text-xl">Model 1</label>
+          <label for="select1" class="block mb-2 font-light serif text-xl">Reference solver</label>
           <select id="select1" class="border px-4 py-2 text-base rounded serif"></select>
         </div>
         <div class="text-center">
-          <label for="select2" class="block mb-2 font-light serif text-xl">Model 2</label>
+          <label for="select2" class="block mb-2 font-light serif text-xl">Unsupervised model</label>
           <select id="select2" class="border px-4 py-2 text-base rounded serif"></select>
         </div>
         <div class="text-center">
@@ -59,12 +46,6 @@
         <table id="comparison-table" class="w-full border-separate border-spacing-y-8"></table>
       </div>
     </main>
-
-    <!-- footer -->
-    <footer class="text-center py-12 text-sm text-gray-600 leading-relaxed">
-      <div class="italic">demdemo</div>
-      <div>New York University</div>
-    </footer>
 
     <script src="compare.js"></script>
   </body>

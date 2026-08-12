@@ -1,6 +1,13 @@
 const path = "../results/test/";
 let modelList = [];
 
+function prettyName(entry) {
+  const [run, timestamp] = entry.split("/");
+  const track = run.startsWith("bp_") ? "BP" : "ENet";
+  const label = run.endsWith("_solver") ? `${track} solver reference` : `Unsupervised ${track} mlp6 (h232)`;
+  return `${label} — ${timestamp}`;
+}
+
 async function initCompare() {
   const select1 = document.getElementById("select1");
   const select2 = document.getElementById("select2");
@@ -9,12 +16,14 @@ async function initCompare() {
   const res = await fetch("models.json");
   modelList = await res.json();
 
-  for (const model of modelList) {
-    const opt1 = new Option(model, model);
-    const opt2 = new Option(model, model);
-    // print options
-    console.log(`Adding option for ${model}`);
+  const references = modelList.filter(model => model.includes("_solver/"));
+  const models = modelList.filter(model => model.includes("_mlp6_"));
+  for (const model of references) {
+    const opt1 = new Option(prettyName(model), model);
     select1.appendChild(opt1);
+  }
+  for (const model of models) {
+    const opt2 = new Option(prettyName(model), model);
     select2.appendChild(opt2);
   }
 
@@ -23,11 +32,12 @@ async function initCompare() {
   // visit.  Entries are relative result folders such as "bp_solver/201509...".
   const query = new URLSearchParams(window.location.search);
   const choose = (select, requested, fallback) => {
-    const index = requested ? modelList.indexOf(requested) : fallback;
+    const values = [...select.options].map(option => option.value);
+    const index = requested ? values.indexOf(requested) : fallback;
     select.selectedIndex = index >= 0 ? index : fallback;
   };
   choose(select1, query.get("model1"), 0);
-  choose(select2, query.get("model2"), Math.min(1, modelList.length - 1));
+  choose(select2, query.get("model2"), 0);
   if ([...viewMode.options].some(option => option.value === query.get("mode"))) {
     viewMode.value = query.get("mode");
   }

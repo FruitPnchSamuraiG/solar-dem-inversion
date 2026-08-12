@@ -5,7 +5,6 @@ set -euo pipefail
 
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 VIS_ROOT="${VIS_ROOT:-${SCRATCH:?SCRATCH must be set}/dem/visuals}"
-STAMP="${TIMESTAMP:-20150923_180356}"
 PREVIEW="$VIS_ROOT/preview"
 WEBAPP="$PREVIEW/webapp"
 RESULTS="$PREVIEW/results/test"
@@ -15,20 +14,20 @@ cp "$REPO_DIR/student_package/visuals_pipeline/webapp/compare.html" "$WEBAPP/com
 cp "$REPO_DIR/student_package/visuals_pipeline/webapp/compare.js" "$WEBAPP/compare.js"
 
 entries=()
-for track in bp enet; do
-  for run in solver mlp6_h232; do
-    source="$VIS_ROOT/assets/${track}_${run}/$STAMP"
-    name="${track}_${run}/${STAMP}"
-    target="$RESULTS/$name"
-    if [ ! -d "$source" ]; then
-      echo "missing assets: $source" >&2
-      exit 1
-    fi
-    mkdir -p "$(dirname "$target")"
-    ln -sfn "$source" "$target"
-    entries+=("$name")
-  done
+for source in "$VIS_ROOT"/assets/{bp,enet}_{solver,mlp6_h232}/*; do
+  [ -d "$source" ] || continue
+  run="$(basename "$(dirname "$source")")"
+  stamp="$(basename "$source")"
+  name="$run/$stamp"
+  target="$RESULTS/$name"
+  mkdir -p "$(dirname "$target")"
+  ln -sfn "$source" "$target"
+  entries+=("$name")
 done
+if [ "${#entries[@]}" -eq 0 ]; then
+  echo "no rendered assets found under $VIS_ROOT/assets" >&2
+  exit 1
+fi
 
 {
   echo '['
@@ -48,6 +47,6 @@ On Torch, serve it:
 On your local machine, in another terminal:
   ssh -N -L 8000:127.0.0.1:8000 torch
 
-Then open:
-  http://localhost:8000/webapp/compare.html?model1=bp_solver/${STAMP}&model2=bp_mlp6_h232/${STAMP}&mode=dems
+Then open (replace TIMESTAMP with any rendered date):
+  http://localhost:8000/webapp/compare.html?model1=bp_solver/TIMESTAMP&model2=bp_mlp6_h232/TIMESTAMP&mode=dems
 EOF

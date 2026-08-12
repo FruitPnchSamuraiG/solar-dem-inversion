@@ -1,0 +1,10 @@
+# Samuel's curated visualizer dates.  The first one has already been rendered;
+# the batch array renders the remaining eight representative full-disk cases.
+20151022_053428
+20150930_053501
+20151112_060355
+20151218_062855
+20151226_060354
+20151023_190019
+20151209_180802
+20150928_060524

@@ -18,13 +18,26 @@ async function initCompare() {
     select2.appendChild(opt2);
   }
 
-  select1.selectedIndex = 0;
-  select2.selectedIndex = 1;
+  // Match the deployed viewer.html convention: a shareable URL chooses both
+  // assets and the initial pane, while still falling back cleanly for a fresh
+  // visit.  Entries are relative result folders such as "bp_solver/201509...".
+  const query = new URLSearchParams(window.location.search);
+  const choose = (select, requested, fallback) => {
+    const index = requested ? modelList.indexOf(requested) : fallback;
+    select.selectedIndex = index >= 0 ? index : fallback;
+  };
+  choose(select1, query.get("model1"), 0);
+  choose(select2, query.get("model2"), Math.min(1, modelList.length - 1));
+  if ([...viewMode.options].some(option => option.value === query.get("mode"))) {
+    viewMode.value = query.get("mode");
+  }
 
   [select1, select2, viewMode].forEach(select =>
-    select.addEventListener("change", () =>
-      render(select1.value, select2.value, viewMode.value, table)
-    )
+    select.addEventListener("change", () => {
+      const params = new URLSearchParams({model1: select1.value, model2: select2.value, mode: viewMode.value});
+      history.replaceState(null, "", `${window.location.pathname}?${params}`);
+      render(select1.value, select2.value, viewMode.value, table);
+    })
   );
 
   render(select1.value, select2.value, viewMode.value, table);

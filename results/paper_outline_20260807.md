@@ -164,10 +164,24 @@ The full-set MSE difference is **not** explained by one pathological pixel. On
 BP, excluding the largest per-pixel squared DEM error (block 13,061; row 40;
 column 71) changes MSE 4.191 to 4.046: 3.46% of total MSE. On ENet, excluding its
 worst pixel (block 30,789; row 29; column 0) changes MSE 4.345 to 4.297: 1.10%.
-The corresponding relative-error and W1 changes are negligible. Thus the high
-mean MSE reflects a broader error tail, not the single-outlier failure already
-known for the barrier training loss. We still need per-pixel p50/p90/p99/p99.9
-and top-tail shares to say how broad that tail is.
+The corresponding relative-error and W1 changes are negligible.
+
+The per-pixel SSE distribution shows that the two tracks have different failure
+modes. Values below are summed over the 18 DEM bins for each pixel; percentiles
+and tail shares are calculated over every finite pixel using a 0.0001-dex
+streaming histogram.
+
+| Track | p50 SSE | p90 SSE | p99 SSE | p99.9 SSE | SSE in worst 1% |
+|---|---:|---:|---:|---:|---:|
+| BP | 0.0262 | 3.56 | 76.9 | 1,203 | 97.80% |
+| ENet | 4.04 | 38.4 | 265 | 2,938 | 82.87% |
+
+BP's ordinary prediction is therefore much better than its mean MSE suggests:
+the worst 0.01% of pixels (70,502 of 705,016,779) alone accounts for 89.71% of
+its total squared error. This is a **tail**, but not the single-pixel barrier-loss
+failure already known from training. ENet is also tail-weighted, but its median
+per-pixel SSE is ~154x BP's and its p90 is ~11x BP's; its high mean therefore
+reflects broad disagreement with the ENet reference, not only rare failures.
 
 **Protocol check before final prose:** confirm Samuel's exact Table-1 masking
 and bright/quiet thresholds. Our current full row uses all finite labels; no

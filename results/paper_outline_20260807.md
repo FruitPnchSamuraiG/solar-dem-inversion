@@ -1,6 +1,8 @@
 # Methods & Results — draft outline for review
 
-**Status**: flow only. Agree the spine and the in/out calls first, then fill.
+**Status**: review draft. The core internal results and the external full-test
+comparison are now recorded below; the remaining task is to verify the few
+open protocol details before turning this into prose.
 **Scope**: this is a component of a larger paper, not a standalone one. No intro,
 no literature review, no discussion of the field. Methods and Results, written so
 they can be dropped into someone else's frame.
@@ -119,8 +121,13 @@ Define once, so Results can just report:
   BP's spikes are far harder to hit than ENet's smooth curves.
 - `mae_aia` — resynthesis error against the real observation. No solver involved.
   **The only number comparable across tracks.**
-- **Percentiles, never means.** State the reason here: one pixel in 5,013,504 was
-  94% of the mean barrier loss and inverted the architecture ranking.
+- **Training-objective summaries:** use percentiles, not means. One pixel in
+  5,013,504 was 94% of the *mean barrier loss* and inverted an architecture
+  ranking. This warning applies to the heavy-tailed barrier objective.
+- **External Table-1 protocol:** report its required mean DEM MSE alongside EM
+  relative error and W1. Mean MSE is also tail-sensitive, so report the
+  leave-one-worst-pixel check and add the full per-pixel percentile/tail summary
+  before treating MSE as a typical-pixel claim.
 
 ---
 
@@ -132,6 +139,40 @@ Four models on the untouched 153-timestamp test split (~5.0M pixels).
 **Test reproduces validation to the third decimal** across every metric — no
 overfitting across 153 timestamps never seen in training or in checkpoint
 selection. Table: sp_coef, mae_aia, mae_dem, test/val side by side.
+
+### R1b — External full-test comparison to supervised models
+*Claim: on Samuel's full shared test set, the unsupervised BP emulator has
+competitive curve-shape agreement and EM error, while the current ENet emulator
+does not yet match the supervised ENet result.*
+
+Samuel supplied a full version of the same 153 held-out timestamps (48,960
+256x256 blocks per solver track, rather than our earlier 9,792-block staging).
+Our h232 networks were evaluated once over every finite label in those shared
+Zarr test sets. The supervised values below are Samuel's Table-1 values; the
+unsupervised values are our rerun with the same named metrics. These are
+comparison results, not training labels: our networks were trained directly from
+the corresponding inverse objectives.
+
+| Reference track | Method | DEM MSE | EM rel. err. (%) | W1 (dex) |
+|---|---|---:|---:|---:|
+| BP | Samuel supervised | 0.97 | 13.3 | 0.131 |
+| BP | Ours, unsupervised mlp6 h232 | 4.191 | 15.29 | **0.0845** |
+| ENet | Samuel supervised | 0.29 | 14.1 | 0.129 |
+| ENet | Ours, unsupervised mlp6 h232 | 4.345 | 71.66 | 0.2997 |
+
+The full-set MSE difference is **not** explained by one pathological pixel. On
+BP, excluding the largest per-pixel squared DEM error (block 13,061; row 40;
+column 71) changes MSE 4.191 to 4.046: 3.46% of total MSE. On ENet, excluding its
+worst pixel (block 30,789; row 29; column 0) changes MSE 4.345 to 4.297: 1.10%.
+The corresponding relative-error and W1 changes are negligible. Thus the high
+mean MSE reflects a broader error tail, not the single-outlier failure already
+known for the barrier training loss. We still need per-pixel p50/p90/p99/p99.9
+and top-tail shares to say how broad that tail is.
+
+**Protocol check before final prose:** confirm Samuel's exact Table-1 masking
+and bright/quiet thresholds. Our current full row uses all finite labels; no
+bright/quiet split is yet reported. Do not call this a strict head-to-head claim
+until that masking is confirmed.
 
 ### R2 — Spatial context buys nothing
 *Claim: the per-pixel MLP is not a compromise, it is the better model.*

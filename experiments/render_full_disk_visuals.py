@@ -8,6 +8,7 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
+import sunpy.visualization.colormaps  # Registers the sdoaia* Matplotlib maps.
 
 WAVELENGTHS = (94, 131, 171, 193, 211, 335)
 
@@ -32,6 +33,7 @@ def save_image(path, image, cmap="inferno", vmin=None, vmax=None):
 
 
 def jpdf(path, observed, synthesized):
+    """Match Samuel's log-log AIA/resynthesis JPDF convention."""
     x = np.maximum(observed.ravel(), 0.5)
     y = np.maximum(synthesized.ravel(), 0.5)
     good = np.isfinite(x) & np.isfinite(y)
@@ -40,11 +42,13 @@ def jpdf(path, observed, synthesized):
         lo = min(np.log10(x[good]).min(), np.log10(y[good]).min())
         hi = max(np.log10(x[good]).max(), np.log10(y[good]).max())
         ax.hexbin(x[good], y[good], xscale="log", yscale="log", gridsize=200,
-                  bins="log", extent=(lo, hi, lo, hi))
+                  bins="log", cmap="viridis", extent=(lo, hi, lo, hi))
         ax.plot((10**lo, 10**hi), (10**lo, 10**hi), "k--", linewidth=0.8)
-    ax.set(xlabel="observed AIA", ylabel="DEM-resynthesized AIA")
+        r2 = np.corrcoef(np.log10(x[good]), np.log10(y[good]))[0, 1] ** 2
+        ax.set_title(r"$R^2 = %.2f$" % r2)
+    ax.set(xlabel=r"$I_{AIA}$", ylabel=r"$I_{resynth}$")
     ax.set_aspect("equal", adjustable="box")
-    fig.savefig(path, dpi=180, bbox_inches="tight")
+    fig.savefig(path, dpi=300, bbox_inches="tight")
     plt.close(fig)
 
 
@@ -62,8 +66,13 @@ def main():
         raise ValueError(f"expected 18-bin DEM and 6-channel AIA, got {dem.shape}, {aia.shape}")
 
     os.makedirs(args.output, exist_ok=True)
+    # Match dumpVisuals.py: a fixed visual scale makes every DEM bin and every
+    # solver/model panel directly comparable, rather than auto-stretching each
+    # image independently.
     for i, layer in enumerate(dem):
-        save_image(os.path.join(args.output, f"dem_{i}.png"), layer)
+        shown = np.sqrt(np.maximum(np.where(layer >= 0.01, layer, 0.0), 0.0))
+        save_image(os.path.join(args.output, f"dem_{i}.png"), shown,
+                   cmap="turbo", vmin=0.0, vmax=30.0)
 
     mass = np.clip(dem, 0, None)
     denom = mass.sum(axis=0)
@@ -71,21 +80,23 @@ def main():
     std = np.sqrt((mass * (logt[:, None, None] - mean[None]) ** 2).sum(axis=0) /
                   np.maximum(denom, 1e-12))
     save_image(os.path.join(args.output, "mean_logt.png"), mean, vmin=float(logt.min()), vmax=float(logt.max()))
-    save_image(os.path.join(args.output, "std_logt.png"), std, vmin=0.0, vmax=0.5)
+    save_image(os.path.join(args.output, "std_logt.png"), std, vmin=0.0,
+               vmax=0.5 * float(logt.max() - logt.min()))
 
     rdata = np.load("RData.npz")
     response = (rdata["R"][:, :18] * 1e26).astype(np.float32)
     resynth = np.tensordot(response, dem, axes=(1, 0))
     for i, wavelength in enumerate(WAVELENGTHS):
-        # Samuel's container registered SunPy's ``sdoaia*`` colormaps at
-        # import time.  Our uv environment intentionally does not depend on
-        # that optional registration; use a built-in, portable sequential map
-        # so asset generation works on every Torch node.
-        cmap = "magma"
+        # The observed AIA scale is intentionally reused for the solver and
+        # neural resynthesis panels. Similar images then mean similar physical
+        # reconstructions, rather than separate contrast stretching.
+        cmap = f"sdoaia{wavelength}"
         scale = np.sqrt(np.maximum(aia[i], 0))
-        vmin, vmax = np.percentile(scale[np.isfinite(scale)], (20, 99.99))
-        save_image(os.path.join(args.output, f"aia_{i}_resynth.png"), np.sqrt(np.maximum(resynth[i], 0)), cmap, vmin, vmax)
-        save_image(os.path.join(args.output, f"aia_{i}.png"), scale, cmap, vmin, vmax)
+        vmin, vmax = np.percentile(scale[np.isfinite(scale)], (20, 99.9999))
+        save_image(os.path.join(args.output, f"aia_{i}_resynth.png"),
+                   np.sqrt(np.maximum(resynth[i], 0)), cmap, vmin, vmax)
+        save_image(os.path.join(args.output, f"aia_{i}.png"), scale, cmap,
+                   vmin, vmax)
         jpdf(os.path.join(args.output, f"aia_{i}_resynth_jpdf.png"), aia[i], resynth[i])
 
     metrics = {"mae": float(np.mean(np.abs(resynth - aia))),

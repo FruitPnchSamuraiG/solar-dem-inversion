@@ -7,6 +7,97 @@ const RUN_LABELS = {
   enet_mlp6_h232: "ENet mlp6 (h232, 176k)",
 };
 
+let openZoomViewer;
+
+function setupZoomViewer() {
+  const modal = document.getElementById("zoom-modal");
+  const canvas = document.getElementById("zoom-canvas");
+  const image = document.getElementById("zoom-image");
+  const title = document.getElementById("zoom-title");
+  const close = document.getElementById("zoom-close");
+  let scale = 1;
+  let x = 0;
+  let y = 0;
+  let dragging = false;
+  let pointerX = 0;
+  let pointerY = 0;
+
+  const apply = () => {
+    image.style.transform = `translate(${x}px, ${y}px) scale(${scale})`;
+  };
+  const fit = () => {
+    if (!image.naturalWidth || !image.naturalHeight) return;
+    const padding = 12;
+    scale = Math.min(
+      (canvas.clientWidth - padding * 2) / image.naturalWidth,
+      (canvas.clientHeight - padding * 2) / image.naturalHeight,
+    );
+    x = (canvas.clientWidth - image.naturalWidth * scale) / 2;
+    y = (canvas.clientHeight - image.naturalHeight * scale) / 2;
+    apply();
+  };
+  const hide = () => {
+    modal.hidden = true;
+    image.removeAttribute("src");
+  };
+
+  openZoomViewer = (src, label) => {
+    title.textContent = label;
+    modal.hidden = false;
+    image.onload = fit;
+    image.src = src;
+  };
+
+  close.addEventListener("click", hide);
+  modal.addEventListener("click", event => {
+    if (event.target === modal) hide();
+  });
+  document.addEventListener("keydown", event => {
+    if (event.key === "Escape" && !modal.hidden) hide();
+  });
+  window.addEventListener("resize", () => {
+    if (!modal.hidden) fit();
+  });
+  canvas.addEventListener("wheel", event => {
+    event.preventDefault();
+    const rect = canvas.getBoundingClientRect();
+    const cursorX = event.clientX - rect.left;
+    const cursorY = event.clientY - rect.top;
+    const imageX = (cursorX - x) / scale;
+    const imageY = (cursorY - y) / scale;
+    const factor = event.deltaY < 0 ? 1.18 : 1 / 1.18;
+    scale = Math.max(0.05, Math.min(12, scale * factor));
+    x = cursorX - imageX * scale;
+    y = cursorY - imageY * scale;
+    apply();
+  }, { passive: false });
+  canvas.addEventListener("pointerdown", event => {
+    dragging = true;
+    pointerX = event.clientX;
+    pointerY = event.clientY;
+    canvas.classList.add("dragging");
+    canvas.setPointerCapture(event.pointerId);
+  });
+  canvas.addEventListener("pointermove", event => {
+    if (!dragging) return;
+    x += event.clientX - pointerX;
+    y += event.clientY - pointerY;
+    pointerX = event.clientX;
+    pointerY = event.clientY;
+    apply();
+  });
+  canvas.addEventListener("pointerup", event => {
+    dragging = false;
+    canvas.classList.remove("dragging");
+    if (canvas.hasPointerCapture(event.pointerId)) canvas.releasePointerCapture(event.pointerId);
+  });
+  canvas.addEventListener("pointercancel", () => {
+    dragging = false;
+    canvas.classList.remove("dragging");
+  });
+  canvas.addEventListener("dblclick", fit);
+}
+
 async function initCompare() {
   const select1 = document.getElementById("select1");
   const select2 = document.getElementById("select2");
@@ -94,8 +185,8 @@ function render(leftModel, rightModel, mode, table) {
             }
         </div>
         </td>
-      <td><a target="_blank" id="a_${i}_1"><img id="img_${i}_1" width=400 height=400 class="border shadow" /></a></td>
-      <td><a target="_blank" id="a_${i}_2"><img id="img_${i}_2" width=400 height=400 class="border shadow" /></a></td>
+      <td><button type="button" id="zoom_${i}_1" class="block cursor-zoom-in" aria-label="Zoom reference image"><img id="img_${i}_1" width=400 height=400 class="border shadow" /></button></td>
+      <td><button type="button" id="zoom_${i}_2" class="block cursor-zoom-in" aria-label="Zoom model image"><img id="img_${i}_2" width=400 height=400 class="border shadow" /></button></td>
     `;
 
     table.appendChild(row);
@@ -105,8 +196,14 @@ function render(leftModel, rightModel, mode, table) {
 
     document.getElementById(`img_${i}_1`).src = leftPath;
     document.getElementById(`img_${i}_2`).src = rightPath;
-    document.getElementById(`a_${i}_1`).href = leftPath;
-    document.getElementById(`a_${i}_2`).href = rightPath;
+    const label = mode === "aia" || mode === "jpdfs"
+      ? aiaLabels[i]
+      : demLabels[i];
+    document.getElementById(`zoom_${i}_1`).addEventListener("click", () =>
+      openZoomViewer(leftPath, `${RUN_LABELS[leftModel.split("/")[0]] || leftModel} — ${label}`));
+    document.getElementById(`zoom_${i}_2`).addEventListener("click", () =>
+      openZoomViewer(rightPath, `${RUN_LABELS[rightModel.split("/")[0]] || rightModel} — ${label}`));
   }
 }
+setupZoomViewer();
 initCompare();

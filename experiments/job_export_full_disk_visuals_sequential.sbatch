@@ -11,7 +11,7 @@
 #SBATCH --mail-type=FAIL
 #SBATCH --account=torch_pr_41_tandon_advanced
 
-# One GPU, all curated dates sequentially: 8 dates x {BP, ENet} = 16 exports.
+# One GPU, all curated dates sequentially: 9 dates x {BP, ENet} = 18 exports.
 set -euo pipefail
 cd "${SLURM_SUBMIT_DIR:-$HOME/projects/dem}"
 source env.sh

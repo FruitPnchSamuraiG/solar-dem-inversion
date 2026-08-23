@@ -13,6 +13,23 @@
       .serif {
         font-family: 'Source Serif 4', serif;
       }
+      #zoom-modal[hidden] {
+        display: none;
+      }
+      #zoom-canvas {
+        cursor: grab;
+        touch-action: none;
+      }
+      #zoom-canvas.dragging {
+        cursor: grabbing;
+      }
+      #zoom-image {
+        max-width: none;
+        max-height: none;
+        user-select: none;
+        -webkit-user-drag: none;
+        transform-origin: 0 0;
+      }
     </style>
   </head>
   <body class="bg-white text-black flex flex-col min-h-screen">
@@ -49,6 +66,21 @@
         <table id="comparison-table" class="w-full border-separate border-spacing-y-8"></table>
       </div>
     </main>
+
+    <div id="zoom-modal" hidden class="fixed inset-0 z-50 bg-black/85 p-4 sm:p-8" role="dialog" aria-modal="true" aria-labelledby="zoom-title">
+      <div class="mx-auto flex h-full max-w-7xl flex-col rounded bg-white p-3 shadow-2xl">
+        <div class="mb-2 flex items-center justify-between gap-4">
+          <div>
+            <h2 id="zoom-title" class="serif text-xl"></h2>
+            <p class="text-xs text-gray-500">Scroll to zoom · drag to pan · double-click to reset</p>
+          </div>
+          <button id="zoom-close" type="button" class="rounded border px-3 py-1 text-sm hover:bg-gray-100" aria-label="Close zoom view">Close</button>
+        </div>
+        <div id="zoom-canvas" class="relative min-h-0 flex-1 overflow-hidden rounded border bg-black">
+          <img id="zoom-image" alt="" draggable="false" class="absolute left-0 top-0" />
+        </div>
+      </div>
+    </div>
 
     <script src="compare.js"></script>
   </body>

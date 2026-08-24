@@ -1,4 +1,9 @@
-# ML4PS 2026 workshop paper — scoped plan
+# ML4PS 2026 workshop paper — deferred plan
+
+> **Status (2026-08-24): deferred.** Samuel and Hriday decided not to submit
+> this workshop paper. Preserve this as a possible future direction; the active
+> deliverable is now an advisor-facing presentation of the completed work and
+> the next research questions.
 
 ## Submission decision
 

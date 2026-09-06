@@ -2,91 +2,136 @@
 
 ## Purpose
 
-Present the completed label-free neural DEM inversion work to Samuel's advisor
-as a research briefing, not as a paper pitch. The presentation should make three
-things easy to judge:
+Present the complete label-free neural DEM inversion research story to Samuel's
+advisor, not as a paper pitch. It should follow the work chronologically from
+the first direct-objective experiments to the current full-disk viewer, making
+clear what each experiment changed in the next decision. The presentation should
+make four things easy to judge:
 
 1. What was built and why it is scientifically useful.
 2. Which conclusions are supported by the evaluations.
 3. Which limitations and next experiments deserve advisor direction.
+4. How the project reached its current design, including negative results,
+   corrected interpretations, and engineering failures that materially changed
+   the science.
 
 ## Recommended format
 
-Eight to ten slides plus a live full-disk viewer demo. Aim for 12--15 minutes,
-then discussion.
+Eighteen to twenty-two slides plus a live full-disk viewer demo. Aim for
+25--30 minutes, then discussion. The results log and CLAUDE.md are the source
+of truth for the chronology; every major experiment receives at least one slide,
+but low-level commands and repeated job failures are condensed.
 
 ## Slide sequence
 
-1. **Problem and motivation**
+1. **Title, people, and presentation map**
+   - What will be covered: method evolution, evidence, current state, decisions.
+
+2. **Problem and motivation**
    - Six AIA channels must infer an 18-bin DEM.
    - Classical BP/ENet inversion is a per-pixel optimization.
    - Goal: amortize the physical inverse objective without solver DEM labels.
 
-2. **Method**
+3. **Reference objectives and starting point**
+   - BP sparsity and ENet smoothness select different feasible DEMs.
+   - Initial direct per-pixel loss comparison: barrier-style objectives best
+     tracked BP structure; purely fit-oriented objectives did not.
+
+4. **First label-free neural attempts**
+   - Channel-input amortized networks trained directly on the objective.
+   - They converged but produced noisy/oscillatory DEMs.
+   - Decision: test whether patch context and capacity repair this.
+
+5. **Neural-field progression on four timestamps**
+   - Per-image patch model -> amortized patch model -> neighborhood masking.
+   - What held-out pixels within seen images established, and why it was not yet
+     a true generalization test.
+
+6. **Initial architecture ablation**
+   - Patch CNN, centre-pixel MLP, flat patch MLP, shuffled CNN, and ENet loss.
+   - What appeared to favor spatial context before timestamp-held-out testing.
+
+7. **Leave-one-timestamp-out correction**
+   - The CNN advantage weakened/disappeared on unseen images.
+   - Flare timestamp as the early generalization weakness.
+
+8. **Early bimodality diagnostic and revised hypothesis**
+   - Initial perturbation study and the question it raised.
+   - Why larger-scale evaluation was needed before making a final claim.
+
+9. **Scaling to the full timestamp dataset**
+   - Hofmeister deconvolution, clean data generation, and timestamp split.
+   - 917/153/153 train/validation/test setup.
+
+10. **Numerical-collapse failure and repair**
+    - Raw-DN dynamic range, dead softplus outputs, and why clean-looking logs
+      were misleading.
+    - Input log transform, warmup, and clamped output as the remedy.
+
+11. **Scaled MLP versus CNN result**
+    - Re-evaluation on timestamp-disjoint validation/test data.
+    - Simpler per-pixel MLP selected as production architecture.
+
+12. **Why percentiles replaced mean training loss**
+    - One BP barrier-loss pixel dominated a mean and reversed a model ranking.
+    - Evaluation convention: percentiles and task-relevant diagnostics.
+
+13. **Production-model width sweep**
+    - 10k to 11.2M parameters.
+    - h232, 176k parameters, selected for resynthesis-oriented production use.
+    - Sparsity-versus-resynthesis trade-off with larger BP models.
+
+14. **Final multimodal census**
+    - Prevalence, precision, recall, and peak-quality dependence.
+    - High-precision detection is not the same as reproducing all bimodal curves.
+
+15. **Capacity ceiling and BP self-consistency**
+    - More capacity does not repair the multimodal gap.
+    - Photon-noise re-solves: NN--BP discrepancy compared with BP's own scatter.
+
+16. **Current full shared-test evaluation**
+    - Full 153-timestamp data, mean metrics, and tail-aware interpretation.
+    - Clearly distinguish verified results from protocol details still awaiting
+      Samuel's confirmation.
+
+17. **Full-disk visualizer demonstration**
+    - Zoomable BP/ENet solver versus h232 MLP.
+    - DEM maps, AIA resynthesis, JPDFs, and why equal AIA images do not imply
+      equal DEMs.
+
+18. **AIA resynthesis: typical fidelity versus extreme residuals**
+    - Full-disk BP example: MAE 4.63 MLP versus 5.29 solver; MSE tail caveat.
+    - Hot-channel undershoot and the need for residual views.
+
+19. **Current consolidated state**
+    - What is established, what is tentative, and what is currently blocked by
+      missing external configuration/access details.
+
+20. **Advisor decisions requested**
+    - Scientific primary target, evaluation priority, and next experiment.
+    - Hot-channel calibration, ENet, AIA+XRT, uncertainty, or another physical
+      target.
+
+## Method slide content
+
+The central method slide should still be simple:
    - AIA observation -> per-pixel MLP -> non-negative DEM basis coefficients.
    - Forward response reconstructs AIA; BP or ENet objective is the training
      signal.
    - Explicitly state: solver DEMs are evaluation references, not targets.
 
-3. **Data and honest evaluation**
-   - Hofmeister-deconvolved AIA-only data.
-   - Timestamp-disjoint 917/153/153 train/validation/test split.
-   - Why held-out pixels from seen images would not be sufficient.
-
-4. **Architecture decision: MLP versus patch CNN**
-   - The 176k h232 MLP is the production model.
-   - The patch CNN did not show a consistent benefit on unseen timestamps.
-   - Practical implication: no spatial context is needed for the present
-     AIA-only objective.
-
-5. **Capacity sweep**
-   - h232 is 8.1x smaller than the 1.43M baseline.
-   - Explain the sparsity-versus-resynthesis trade-off rather than claiming a
-     universal best size.
-
-6. **Multi-thermal result**
-   - BP MLP: high precision (~80%), limited recall (~30%) for interior
-     bimodality.
-   - Best on well-separated, similar-height peaks; misses shoulders.
-   - Do not claim that every bimodal DEM is reproduced.
-
-7. **Reference ambiguity / self-consistency**
-   - BP perturbation re-solves: at bimodal pixels, NN--BP discrepancy is 0.98x
-     BP's own noise-induced scatter.
-   - Core interpretation: capacity alone cannot resolve a reference that is
-     unstable under photon noise.
-
-8. **Full-disk visual demonstration**
-   - Use the zoomable viewer: BP or ENet solver left, h232 MLP right.
-   - Show DEM maps, AIA resynthesis, and JPDFs.
-   - Explain why nearly identical AIA resynthesis does not imply identical DEM:
-     six measurements underdetermine 18 bins.
-
-9. **What the full-disk AIA metrics say**
-   - For 20150923_180356, BP MLP versus BP solver:
-     MAE 4.63 versus 5.29; MSE 6006 versus 110.
-   - Typical-pixel AIA fidelity is similar, while rare MLP residuals dominate
-     squared error.
-   - State that BP solver invalid pixels must be masked in any reportable metric.
-
-10. **Limitations and decisions requested**
-    - Hot-channel (94/131 Å) undershoot at bright pixels.
-    - Current ENet mismatch is broader than a few outliers.
-    - Ask which next direction has the highest scientific value: improved
-      objective/calibration, targeted hot-channel treatment, uncertainty output,
-      AIA+XRT, or a new physics target.
-
 ## Materials to prepare
 
 - One clean method diagram.
-- Existing MLP/CNN or width-sweep figure.
-- Existing multimodal-quality or BP self-consistency figure.
-- A compact advisor-facing results table, with all metric units labelled.
+- Existing figures for each major stage, selected from the results log.
+- MLP/CNN, width-sweep, multimodal-quality, and BP self-consistency figures.
+- Compact result tables with all metric units labelled.
 - Live viewer staged locally from Torch; preselect one quiet and one active date.
 
 ## Deliberate exclusions
 
 - Workshop-paper framing, submission schedule, and authorship.
-- Cluster setup and implementation chronology.
+- Raw command logs and repeated copies of the same job failure.
 - A claim that the model beats supervised work.
-- Unconfirmed ENet hyperparameters or Bright/Quiet table comparisons.
+- Unconfirmed ENet hyperparameters or Bright/Quiet table comparisons presented
+  as final conclusions.

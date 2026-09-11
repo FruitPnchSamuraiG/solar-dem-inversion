@@ -22,6 +22,29 @@ argmin_{x>=0} 1/(2N) ||Dx - y||^2 + alpha * l1_ratio * ||x||_1 + alpha * (1 - l1
 
 Objective code: `solveElasticNet()` in `fullBP.py` (repo root). Exact CLI invocation: `submit_enet_aia_hofdeconv_full.py`.
 
+The supplied generation script creates five versions per timestamp (the clean
+sample plus four photon-noise realizations). This accounts exactly for the
+shared test set containing 48,960 blocks rather than the 9,792 clean-only
+blocks in the earlier staged test split.
+
 ## Per-pixel error statistics (p50/p90/p99/p99.9, worst-1% squared-error share)
 
 Not precomputed. Best checkpoints to compute them from: `checkpoints/model_best_bp.pth`, `checkpoints/model_best_en.pth`.
+
+The fixed thresholds are also available in machine-readable form as
+`aia_thresholds.json`. From the repository root on Torch, evaluate both
+supervised checkpoints on the shared test sets with:
+
+```bash
+sbatch --export=ALL,TRACK=bp experiments/job_eval_supervised_paper_test.sbatch
+sbatch --export=ALL,TRACK=enet experiments/job_eval_supervised_paper_test.sbatch
+```
+
+The jobs write `output/experiments/paper_eval/{bp,enet}_supervised_matched.json`.
+Each Full/Bright/Quiet row includes the paper metrics plus per-pixel DEM SSE
+p50/p90/p99/p99.9 and the share of total SSE contributed by the worst 1%.
+
+For a quick two-block checkpoint/loading test, add `MAX_BLOCKS=2` to the
+`--export` list. The supplied table script evaluates `test_x.zarr` and
+`test_y.zarr`; use those files for comparison with the reported Table-1 test
+numbers.

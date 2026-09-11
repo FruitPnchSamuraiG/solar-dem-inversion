@@ -31,6 +31,9 @@ ARGS=(
   --model "$MODEL" --data "$DATA" --reference "$TRACK"
   --output "output/experiments/paper_eval/${TRACK}_h232_${OUTPUT_TAG}.json"
 )
+if [ "${USE_SAMUEL_THRESHOLDS:-1}" = 1 ]; then
+  ARGS+=(--bright_thresholds eval_and_enet_specs/aia_thresholds.json)
+fi
 if [ -n "${MAX_BLOCKS:-}" ]; then
   ARGS+=(--max_blocks "$MAX_BLOCKS")
 fi

@@ -57,10 +57,16 @@ N_BINS = 18
 TOP_PCT = 5.0
 REL_FLOOR = 0.1
 EPS = 1e-12
+SSE_LOG10_MIN = -12.0
+SSE_LOG10_MAX = 12.0
+SSE_HIST_BINS = 240_000
 
 
 def load_model(ckpt_path, device):
-    ckpt = torch.load(ckpt_path, map_location='cpu')
+    # These checkpoints are trusted project artifacts supplied by their author.
+    # Explicitly disable the weights-only loader because ``args`` may be an
+    # argparse Namespace in older training checkpoints.
+    ckpt = torch.load(ckpt_path, map_location='cpu', weights_only=False)
     model_name = ckpt['model_name']
     model_args = ckpt.get('args', {})
     if hasattr(model_args, '__dict__'):
@@ -140,7 +146,104 @@ def w1_per_pixel(pred, gt, dT, eps=EPS):
 
 def _accum():
     return {'sq_err': 0.0, 'rel_err': 0.0, 'w1_sum': 0.0,
-            'n_bins_valid': 0, 'n_pixels_valid': 0, 'n_w1_valid': 0}
+            'n_bins_valid': 0, 'n_pixels_valid': 0, 'n_w1_valid': 0,
+            'sse_hist_count': np.zeros(SSE_HIST_BINS, dtype=np.int64),
+            'sse_hist_sum': np.zeros(SSE_HIST_BINS, dtype=np.float64),
+            'sse_zero_count': 0, 'sse_low_count': 0, 'sse_low_sum': 0.0,
+            'sse_high_count': 0, 'sse_high_sum': 0.0,
+            'max_per_pixel_dem_sse': -np.inf}
+
+
+def _add_sse_distribution(acc, per_pixel_sse):
+    """Accumulate a constant-memory histogram of per-pixel DEM SSE."""
+    values = per_pixel_sse.detach().double().cpu().numpy()
+    if values.size == 0:
+        return
+    acc['max_per_pixel_dem_sse'] = max(
+        acc['max_per_pixel_dem_sse'], float(values.max()))
+    positive = values > 0
+    acc['sse_zero_count'] += int((~positive).sum())
+    if not positive.any():
+        return
+
+    values = values[positive]
+    logs = np.log10(values)
+    low = logs < SSE_LOG10_MIN
+    high = logs >= SSE_LOG10_MAX
+    acc['sse_low_count'] += int(low.sum())
+    acc['sse_low_sum'] += float(values[low].sum())
+    acc['sse_high_count'] += int(high.sum())
+    acc['sse_high_sum'] += float(values[high].sum())
+    middle = ~(low | high)
+    if middle.any():
+        indices = np.floor(
+            (logs[middle] - SSE_LOG10_MIN)
+            / (SSE_LOG10_MAX - SSE_LOG10_MIN) * SSE_HIST_BINS
+        ).astype(np.int64)
+        indices = np.clip(indices, 0, SSE_HIST_BINS - 1)
+        acc['sse_hist_count'] += np.bincount(
+            indices, minlength=SSE_HIST_BINS)
+        acc['sse_hist_sum'] += np.bincount(
+            indices, weights=values[middle], minlength=SSE_HIST_BINS)
+
+
+def _finish_sse_distribution(acc):
+    """Compute approximate quantiles and upper-tail shares from the histogram."""
+    n = acc['n_pixels_valid']
+    if not n:
+        return None
+    width = (SSE_LOG10_MAX - SSE_LOG10_MIN) / SSE_HIST_BINS
+    counts = acc['sse_hist_count']
+    sums = acc['sse_hist_sum']
+    below_hist = acc['sse_zero_count'] + acc['sse_low_count']
+    cumulative = below_hist + np.cumsum(counts)
+
+    quantiles = {}
+    for q in (50, 90, 99, 99.9):
+        rank = int(np.ceil(n * q / 100.0))
+        if rank <= acc['sse_zero_count']:
+            value = 0.0
+        elif rank <= below_hist:
+            value = 10 ** SSE_LOG10_MIN
+        else:
+            idx = int(np.searchsorted(cumulative, rank, side='left'))
+            value = (10 ** SSE_LOG10_MAX if idx >= SSE_HIST_BINS else
+                     float(10 ** (SSE_LOG10_MIN + (idx + 0.5) * width)))
+        quantiles[f'p{q}'] = value
+
+    total_sse = max(acc['sq_err'], 1e-300)
+    tail_count = int(np.ceil(n * 0.01))
+    remaining = tail_count
+    selected = min(remaining, acc['sse_high_count'])
+    selected_sse = (acc['sse_high_sum'] * selected / acc['sse_high_count']
+                    if acc['sse_high_count'] else 0.0)
+    remaining -= selected
+    threshold = 10 ** SSE_LOG10_MAX if selected else None
+    for idx in range(SSE_HIST_BINS - 1, -1, -1):
+        if remaining <= 0:
+            break
+        count = int(counts[idx])
+        if not count:
+            continue
+        take = min(remaining, count)
+        selected_sse += float(sums[idx]) * take / count
+        remaining -= take
+        threshold = float(10 ** (SSE_LOG10_MIN + idx * width))
+    if remaining > 0 and acc['sse_low_count']:
+        take = min(remaining, acc['sse_low_count'])
+        selected_sse += acc['sse_low_sum'] * take / acc['sse_low_count']
+
+    return {
+        'method': 'streaming_log10_histogram',
+        'bin_width_dex': width,
+        'per_pixel_dem_sse_quantiles_approx': quantiles,
+        'top_1_pct': {
+            'n_pixels': tail_count,
+            'min_sse_approx': threshold,
+            'total_sse_share_pct_approx': 100.0 * selected_sse / total_sse,
+        },
+        'max_per_pixel_dem_sse': acc['max_per_pixel_dem_sse'],
+    }
 
 
 @torch.no_grad()
@@ -191,6 +294,7 @@ def evaluate(model, x_zarr, y_zarr, thresholds, logT, device, batch_size, rel_fl
             acc[key]['rel_err'] += (rel_err * m4d).sum().item()
             acc[key]['n_bins_valid'] += int(mask.sum().item()) * N_BINS
             acc[key]['n_pixels_valid'] += int(mask.sum().item())
+            _add_sse_distribution(acc[key], sq_err.sum(dim=1)[mask])
 
             w1_mask = mask & w1_valid
             acc[key]['w1_sum'] += (w1_map * w1_mask).sum().item()
@@ -208,6 +312,7 @@ def evaluate(model, x_zarr, y_zarr, thresholds, logT, device, batch_size, rel_fl
             'w1_dex': a['w1_sum'] / max(a['n_w1_valid'], 1),
             'n_pixels': a['n_pixels_valid'],
             'n_w1_pixels': a['n_w1_valid'],
+            'per_pixel_dem_sse_distribution': _finish_sse_distribution(a),
         }
     return results
 

@@ -264,7 +264,10 @@ def main():
     thresholds = None
     if args.bright_thresholds:
         with open(args.bright_thresholds) as f:
-            thresholds = np.asarray(json.load(f), dtype=np.float32)
+            threshold_payload = json.load(f)
+        if isinstance(threshold_payload, dict):
+            threshold_payload = threshold_payload["test"]
+        thresholds = np.asarray(threshold_payload, dtype=np.float32)
         if thresholds.shape != (6,):
             raise ValueError("--bright_thresholds must be a JSON list of six values")
 

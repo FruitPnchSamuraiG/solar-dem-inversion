@@ -91,6 +91,39 @@ From the paper's "Future Work" section:
 
 ## Progress Log (most recent first)
 
+### 2026-09-11 — Samuel's evaluation protocol received; matched ENet rerun prepared
+
+Samuel supplied the exact Bright/Quiet definition, supervised BP/ENet
+checkpoints, and the ENet generation settings in `eval_and_enet_specs/`.
+Bright means any AIA channel reaches its fixed top-5% threshold; Quiet is the
+valid complement. The confirmed Elastic Net settings are **alpha=0.001,
+l1_ratio=0.5, C=n_obs**, not the alpha=1 used by the historical label-free ENet
+runs. Those old ENet results remain valid for their own objective but are not a
+protocol-matched comparison with Samuel's ENet solver or supervised model.
+
+The 48,960-block shared test set is now understood exactly. Each of the 153
+timestamps has 64 spatial blocks and five solver targets: one clean solve plus
+four Gaussian-noise re-solves. The staging code repeats the clean AIA input for
+all five targets because noisy inversion files store only the DEM. Thus the
+fivefold axis measures solver-output uncertainty for the same observation; it
+does not contain five independently noisy AIA inputs.
+
+`experiments/job_eval_supervised_paper_test.sbatch` evaluates Samuel's supplied
+checkpoints with the fixed mask and reports Full/Bright/Quiet MSE, relative
+error, W1, per-pixel SSE percentiles, and worst-1% SSE share. A matched h232 ENet
+retrain is prepared in `experiments/job_train_enet_alpha0p001.sbatch`; it can
+reuse the existing staged observations because training is label-free and does
+not consume solver DEM targets. Its validation `mae_dem` is against the older
+alpha=1 staged labels and is diagnostic only; final agreement must be measured
+on Samuel's alpha=0.001 shared test set. `experiments/submit_matched_enet.sh`
+submits the retrain and a dependent full shared-test evaluation without
+overwriting the historical checkpoint.
+
+Triborough deployment remains blocked: direct SSH to
+`triborough.cs.nyu.edu:22` as `hsr3649` times out before authentication. Samuel's
+working SSH snippet uses his own `vp2435` account and private key, so it cannot
+be reused for Hriday's account without server/network access being enabled.
+
 ### 2026-08-07 — CAPACITY CEILING CONFIRMED, and the missed peaks are the *marginal* ones
 
 Array `15497859` (mlp6 barrier at h960/h1360/h1920 = 2.83M/5.64M/11.18M), all

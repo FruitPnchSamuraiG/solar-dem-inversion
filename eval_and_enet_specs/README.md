@@ -22,10 +22,24 @@ argmin_{x>=0} 1/(2N) ||Dx - y||^2 + alpha * l1_ratio * ||x||_1 + alpha * (1 - l1
 
 Objective code: `solveElasticNet()` in `fullBP.py` (repo root). Exact CLI invocation: `submit_enet_aia_hofdeconv_full.py`.
 
-The supplied generation script creates five versions per timestamp (the clean
-sample plus four photon-noise realizations). This accounts exactly for the
-shared test set containing 48,960 blocks rather than the 9,792 clean-only
-blocks in the earlier staged test split.
+The supplied generation script creates five solver targets per timestamp (the
+clean solve plus four Gaussian-noise re-solves). During Zarr staging, the clean
+AIA observation is repeated for all five targets; the noisy inversion files do
+not store a second AIA cube. This accounts exactly for the shared test set
+containing 48,960 blocks rather than the 9,792 clean-only blocks in the earlier
+staged test split. It also means the five targets measure solver uncertainty
+for the same observed input.
+
+The original label-free ENet h232 checkpoint used `alpha=1`. To align its
+training objective with the confirmed `alpha=0.001` reference without
+overwriting the historical checkpoint, submit:
+
+```bash
+bash experiments/submit_matched_enet.sh
+```
+
+This trains into `output/experiments/matched_enet_alpha0p001/` and schedules a
+dependent full evaluation against Samuel's shared ENet test set.
 
 ## Per-pixel error statistics (p50/p90/p99/p99.9, worst-1% squared-error share)
 

@@ -26,6 +26,7 @@ case "${TRACK:?set TRACK=bp or TRACK=enet}" in
         MODEL=output/experiments/sweep/scaled_mlp6_enet_h232.pt ;;
   *) echo "TRACK must be bp or enet" >&2; exit 2 ;;
 esac
+MODEL=${MODEL_OVERRIDE:-$MODEL}
 
 ARGS=(
   --model "$MODEL" --data "$DATA" --reference "$TRACK"

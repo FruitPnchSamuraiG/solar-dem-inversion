@@ -64,3 +64,8 @@ For a quick two-block checkpoint/loading test, add `MAX_BLOCKS=2` to the
 `--export` list. The supplied table script evaluates `test_x.zarr` and
 `test_y.zarr`; use those files for comparison with the reported Table-1 test
 numbers.
+
+If the project GPU quota is busy, the same supervised evaluation can run on a
+CPU node with `experiments/job_eval_supervised_paper_test_cpu.sbatch`. The
+evaluator skips the unused classification head, so this path computes exactly
+the same regression metrics without allocating its large logits tensor.

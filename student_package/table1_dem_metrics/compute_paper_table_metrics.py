@@ -46,7 +46,8 @@ import zarr
 # PYTHONPATH alongside) the demdemo repo, since it imports from src/. Adjust
 # this path if you relocate the script relative to the repo root.
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
-from src.model import FreqClassNonReLU, FreqClassNonReLUNoPos, BasicNetworkFreqClass
+from src.model import (FreqClassNonReLU, FreqClassNonReLUNoPos,
+                       BasicNetworkFreqClass, posEncode)
 
 _MODEL_REGISTRY = {
     'FreqClassNonReLU': FreqClassNonReLU,
@@ -78,6 +79,19 @@ def load_model(ckpt_path, device):
     model.load_state_dict(ckpt['model_state_dict'])
     model.to(device).eval()
     return model, {'model_name': model_name, 'n_bins': int(n_bins), 'epoch': int(ckpt.get('epoch', -1))}
+
+
+def predict_regression_only(model, aia):
+    """Run the DEM regression branch without allocating classification logits.
+
+    The supplied checkpoints have a large uncertainty/classification head, but
+    Table 1 uses only the regression output. Skipping that head makes CPU
+    evaluation practical and also reduces GPU memory use without changing the
+    prediction being scored.
+    """
+    x = torch.sqrt(torch.clamp(aia, min=0.0))
+    x = posEncode(x, model.nFreq)
+    return model.regression_head(model.backbone(x))
 
 
 def compute_thresholds(x_zarr, top_pct=TOP_PCT, n_hist_bins=500_000, hist_min=-300.0, hist_max=30_000.0, bs=64):
@@ -271,8 +285,7 @@ def evaluate(model, x_zarr, y_zarr, thresholds, logT, device, batch_size, rel_fl
         gt_t = torch.from_numpy(dem_np).to(device)
         aia_in = torch.clamp(aia_t, min=0.0)
 
-        out = model(aia_in)
-        pred_t = (out[0] if isinstance(out, tuple) else out)[:, :N_BINS]
+        pred_t = predict_regression_only(model, aia_in)[:, :N_BINS]
 
         pixel_valid = torch.isfinite(gt_t).all(dim=1) & torch.isfinite(pred_t).all(dim=1)  # [B,H,W]
         bright = (aia_t >= thr_t[None, :, None, None]).any(dim=1) & pixel_valid
@@ -329,6 +342,7 @@ def parse_args():
     p.add_argument('--data', required=True, help='dir with test_x.zarr / test_y.zarr (reference-solver DEM as GT)')
     p.add_argument('--rdata', default='RData.npz')
     p.add_argument('--batch_size', type=int, default=16)
+    p.add_argument('--device', choices=('auto', 'cpu', 'cuda'), default='auto')
     p.add_argument('--rel_floor', type=float, default=REL_FLOOR)
     p.add_argument('--n_samples', type=int, default=None)
     p.add_argument('--variant', required=True, help='e.g. methodbp, methoden (row label)')
@@ -342,7 +356,9 @@ def parse_args():
 
 def main():
     args = parse_args()
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    device_name = ('cuda' if torch.cuda.is_available() else 'cpu') \
+        if args.device == 'auto' else args.device
+    device = torch.device(device_name)
     print(f'device: {device}')
 
     logT = np.load(args.rdata)['logT'][:N_BINS].astype(np.float64)

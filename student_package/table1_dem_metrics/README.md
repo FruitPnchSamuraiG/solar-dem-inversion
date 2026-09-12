@@ -4,13 +4,15 @@
 DEM solver) pair over a test split, stratified by Full/Bright/Quiet pixels:
 
 - **DEM MSE** — mean squared error, predicted vs. reference DEM.
-- **EM Rel. Err. (%)** — mean per-pixel relative error in total emission
-  measure: `|sum(pred) - sum(gt)| / (|sum(gt)| + 0.1)`.
+- **EM Rel. Err. (%)** — ratio of aggregate absolute total-emission error to
+  aggregate reference emission:
+  `sum_pixels |sum_bins(pred)-sum_bins(gt)| / sum_pixels |sum_bins(gt)|`.
 - **W1 (dex)** — 1-D Wasserstein distance between predicted and reference
   DEM curves over the 18-bin logT grid.
 
-The JSON also retains the mean per-bin relative error as
-`dem_bin_rel_err_pct` for diagnosis; that is not the Table-1 EM metric.
+The JSON also retains the mean of per-pixel total-EM relative errors as
+`mean_pixel_em_rel_err_pct` and the mean per-bin relative error as
+`dem_bin_rel_err_pct`; neither is the Table-1 EM metric.
 
 "Bright" = any AIA channel at/above its own top-5% intensity threshold
 (computed from the same split). "Quiet" = everything else. "Full" = all

@@ -57,6 +57,8 @@ sbatch --export=ALL,TRACK=enet experiments/job_eval_supervised_paper_test.sbatch
 The jobs write `output/experiments/paper_eval/{bp,enet}_supervised_matched.json`.
 Each Full/Bright/Quiet row includes the paper metrics plus per-pixel DEM SSE
 p50/p90/p99/p99.9 and the share of total SSE contributed by the worst 1%.
+`em_rel_err_pct` is the Table-1 total-emission-measure metric;
+`dem_bin_rel_err_pct` is retained only as a separate diagnostic.
 
 For a quick two-block checkpoint/loading test, add `MAX_BLOCKS=2` to the
 `--export` list. The supplied table script evaluates `test_x.zarr` and

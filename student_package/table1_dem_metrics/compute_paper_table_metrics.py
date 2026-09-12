@@ -3,7 +3,7 @@
 compute_paper_table_metrics.py  (minimal version)
 
 Populates tab:comparison — for one (model, reference-solver dataset) pair,
-computes DEM MSE, DEM Rel. Err. (%), and W1 (dex) against the reference
+computes DEM MSE, total-EM Rel. Err. (%), and W1 (dex) against the reference
 solver's ground truth, stratified by Full / Bright / Quiet pixels, over the
 full test split. This is the trimmed-down version: only the three metrics
 actually cited in the paper table are computed (the full lab codebase has
@@ -11,8 +11,9 @@ extra relative-error variants used only for internal sanity checks).
 
 Metric definitions:
   - DEM MSE: mean over (valid pixels x 18 bins) of (pred - gt)^2
-  - DEM Rel. Err. (%): mean over (valid pixels x 18 bins) of
-             |pred - gt| / (|gt| + rel_floor), rel_floor=0.1
+  - EM Rel. Err. (%): per pixel, compare total emission measure summed over
+             the 18 temperature bins:
+             |sum(pred) - sum(gt)| / (|sum(gt)| + rel_floor), rel_floor=0.1
   - W1 (dex): per-pixel 1-D Wasserstein distance between pred and gt DEM,
              treated as distributions over the shared logT grid (18 bins,
              5.5-7.2, 0.1 dex spacing). Computed via the closed-form CDF
@@ -145,7 +146,7 @@ def w1_per_pixel(pred, gt, dT, eps=EPS):
 
 
 def _accum():
-    return {'sq_err': 0.0, 'rel_err': 0.0, 'w1_sum': 0.0,
+    return {'sq_err': 0.0, 'em_rel_err': 0.0, 'bin_rel_err': 0.0, 'w1_sum': 0.0,
             'n_bins_valid': 0, 'n_pixels_valid': 0, 'n_w1_valid': 0,
             'sse_hist_count': np.zeros(SSE_HIST_BINS, dtype=np.int64),
             'sse_hist_sum': np.zeros(SSE_HIST_BINS, dtype=np.float64),
@@ -283,6 +284,9 @@ def evaluate(model, x_zarr, y_zarr, thresholds, logT, device, batch_size, rel_fl
         abs_err = (pred_clean - gt_clean).abs()
         sq_err = (pred_clean - gt_clean) ** 2
         rel_err = abs_err / (gt_clean.abs() + rel_floor)
+        pred_em = pred_clean.sum(dim=1)
+        gt_em = gt_clean.sum(dim=1)
+        em_rel_err = (pred_em - gt_em).abs() / (gt_em.abs() + rel_floor)
 
         # W1 needs strictly-positive mass in both pred and gt to be well-defined
         w1_valid = pixel_valid & (gt_clean.sum(dim=1) > 0) & (pred_clean.sum(dim=1) > 0)
@@ -291,7 +295,8 @@ def evaluate(model, x_zarr, y_zarr, thresholds, logT, device, batch_size, rel_fl
         for mask, key in ((pixel_valid, 'all'), (bright, 'bright'), (quiet, 'quiet')):
             m4d = mask[:, None, :, :]
             acc[key]['sq_err'] += (sq_err * m4d).sum().item()
-            acc[key]['rel_err'] += (rel_err * m4d).sum().item()
+            acc[key]['em_rel_err'] += (em_rel_err * mask).sum().item()
+            acc[key]['bin_rel_err'] += (rel_err * m4d).sum().item()
             acc[key]['n_bins_valid'] += int(mask.sum().item()) * N_BINS
             acc[key]['n_pixels_valid'] += int(mask.sum().item())
             _add_sse_distribution(acc[key], sq_err.sum(dim=1)[mask])
@@ -308,7 +313,8 @@ def evaluate(model, x_zarr, y_zarr, thresholds, logT, device, batch_size, rel_fl
         n_bins = max(a['n_bins_valid'], 1)
         results[key] = {
             'dem_mse': a['sq_err'] / n_bins,
-            'dem_rel_err_pct': 100.0 * a['rel_err'] / n_bins,
+            'em_rel_err_pct': 100.0 * a['em_rel_err'] / max(a['n_pixels_valid'], 1),
+            'dem_bin_rel_err_pct': 100.0 * a['bin_rel_err'] / n_bins,
             'w1_dex': a['w1_sum'] / max(a['n_w1_valid'], 1),
             'n_pixels': a['n_pixels_valid'],
             'n_w1_pixels': a['n_w1_valid'],
@@ -365,7 +371,7 @@ def main():
     print(f"\n=== {args.variant} vs {args.reference} ===")
     for stratum_label, key in [('Full', 'all'), ('Bright', 'bright'), ('Quiet', 'quiet')]:
         r = results[key]
-        print(f"  {stratum_label:6s}  DEM MSE={r['dem_mse']:.4f}  Rel.Err={r['dem_rel_err_pct']:.1f}%  "
+        print(f"  {stratum_label:6s}  DEM MSE={r['dem_mse']:.4f}  EM Rel.Err={r['em_rel_err_pct']:.1f}%  "
               f"W1={r['w1_dex']:.4f} dex  (n={r['n_pixels']:,}, n_w1={r['n_w1_pixels']:,})")
 
     payload = {

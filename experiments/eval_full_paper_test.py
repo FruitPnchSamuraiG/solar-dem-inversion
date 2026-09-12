@@ -75,7 +75,8 @@ def predict_block(model, basis_t, x_block, pixel_batch):
 
 
 def empty_acc():
-    return {"sq": 0.0, "rel": 0.0, "w1": 0.0, "n_bins": 0, "n_px": 0, "n_w1": 0,
+    return {"sq": 0.0, "em_rel": 0.0, "bin_rel": 0.0,
+            "w1": 0.0, "n_bins": 0, "n_px": 0, "n_w1": 0,
             # Histogram count and SSE sum for each log10(per-pixel DEM SSE)
             # bin. Zeros and out-of-range values are retained separately so
             # the accounting remains exact even though quantiles are binned.
@@ -85,7 +86,8 @@ def empty_acc():
             "sse_high_count": 0, "sse_high_sum": 0.0,
             # Exact largest *per-pixel* DEM SSE.  Retaining one candidate makes
             # the leave-one-out diagnostic constant-memory over the full set.
-            "worst": {"sq": -np.inf, "rel": 0.0, "w1": 0.0, "w1_valid": False,
+            "worst": {"sq": -np.inf, "em_rel": 0.0, "bin_rel": 0.0,
+                      "w1": 0.0, "w1_valid": False,
                       "block": -1, "row": -1, "col": -1}}
 
 
@@ -97,9 +99,13 @@ def add_metrics(acc, pred, truth, mask, logt, block_index):
     y = truth[:, mask].T.astype(np.float64, copy=False)
     diff = p - y
     per_px_sq = np.square(diff).sum(axis=1)
-    per_px_rel = (np.abs(diff) / (np.abs(y) + REL_FLOOR)).sum(axis=1)
+    per_px_bin_rel = (np.abs(diff) / (np.abs(y) + REL_FLOOR)).sum(axis=1)
+    pred_em = p.sum(axis=1)
+    truth_em = y.sum(axis=1)
+    per_px_em_rel = np.abs(pred_em - truth_em) / (np.abs(truth_em) + REL_FLOOR)
     acc["sq"] += float(per_px_sq.sum())
-    acc["rel"] += float(per_px_rel.sum())
+    acc["em_rel"] += float(per_px_em_rel.sum())
+    acc["bin_rel"] += float(per_px_bin_rel.sum())
     acc["n_bins"] += int(p.size)
     acc["n_px"] += int(p.shape[0])
 
@@ -145,7 +151,8 @@ def add_metrics(acc, pred, truth, mask, logt, block_index):
         row, col = np.nonzero(mask)
         acc["worst"] = {
             "sq": float(per_px_sq[worst_local]),
-            "rel": float(per_px_rel[worst_local]),
+            "em_rel": float(per_px_em_rel[worst_local]),
+            "bin_rel": float(per_px_bin_rel[worst_local]),
             "w1": float(per_px_w1[worst_local]),
             "w1_valid": bool(ok[worst_local]),
             "block": int(block_index), "row": int(row[worst_local]), "col": int(col[worst_local]),
@@ -222,7 +229,8 @@ def sse_distribution(acc):
 def finish(acc):
     base = {
         "dem_mse": acc["sq"] / max(acc["n_bins"], 1),
-        "dem_rel_err_pct": 100 * acc["rel"] / max(acc["n_bins"], 1),
+        "em_rel_err_pct": 100 * acc["em_rel"] / max(acc["n_px"], 1),
+        "dem_bin_rel_err_pct": 100 * acc["bin_rel"] / max(acc["n_bins"], 1),
         "w1_dex": acc["w1"] / max(acc["n_w1"], 1),
         "n_pixels": acc["n_px"],
         "n_w1_pixels": acc["n_w1"],
@@ -234,12 +242,15 @@ def finish(acc):
         return base
     # Remove all 18 bin errors belonging to the single largest-SSE pixel.
     loo_sq = (acc["sq"] - w["sq"]) / max(acc["n_bins"] - N_AIA_BINS, 1)
-    loo_rel = 100 * (acc["rel"] - w["rel"]) / max(acc["n_bins"] - N_AIA_BINS, 1)
+    loo_em_rel = 100 * (acc["em_rel"] - w["em_rel"]) / max(acc["n_px"] - 1, 1)
+    loo_bin_rel = 100 * (acc["bin_rel"] - w["bin_rel"]) / max(
+        acc["n_bins"] - N_AIA_BINS, 1)
     loo_w1 = (acc["w1"] - (w["w1"] if w["w1_valid"] else 0.0)) / max(
         acc["n_w1"] - int(w["w1_valid"]), 1)
     base["leave_one_worst_pixel_out"] = {
         "dem_mse": loo_sq,
-        "dem_rel_err_pct": loo_rel,
+        "em_rel_err_pct": loo_em_rel,
+        "dem_bin_rel_err_pct": loo_bin_rel,
         "w1_dex": loo_w1,
         "worst_pixel": w,
         "worst_pixel_mse_share_pct": 100 * w["sq"] / max(acc["sq"], 1e-12),

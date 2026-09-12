@@ -1,15 +1,16 @@
-# Table 1 — DEM MSE / Rel. Err. / W1
+# Table 1 — DEM MSE / EM Rel. Err. / W1
 
 `compute_paper_table_metrics.py` evaluates one (model checkpoint, reference
 DEM solver) pair over a test split, stratified by Full/Bright/Quiet pixels:
 
 - **DEM MSE** — mean squared error, predicted vs. reference DEM.
-- **DEM Rel. Err. (%)** — mean `|pred - gt| / (|gt| + 0.1)`.
+- **EM Rel. Err. (%)** — mean per-pixel relative error in total emission
+  measure: `|sum(pred) - sum(gt)| / (|sum(gt)| + 0.1)`.
 - **W1 (dex)** — 1-D Wasserstein distance between predicted and reference
   DEM curves over the 18-bin logT grid.
 
-Trimmed to just these three metrics (the lab version also computes several
-alternative relative-error definitions used only for internal checks).
+The JSON also retains the mean per-bin relative error as
+`dem_bin_rel_err_pct` for diagnosis; that is not the Table-1 EM metric.
 
 "Bright" = any AIA channel at/above its own top-5% intensity threshold
 (computed from the same split). "Quiet" = everything else. "Full" = all

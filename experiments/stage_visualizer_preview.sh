@@ -14,7 +14,7 @@ cp "$REPO_DIR/student_package/visuals_pipeline/webapp/compare.html" "$WEBAPP/com
 cp "$REPO_DIR/student_package/visuals_pipeline/webapp/compare.js" "$WEBAPP/compare.js"
 
 entries=()
-for source in "$VIS_ROOT"/assets/{bp,enet}_{solver,mlp6_h232}/*; do
+for source in "$VIS_ROOT"/assets/{bp,enet}_{solver,mlp6_h232,supervised}/*; do
   [ -d "$source" ] || continue
   run="$(basename "$(dirname "$source")")"
   stamp="$(basename "$source")"

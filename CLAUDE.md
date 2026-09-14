@@ -91,6 +91,23 @@ From the paper's "Future Work" section:
 
 ## Progress Log (most recent first)
 
+### 2026-09-13 — Supervised viewer additions prepared
+
+Matched ENet website generation job `17559157` completed (2:32:49), with
+new alpha=0.001 solver references and h232 predictions for nine dates under
+`$SCRATCH/dem/visuals/matched_enet_alpha0p001/`. Its log includes ElasticNet
+convergence warnings; finite returned solutions are not proof of convergence.
+
+Hriday requested supervised predictions in the same viewer. The prepared
+`experiments/job_visuals_supervised_cpu.sbatch` runs both supplied checkpoints
+on those nine dates using each track's existing aligned AIA export, renders
+them with the common renderer, and restages the matched preview. No solver
+regeneration is needed. The UI pairs the selected BP/ENet reference with that
+track's label-free or supervised prediction and lists common available dates.
+This additional job is prepared, not yet confirmed submitted or completed.
+After it completes, the updated preview must be copied to Triborough again.
+See `experiments/matched_visuals.md` for the commands and paths.
+
 ### 2026-09-11 — Samuel's evaluation protocol received; matched ENet rerun prepared
 
 Samuel supplied the exact Bright/Quiet definition, supervised BP/ENet

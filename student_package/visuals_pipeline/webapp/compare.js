@@ -3,8 +3,10 @@ const path = "../results/test/";
 const RUN_LABELS = {
   bp_solver: "BP solver reference",
   enet_solver: "ENet solver reference",
-  bp_mlp6_h232: "BP mlp6 (h232, 176k)",
-  enet_mlp6_h232: "ENet mlp6 (h232, 176k)",
+  bp_mlp6_h232: "Label-free MLP6 (176k)",
+  enet_mlp6_h232: "Label-free MLP6 (176k)",
+  bp_supervised: "Samuel's supervised model",
+  enet_supervised: "Samuel's supervised model",
 };
 
 let openZoomViewer;
@@ -110,11 +112,8 @@ async function initCompare() {
 
   const runs = [...new Set(entries.map(entry => entry.split("/")[0]))];
   const references = runs.filter(run => run.endsWith("_solver"));
-  const models = runs.filter(run => run.includes("_mlp6_"));
-  const dates = [...new Set(entries.map(entry => entry.split("/")[1]))].sort();
+  const models = runs.filter(run => run.includes("_mlp6_") || run.endsWith("_supervised"));
   references.forEach(run => select1.appendChild(new Option(RUN_LABELS[run] || run, run)));
-  models.forEach(run => select2.appendChild(new Option(RUN_LABELS[run] || run, run)));
-  dates.forEach(stamp => date.appendChild(new Option(stamp, stamp)));
 
   // One shared date makes a direct side-by-side comparison unambiguous.
   const query = new URLSearchParams(window.location.search);
@@ -124,8 +123,25 @@ async function initCompare() {
     select.selectedIndex = index >= 0 ? index : fallback;
   };
   choose(select1, query.get("solver"), 0);
-  choose(select2, query.get("model"), 0);
-  choose(date, query.get("date"), 0);
+  const refreshModels = (requested) => {
+    const prefix = select1.value.replace(/_solver$/, "");
+    const family = requested?.endsWith("_supervised") ? "supervised" : "mlp6_h232";
+    const matching = models.filter(run => run.startsWith(`${prefix}_`));
+    select2.replaceChildren();
+    matching.forEach(run => select2.appendChild(new Option(RUN_LABELS[run] || run, run)));
+    choose(select2, matching.includes(requested) ? requested : `${prefix}_${family}`, 0);
+  };
+  const refreshDates = (requested) => {
+    const dates = entries
+      .filter(entry => entry.startsWith(`${select1.value}/`))
+      .map(entry => entry.split("/")[1])
+      .filter(stamp => available.has(`${select2.value}/${stamp}`));
+    date.replaceChildren();
+    [...new Set(dates)].sort().forEach(stamp => date.appendChild(new Option(stamp, stamp)));
+    choose(date, requested, 0);
+  };
+  refreshModels(query.get("model"));
+  refreshDates(query.get("date"));
   if ([...viewMode.options].some(option => option.value === query.get("mode"))) {
     viewMode.value = query.get("mode");
   }
@@ -141,11 +157,17 @@ async function initCompare() {
     history.replaceState(null, "", `${window.location.pathname}?${params}`);
     render(left, right, viewMode.value, table);
   };
-  [select1, select2, date, viewMode].forEach(select =>
-    select.addEventListener("change", () => {
-      renderSelected();
-    })
-  );
+  select1.addEventListener("change", () => {
+    const previousDate = date.value;
+    refreshModels(select2.value);
+    refreshDates(previousDate);
+    renderSelected();
+  });
+  select2.addEventListener("change", () => {
+    refreshDates(date.value);
+    renderSelected();
+  });
+  [date, viewMode].forEach(select => select.addEventListener("change", renderSelected));
 
   renderSelected();
 }

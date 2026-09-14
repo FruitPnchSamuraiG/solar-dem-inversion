@@ -36,3 +36,32 @@ Use this new preview directory when serving or deploying. Deployment must
 dereference the asset symlinks (for example `rsync --copy-links`). Do not run
 the old sequential export job for this update: it selects the historical
 ENet checkpoint and references.
+
+## Add the supervised predictions
+
+After the matched preview exists, submit from the Torch repository root:
+
+```bash
+mkdir -p logs/visuals
+sbatch --partition=cpu_short experiments/job_visuals_supervised_cpu.sbatch
+```
+
+One CPU job exports both supplied supervised checkpoints for all nine dates
+(18 exports), using the saved AIA grids from each track's existing viewer
+exports. It does not rerun either solver. The exporter checks the pointwise
+architecture before batching pixels and uses the same regression path as the
+supervised evaluator. The renderer and its colour scales are shared with the
+existing solver and label-free images. Only the first 18 temperature bins are
+displayed. This shows deterministic DEM predictions, not the uncertainty head.
+
+New assets are `assets/bp_supervised/DATE` and `assets/enet_supervised/DATE`
+under the matched visualizer root above. The job restages the preview after
+all exports complete. Logs are `logs/visuals/supervised_cpu_JOBID.log` and `.err`.
+The viewer keeps the reference solver on the left; the Prediction dropdown on
+the right offers that track's label-free MLP6 or supervised model. It lists
+only dates rendered for both selections and preserves the prediction type
+when switching solver tracks, when available. Existing URLs remain supported.
+
+After checking completion, repeat the preview download and public-site upload
+with rsync. The public site does not update automatically when a Torch job
+finishes. Keep symlink dereferencing enabled for the download (`rsync -rLt`).

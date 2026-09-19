@@ -232,6 +232,11 @@ function setupLinkedNavigation(table) {
 
 function render(models, mode, table) {
   table.innerHTML = "";
+  const resultsContent = document.getElementById("results-content");
+  resultsContent.replaceChildren();
+  resultsContent.hidden = mode !== "results";
+  table.hidden = mode === "results";
+  document.getElementById("reset-linked-zoom").parentElement.hidden = mode === "results";
   const columns = models.map(model => ({
     model, label: RUN_LABELS[model.split("/")[0]], subtitle: "", observed: false,
   }));
@@ -252,7 +257,7 @@ function render(models, mode, table) {
     results: "Shared-test DEM metrics and selected-date AIA reconstruction errors. Lower is better for every metric.",
   }[mode];
   if (mode === "results") {
-    renderResults(models, table);
+    renderResults(models, resultsContent);
     return;
   }
   const header = table.createTHead().insertRow();
@@ -335,13 +340,13 @@ function render(models, mode, table) {
 
 function makeResultsTable(title, headers, rows) {
   const section = document.createElement("section");
-  section.className = "max-w-5xl mx-auto mb-10";
+  section.className = "results-section";
   const heading = document.createElement("h2");
   heading.className = "serif text-2xl text-center mb-3";
   heading.textContent = title;
   section.appendChild(heading);
   const table = document.createElement("table");
-  table.className = "w-full text-sm border-collapse";
+  table.className = "results-table";
   const thead = table.createTHead().insertRow();
   headers.forEach(header => {
     const cell = document.createElement("th");
@@ -364,42 +369,66 @@ function makeResultsTable(title, headers, rows) {
 
 async function renderResults(models, container) {
   container.innerHTML = "";
+  const generation = Symbol();
+  container.resultsGeneration = generation;
+  const intro = document.createElement("section");
+  intro.className = "results-section";
+  intro.innerHTML = `
+    <h2 class="serif text-3xl mb-4">Evaluation results</h2>
+    <p class="mb-4">The DEM tables summarize the full shared test set: 153 timestamps and 48,960 blocks, including five solver targets per spatial block. They do not change with the selected viewer date. Predictions are compared with the corresponding BP or ENet solver reference, not a directly measured true DEM.</p>
+    <dl class="space-y-3 mb-5">
+      <div><dt class="font-bold">DEM MSE ↓</dt><dd>Mean squared difference between predicted and reference DEM values, averaged across valid pixels and 18 temperature bins. Large errors receive more weight.</dd></div>
+      <div><dt class="font-bold">EM relative error (%) ↓</dt><dd>Sum of absolute errors in each pixel’s total emission, divided by the sum of reference emission, multiplied by 100. This is a ratio of totals, not an average of pixel percentages.</dd></div>
+      <div><dt class="font-bold">W1 (dex) ↓</dt><dd>Average temperature-distribution distance between DEM curves normalized to unit total emission. Lower values indicate closer thermal shapes. Only pixels with positive emission in both curves are included.</dd></div>
+      <div><dt class="font-bold">AIA MAE and MSE ↓</dt><dd>Mean absolute and mean squared differences between reconstructed and observed AIA brightness. MAE is in DN/s and MSE in (DN/s)². The frame diagnostics below average across six channels and image pixels.</dd></div>
+    </dl>
+    <p>Full includes all valid pixels. Bright means at least one AIA channel reaches its fixed brightness threshold; Quiet is the remaining valid population. Lower is better for all metrics. Supervised models learn solver labels; label-free MLP6 models learn physical objectives.</p>
+    <p class="mt-3">DEM MAE and full-test AIA reconstruction metrics are not available in this comparison. The AIA section below is explicitly limited to the selected frame.</p>`;
+  container.appendChild(intro);
   for (const prefix of ["bp", "enet"]) {
     const result = RESULTS[prefix];
-    const demRows = result.rows.map(row => [
-      row[0], row[1].toFixed(3), `${row[2].toFixed(2)}%`, row[3].toFixed(4),
-      row[4].toFixed(3), `${row[5].toFixed(2)}%`, row[6].toFixed(4),
+    const rows = result.rows.flatMap(row => [
+      ["Supervised", row[0], row[4].toFixed(4), row[5].toFixed(2), row[6].toFixed(4)],
+      ["Label-free MLP6", row[0], row[1].toFixed(4), row[2].toFixed(2), row[3].toFixed(4)],
     ]);
     container.appendChild(makeResultsTable(
-      `${result.title}: label-free versus supervised`,
-      ["Pixel type", "Label-free MLP6 DEM MSE", "Label-free EM error", "Label-free W1", "Supervised DEM MSE", "Supervised EM error", "Supervised W1"],
-      demRows,
+      `${result.title} — full shared test set`,
+      ["Model", "Pixels", "DEM MSE ↓", "EM error (%) ↓", "W1 (dex) ↓"],
+      rows,
     ));
   }
-
   const date = document.getElementById("date").value;
-  const metricRuns = ["bp_mlp6_h232", "bp_supervised", "enet_mlp6_h232", "enet_supervised"]
-    .map(run => `${run}/${date}`);
-  const metricRows = [];
-  for (const run of metricRuns) {
+  const section = makeResultsTable(
+    `AIA reconstruction — selected frame only: ${date}`,
+    ["Track", "Model", "AIA MAE ↓", "AIA MSE ↓"],
+    [],
+  );
+  const note = document.createElement("p");
+  note.className = "text-gray-600 my-3";
+  note.textContent = "These are saved full-frame diagnostics, not test-set averages or a shared finite-pixel-mask evaluation. Nonfinite or inaccessible metrics are shown as unavailable.";
+  section.insertBefore(note, section.querySelector("table"));
+  container.appendChild(section);
+  const runs = ["bp_mlp6_h232", "bp_supervised", "enet_mlp6_h232", "enet_supervised"];
+  const rows = runs.map(run => {
+    const row = section.querySelector("tbody").insertRow();
+    [run.startsWith("bp_") ? "BP" : "ENet", RUN_LABELS[run], "Loading…", "Loading…"].forEach(value => {
+      row.insertCell().textContent = value;
+    });
+    return row;
+  });
+  await Promise.all(runs.map(async (run, index) => {
+    let values = ["Unavailable", "Unavailable"];
     try {
-      const response = await fetch(`${path}${run}/metrics.json`);
-      if (!response.ok) continue;
+      const response = await fetch(`${path}${run}/${date}/metrics.json`);
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const metrics = await response.json();
-      metricRows.push([
-        RUN_LABELS[run.split("/")[0]],
-        Number(metrics.mae).toFixed(4),
-        Number(metrics.mse).toFixed(4),
-      ]);
-    } catch (_) {
-      // The DEM results remain useful if an older deployment lacks metrics.json.
-    }
-  }
-  container.appendChild(makeResultsTable(
-    `AIA reconstruction error: ${date}`,
-    ["Model", "AIA MAE", "AIA MSE"],
-    metricRows.length ? metricRows : [["Metrics unavailable", "—", "—"]],
-  ));
+      values = [metrics.mae, metrics.mse].map(value =>
+        typeof value === "number" && Number.isFinite(value) ? value.toFixed(4) : "Unavailable");
+    } catch (_) {}
+    if (container.resultsGeneration !== generation || !section.isConnected) return;
+    rows[index].cells[2].textContent = values[0];
+    rows[index].cells[3].textContent = values[1];
+  }));
 }
 setupZoomViewer();
 initCompare().catch(error => {

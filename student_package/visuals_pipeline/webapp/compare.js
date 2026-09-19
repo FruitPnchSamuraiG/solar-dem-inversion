@@ -363,24 +363,22 @@ function makeResultsTable(title, headers, rows) {
 
 async function renderResults(models, container) {
   container.innerHTML = "";
-  const prefix = models[0].split("/")[0].replace(/_solver$/, "");
-  const result = RESULTS[prefix];
-  if (!result) return;
-  const demRows = result.rows.map(row => [
-    row[0], row[1].toFixed(3), `${row[2].toFixed(2)}%`, row[3].toFixed(4),
-    row[4].toFixed(3), `${row[5].toFixed(2)}%`, row[6].toFixed(4),
-  ]);
-  container.appendChild(makeResultsTable(
-    `${result.title}: label-free versus supervised`,
-    ["Pixel type", "Label-free MLP6 DEM MSE", "Label-free EM error", "Label-free W1", "Supervised DEM MSE", "Supervised EM error", "Supervised W1"],
-    demRows,
-  ));
+  for (const prefix of ["bp", "enet"]) {
+    const result = RESULTS[prefix];
+    const demRows = result.rows.map(row => [
+      row[0], row[1].toFixed(3), `${row[2].toFixed(2)}%`, row[3].toFixed(4),
+      row[4].toFixed(3), `${row[5].toFixed(2)}%`, row[6].toFixed(4),
+    ]);
+    container.appendChild(makeResultsTable(
+      `${result.title}: label-free versus supervised`,
+      ["Pixel type", "Label-free MLP6 DEM MSE", "Label-free EM error", "Label-free W1", "Supervised DEM MSE", "Supervised EM error", "Supervised W1"],
+      demRows,
+    ));
+  }
 
   const date = document.getElementById("date").value;
-  const metricRuns = [
-    `${prefix}_mlp6_h232/${date}`,
-    `${prefix}_supervised/${date}`,
-  ];
+  const metricRuns = ["bp_mlp6_h232", "bp_supervised", "enet_mlp6_h232", "enet_supervised"]
+    .map(run => `${run}/${date}`);
   const metricRows = [];
   for (const run of metricRuns) {
     try {

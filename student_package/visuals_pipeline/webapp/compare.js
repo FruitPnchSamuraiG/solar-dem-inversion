@@ -17,6 +17,11 @@ const RESULTS = {
       ["Bright", 40.901, 19.82, 0.0785, 8.657, 8.92, 0.0546],
       ["Quiet", 0.0583, 20.53, 0.0853, 0.0335, 20.13, 0.1430],
     ],
+    aiaRows: [
+      ["Full", 4.3152880002, 82.5570380168, 2.9461307552, 156.6698630557],
+      ["Bright", 12.4006152650, 527.3480279327, 13.1345345278, 1444.9823134077],
+      ["Quiet", 3.4050557601, 32.4832332227, 1.7991377782, 11.6338627424],
+    ],
   },
   enet: {
     title: "ENet reference (alpha=0.001, L1 ratio=0.5)",
@@ -24,6 +29,11 @@ const RESULTS = {
       ["Full", 0.588, 13.45, 0.1176, 0.318, 18.00, 0.1210],
       ["Bright", 4.239, 8.44, 0.0717, 1.926, 14.47, 0.0607],
       ["Quiet", 0.159, 17.23, 0.1230, 0.1296, 20.66, 0.1281],
+    ],
+    aiaRows: [
+      ["Full", 0.6692464264, 193.3688050353, 6.3214123554, 597.8457535723],
+      ["Bright", 1.6566951105, 1825.9784179279, 29.1901702298, 5053.2289548371],
+      ["Quiet", 0.5534536766, 1.9215333114, 3.6397171919, 75.3871378502],
     ],
   },
 };
@@ -254,7 +264,7 @@ function render(models, mode, table) {
     dems: "Three DEM estimates at the same date and solar location.",
     aia: "Measured AIA followed by label-free and supervised reconstructions from their DEMs, using the observed-image colour scale for each channel.",
     jpdfs: "Horizontal axis: observed AIA. Vertical axis: reconstructed AIA. Colour shows pixel counts; the diagonal marks agreement. Axes are logarithmic. Linked zoom matches image positions; plot axis limits may differ.",
-    results: "Shared-test DEM metrics and selected-date AIA reconstruction errors. Lower is better for every metric.",
+    results: "Shared-test DEM and AIA reconstruction metrics. Lower is better for every metric.",
   }[mode];
   if (mode === "results") {
     renderResults(models, resultsContent);
@@ -367,23 +377,21 @@ function makeResultsTable(title, headers, rows) {
   return section;
 }
 
-async function renderResults(models, container) {
+function renderResults(models, container) {
   container.innerHTML = "";
-  const generation = Symbol();
-  container.resultsGeneration = generation;
   const intro = document.createElement("section");
   intro.className = "results-section";
   intro.innerHTML = `
     <h2 class="serif text-3xl mb-4">Evaluation results</h2>
-    <p class="mb-4">The DEM tables summarize the full shared test set: 153 timestamps and 48,960 blocks, including five solver targets per spatial block. They do not change with the selected viewer date. Predictions are compared with the corresponding BP or ENet solver reference, not a directly measured true DEM.</p>
+    <p class="mb-4">The tables summarize the full shared test set: 153 timestamps and 48,960 blocks, including five solver targets per spatial block. They do not change with the selected viewer date. DEM predictions are compared with the corresponding BP or ENet solver reference, not a directly measured true DEM.</p>
     <dl class="space-y-3 mb-5">
       <div><dt class="font-bold">DEM MSE ↓</dt><dd>Mean squared difference between predicted and reference DEM values, averaged across valid pixels and 18 temperature bins. Large errors receive more weight.</dd></div>
       <div><dt class="font-bold">EM relative error (%) ↓</dt><dd>Sum of absolute errors in each pixel’s total emission, divided by the sum of reference emission, multiplied by 100. This is a ratio of totals, not an average of pixel percentages.</dd></div>
       <div><dt class="font-bold">W1 (dex) ↓</dt><dd>Average temperature-distribution distance between DEM curves normalized to unit total emission. Lower values indicate closer thermal shapes. Only pixels with positive emission in both curves are included.</dd></div>
-      <div><dt class="font-bold">AIA MAE and MSE ↓</dt><dd>Mean absolute and mean squared differences between reconstructed and observed AIA brightness. MAE is in DN/s and MSE in (DN/s)². The frame diagnostics below average across six channels and image pixels.</dd></div>
+      <div><dt class="font-bold">AIA MAE and MSE ↓</dt><dd>Mean absolute and mean squared differences between reconstructed and observed AIA brightness. MAE is in DN/s and MSE in (DN/s)², pooled across six channels and valid image pixels.</dd></div>
     </dl>
     <p>Full includes all valid pixels. Bright means at least one AIA channel reaches its fixed brightness threshold; Quiet is the remaining valid population. Lower is better for all metrics. Supervised models learn solver labels; label-free MLP6 models learn physical objectives.</p>
-    <p class="mt-3">Full-test AIA reconstruction evaluation is pending. Until it is available, the AIA section below shows selected-frame diagnostics only.</p>`;
+    <p class="mt-3">AIA metrics use one common finite-pixel mask for the two models within each track. The clean AIA input is repeated for five solver targets, so the block count is evaluation weighting rather than 48,960 independent observations.</p>`;
   container.appendChild(intro);
   for (const prefix of ["bp", "enet"]) {
     const result = RESULTS[prefix];
@@ -397,44 +405,25 @@ async function renderResults(models, container) {
       rows,
     ));
   }
-  const date = document.getElementById("date").value;
-  const section = makeResultsTable(
-    `AIA reconstruction — selected frame only: ${date}`,
-    ["Track", "Model", "AIA MAE ↓", "AIA MSE ↓"],
-    [],
-  );
-  const note = document.createElement("p");
-  note.className = "text-gray-600 my-3";
-  note.textContent = "These are saved full-frame diagnostics, not test-set averages or a shared finite-pixel-mask evaluation. Nonfinite or inaccessible metrics are shown as unavailable.";
-  section.insertBefore(note, section.querySelector("table"));
-  container.appendChild(section);
+  for (const prefix of ["bp", "enet"]) {
+    const result = RESULTS[prefix];
+    const rows = result.aiaRows.flatMap(row => [
+      ["Supervised", row[0], row[3].toFixed(4), row[4].toFixed(4)],
+      ["Label-free MLP6", row[0], row[1].toFixed(4), row[2].toFixed(4)],
+    ]);
+    container.appendChild(makeResultsTable(
+      `${result.title} — AIA reconstruction on full shared test set`,
+      ["Model", "Pixels", "AIA MAE ↓", "AIA MSE ↓"],
+      rows,
+    ));
+  }
   const tailNote = document.createElement("section");
   tailNote.className = "results-section leading-relaxed";
   tailNote.innerHTML = `<h2 class="serif text-2xl mb-3">Interpreting large DEM errors</h2>
     <p>Squared error is strongly concentrated in a small upper tail, especially among bright pixels. For label-free BP, the worst 1% of pixels contribute about 97.80% of total squared error; for label-free ENet, 66.75%. These errors remain part of the reported means—they are not discarded.</p>
-    <p class="mt-3">The approximate median per-pixel DEM squared error (summed over 18 bins) is 0.02618 for label-free BP versus 0.11022 for supervised BP: a lower median despite a higher mean MSE. For ENet, the corresponding medians are 1.39589 versus 1.12525, so supervised ENet has the lower median as well as the lower mean MSE. Divide these median sums by 18 to express them as per-pixel MSE. A lower median does not remove the importance of large tail errors.</p>`;
+    <p class="mt-3">The approximate median per-pixel DEM squared error (summed over 18 bins) is 0.02618 for label-free BP versus 0.11022 for supervised BP: a lower median despite a higher mean MSE. For ENet, the corresponding medians are 1.39589 versus 1.12525, so supervised ENet has the lower median as well as the lower mean MSE. Divide these median sums by 18 to express them as per-pixel MSE. A lower median does not remove the importance of large tail errors.</p>
+    <p class="mt-3">AIA MSE is also sensitive to large residuals: Bright-pixel MSE is much larger than Quiet-pixel MSE, and can disagree with the MAE ranking. We therefore show both MAE and MSE and avoid interpreting MSE alone. AIA error percentiles were not computed.</p>`;
   container.appendChild(tailNote);
-  const runs = ["bp_mlp6_h232", "bp_supervised", "enet_mlp6_h232", "enet_supervised"];
-  const rows = runs.map(run => {
-    const row = section.querySelector("tbody").insertRow();
-    [run.startsWith("bp_") ? "BP" : "ENet", RUN_LABELS[run], "Loading…", "Loading…"].forEach(value => {
-      row.insertCell().textContent = value;
-    });
-    return row;
-  });
-  await Promise.all(runs.map(async (run, index) => {
-    let values = ["Unavailable", "Unavailable"];
-    try {
-      const response = await fetch(`${path}${run}/${date}/metrics.json`);
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      const metrics = await response.json();
-      values = [metrics.mae, metrics.mse].map(value =>
-        typeof value === "number" && Number.isFinite(value) ? value.toFixed(4) : "Unavailable");
-    } catch (_) {}
-    if (container.resultsGeneration !== generation || !section.isConnected) return;
-    rows[index].cells[2].textContent = values[0];
-    rows[index].cells[3].textContent = values[1];
-  }));
 }
 setupZoomViewer();
 initCompare().catch(error => {

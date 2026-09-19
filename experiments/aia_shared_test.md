@@ -33,8 +33,19 @@ sbatch --export=ALL,TRACK=enet experiments/job_eval_aia_shared_cpu.sbatch
 ```
 
 Results: `output/experiments/paper_eval/{bp,enet}_aia_shared_test.json`.
-Check completion, `complete_test: true`, matching model counts, and nonfinite
-exclusion counts before publishing. CPU runtime is not yet measured for this
-paired evaluator; the initial limit is four hours. No full-test values are
-currently published: the viewer retains explicitly selected-frame diagnostics
-until these results have been validated and incorporated.
+
+The complete runs finished successfully on 2026-09-19: BP job `18025355` in
+1:12:18 and ENet job `18025356` in 1:06:29. Both evaluated all 48,960 blocks,
+reported `complete_test: true`, and excluded zero pixels for nonfinite model
+predictions. Pooled Full-set results incorporated into the viewer are:
+
+| Track | Model | AIA MAE | AIA MSE |
+|---|---|---:|---:|
+| BP | Label-free MLP6 | 4.3153 | 82.5570 |
+| BP | Supervised | 2.9461 | 156.6699 |
+| ENet | Label-free MLP6 | 0.6692 | 193.3688 |
+| ENet | Supervised | 6.3214 | 597.8458 |
+
+The JSON files additionally contain Bright/Quiet and per-channel values. MSE
+and MAE rankings can disagree because squared error gives much more weight to
+large bright-pixel residuals. No AIA percentile distribution was computed.

@@ -9,6 +9,25 @@ const RUN_LABELS = {
   enet_supervised: "Supervised model",
 };
 
+const RESULTS = {
+  bp: {
+    title: "BP reference",
+    rows: [
+      ["Full", 4.191, 20.16, 0.0845, 0.906, 14.34, 0.1334],
+      ["Bright", 40.901, 19.82, 0.0785, 8.657, 8.92, 0.0546],
+      ["Quiet", 0.0583, 20.53, 0.0853, 0.0335, 20.13, 0.1430],
+    ],
+  },
+  enet: {
+    title: "ENet reference (alpha=0.001, L1 ratio=0.5)",
+    rows: [
+      ["Full", 0.588, 13.45, 0.1176, 0.318, 18.00, 0.1210],
+      ["Bright", 4.239, 8.44, 0.0717, 1.926, 14.47, 0.0607],
+      ["Quiet", 0.159, 17.23, 0.1230, 0.1296, 20.66, 0.1281],
+    ],
+  },
+};
+
 let openZoomViewer;
 
 function setupZoomViewer() {
@@ -229,7 +248,12 @@ function render(models, mode, table) {
     dems: "Three DEM estimates at the same date and solar location.",
     aia: "Measured AIA followed by our and Samuel’s reconstructions from their DEMs, using the observed-image colour scale for each channel.",
     jpdfs: "Horizontal axis: observed AIA. Vertical axis: reconstructed AIA. Colour shows pixel counts; the diagonal marks agreement. Axes are logarithmic. Linked zoom matches image positions; plot axis limits may differ.",
+    results: "Shared-test DEM metrics and selected-date AIA reconstruction errors. Lower is better for every metric.",
   }[mode];
+  if (mode === "results") {
+    renderResults(models, table);
+    return;
+  }
   const header = table.createTHead().insertRow();
   for (const column of [{label: "", subtitle: ""}, ...columns]) {
     const cell = document.createElement("th");
@@ -306,6 +330,77 @@ function render(models, mode, table) {
     }
   }
   setupLinkedNavigation(table);
+}
+
+function makeResultsTable(title, headers, rows) {
+  const section = document.createElement("section");
+  section.className = "max-w-5xl mx-auto mb-10";
+  const heading = document.createElement("h2");
+  heading.className = "serif text-2xl text-center mb-3";
+  heading.textContent = title;
+  section.appendChild(heading);
+  const table = document.createElement("table");
+  table.className = "w-full text-sm border-collapse";
+  const thead = table.createTHead().insertRow();
+  headers.forEach(header => {
+    const cell = document.createElement("th");
+    cell.className = "border-b border-gray-300 px-3 py-2 text-center font-medium";
+    cell.textContent = header;
+    thead.appendChild(cell);
+  });
+  const body = table.createTBody();
+  rows.forEach(values => {
+    const row = body.insertRow();
+    values.forEach((value, index) => {
+      const cell = row.insertCell();
+      cell.className = "border-b border-gray-200 px-3 py-2 text-center";
+      cell.textContent = index === 0 ? value : value;
+    });
+  });
+  section.appendChild(table);
+  return section;
+}
+
+async function renderResults(models, container) {
+  container.innerHTML = "";
+  const prefix = models[0].split("/")[0].replace(/_solver$/, "");
+  const result = RESULTS[prefix];
+  if (!result) return;
+  const demRows = result.rows.map(row => [
+    row[0], row[1].toFixed(3), `${row[2].toFixed(2)}%`, row[3].toFixed(4),
+    row[4].toFixed(3), `${row[5].toFixed(2)}%`, row[6].toFixed(4),
+  ]);
+  container.appendChild(makeResultsTable(
+    `${result.title}: label-free versus supervised`,
+    ["Pixel type", "Label-free MLP6 DEM MSE", "Label-free EM error", "Label-free W1", "Supervised DEM MSE", "Supervised EM error", "Supervised W1"],
+    demRows,
+  ));
+
+  const date = document.getElementById("date").value;
+  const metricRuns = [
+    `${prefix}_mlp6_h232/${date}`,
+    `${prefix}_supervised/${date}`,
+  ];
+  const metricRows = [];
+  for (const run of metricRuns) {
+    try {
+      const response = await fetch(`${path}${run}/metrics.json`);
+      if (!response.ok) continue;
+      const metrics = await response.json();
+      metricRows.push([
+        RUN_LABELS[run.split("/")[0]],
+        Number(metrics.mae).toFixed(4),
+        Number(metrics.mse).toFixed(4),
+      ]);
+    } catch (_) {
+      // The DEM results remain useful if an older deployment lacks metrics.json.
+    }
+  }
+  container.appendChild(makeResultsTable(
+    `AIA reconstruction error: ${date}`,
+    ["Model", "AIA MAE", "AIA MSE"],
+    metricRows.length ? metricRows : [["Metrics unavailable", "—", "—"]],
+  ));
 }
 setupZoomViewer();
 initCompare();

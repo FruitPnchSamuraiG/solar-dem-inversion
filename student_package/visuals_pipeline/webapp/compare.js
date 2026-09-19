@@ -246,7 +246,7 @@ function render(models, mode, table) {
   }
   document.getElementById("view-description").textContent = {
     dems: "Three DEM estimates at the same date and solar location.",
-    aia: "Measured AIA followed by our and Samuel’s reconstructions from their DEMs, using the observed-image colour scale for each channel.",
+    aia: "Measured AIA followed by label-free and supervised reconstructions from their DEMs, using the observed-image colour scale for each channel.",
     jpdfs: "Horizontal axis: observed AIA. Vertical axis: reconstructed AIA. Colour shows pixel counts; the diagonal marks agreement. Axes are logarithmic. Linked zoom matches image positions; plot axis limits may differ.",
     results: "Shared-test DEM metrics and selected-date AIA reconstruction errors. Lower is better for every metric.",
   }[mode];

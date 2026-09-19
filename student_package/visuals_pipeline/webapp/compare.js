@@ -159,6 +159,57 @@ async function initCompare() {
   renderSelected();
 }
 
+function setupLinkedNavigation(table) {
+  const panels = [...table.querySelectorAll(".linked-panel")];
+  let scale = 1, x = 0, y = 0;
+  const apply = () => {
+    x = Math.max(1 - scale, Math.min(0, x));
+    y = Math.max(1 - scale, Math.min(0, y));
+    panels.forEach(panel => {
+      panel.querySelector("img").style.transform =
+        `translate(${100 * x}%, ${100 * y}%) scale(${scale})`;
+    });
+  };
+  const reset = () => { scale = 1; x = 0; y = 0; apply(); };
+  document.getElementById("reset-linked-zoom").onclick = reset;
+  panels.forEach(panel => {
+    let drag = null;
+    panel.addEventListener("wheel", event => {
+      if (!event.shiftKey) return;
+      event.preventDefault();
+      const rect = panel.getBoundingClientRect();
+      const px = (event.clientX - rect.left) / rect.width;
+      const py = (event.clientY - rect.top) / rect.height;
+      const next = Math.max(1, Math.min(12, scale * (event.deltaY < 0 ? 1.18 : 1 / 1.18)));
+      x = px - (px - x) * next / scale;
+      y = py - (py - y) * next / scale;
+      scale = next;
+      apply();
+    }, {passive: false});
+    panel.addEventListener("pointerdown", event => {
+      if (event.button !== 0) return;
+      drag = {x: event.clientX, y: event.clientY};
+      panel.setPointerCapture(event.pointerId);
+    });
+    panel.addEventListener("pointermove", event => {
+      if (!drag) return;
+      const rect = panel.getBoundingClientRect();
+      x += (event.clientX - drag.x) / rect.width;
+      y += (event.clientY - drag.y) / rect.height;
+      drag = {x: event.clientX, y: event.clientY};
+      apply();
+    });
+    const stop = event => {
+      drag = null;
+      if (panel.hasPointerCapture(event.pointerId)) panel.releasePointerCapture(event.pointerId);
+    };
+    panel.addEventListener("pointerup", stop);
+    panel.addEventListener("pointercancel", stop);
+    panel.addEventListener("lostpointercapture", () => { drag = null; });
+    panel.addEventListener("dblclick", reset);
+  });
+}
+
 function render(models, mode, table) {
   table.innerHTML = "";
   const columns = models.map(model => ({
@@ -173,9 +224,9 @@ function render(models, mode, table) {
     columns.forEach(column => { column.label += " — reconstruction vs observed AIA"; });
   }
   document.getElementById("view-description").textContent = {
-    dems: "Three DEM estimates at the same date and solar location. Click an image to zoom.",
+    dems: "Three DEM estimates at the same date and solar location.",
     aia: "Measured AIA followed by our and Samuel’s reconstructions from their DEMs, using the observed-image colour scale for each channel.",
-    jpdfs: "Horizontal axis: observed AIA. Vertical axis: reconstructed AIA. Colour shows pixel counts; the diagonal marks agreement. Each plot uses logarithmic brightness axes.",
+    jpdfs: "Horizontal axis: observed AIA. Vertical axis: reconstructed AIA. Colour shows pixel counts; the diagonal marks agreement. Axes are logarithmic. Linked zoom matches image positions; plot axis limits may differ.",
   }[mode];
   const header = table.createTHead().insertRow();
   for (const label of ["", ...columns.map(column => column.label)]) {
@@ -229,7 +280,8 @@ function render(models, mode, table) {
       cell.className = "px-1";
       const button = document.createElement("button");
       button.type = "button";
-      button.className = "block w-full min-w-[220px] cursor-zoom-in";
+      button.className = "block text-sm underline mt-2";
+      button.textContent = "Open full image";
       const title = `${column.label} — ${label}`;
       button.setAttribute("aria-label", `Zoom ${title}`);
       const img = document.createElement("img");
@@ -240,11 +292,16 @@ function render(models, mode, table) {
       img.width = 400;
       img.height = 400;
       img.className = "w-full border shadow";
-      button.appendChild(img);
+      img.draggable = false;
+      const panel = document.createElement("div");
+      panel.className = "linked-panel";
+      panel.appendChild(img);
+      cell.appendChild(panel);
       button.addEventListener("click", () => openZoomViewer(src, title));
       cell.appendChild(button);
     }
   }
+  setupLinkedNavigation(table);
 }
 setupZoomViewer();
 initCompare();

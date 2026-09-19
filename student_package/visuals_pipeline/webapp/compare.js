@@ -161,8 +161,24 @@ async function initCompare() {
 
 function render(models, mode, table) {
   table.innerHTML = "";
+  const columns = models.map(model => ({
+    model, label: RUN_LABELS[model.split("/")[0]], observed: false,
+  }));
+  if (mode === "aia") {
+    columns.shift();
+    columns.forEach(column => { column.label += " — reconstructed AIA"; });
+    columns.unshift({model: models[0], label: "Observed AIA (preprocessed measurement)", observed: true});
+  } else if (mode === "jpdfs") {
+    columns.shift();
+    columns.forEach(column => { column.label += " — reconstruction vs observed AIA"; });
+  }
+  document.getElementById("view-description").textContent = {
+    dems: "Three DEM estimates at the same date and solar location. Click an image to zoom.",
+    aia: "Measured AIA followed by our and Samuel’s reconstructions from their DEMs, using the observed-image colour scale for each channel.",
+    jpdfs: "Horizontal axis: observed AIA. Vertical axis: reconstructed AIA. Colour shows pixel counts; the diagonal marks agreement. Each plot uses logarithmic brightness axes.",
+  }[mode];
   const header = table.createTHead().insertRow();
-  for (const label of ["", ...models.map(model => RUN_LABELS[model.split("/")[0]])]) {
+  for (const label of ["", ...columns.map(column => column.label)]) {
     const cell = document.createElement("th");
     cell.scope = "col";
     cell.className = "text-center px-2 font-medium";
@@ -192,7 +208,6 @@ function render(models, mode, table) {
 
     row.innerHTML = `
       <td class="text-sm text-gray-600">
-        ${name}
         <div class="text-xs text-gray-400 mt-1">
             ${
             mode === "aia" || mode === "jpdfs"
@@ -209,16 +224,17 @@ function render(models, mode, table) {
     const label = mode === "aia" || mode === "jpdfs"
       ? aiaLabels[i]
       : demLabels[i];
-    for (const model of models) {
+    for (const column of columns) {
       const cell = row.insertCell();
       cell.className = "px-1";
       const button = document.createElement("button");
       button.type = "button";
       button.className = "block w-full min-w-[220px] cursor-zoom-in";
-      const title = `${RUN_LABELS[model.split("/")[0]]} — ${label}`;
+      const title = `${column.label} — ${label}`;
       button.setAttribute("aria-label", `Zoom ${title}`);
       const img = document.createElement("img");
-      const src = `${path}${model}/${name}`;
+      const filename = column.observed ? `aia_${i}.png` : name;
+      const src = `${path}${column.model}/${filename}`;
       img.src = src;
       img.alt = title;
       img.width = 400;

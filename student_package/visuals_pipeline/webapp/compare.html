@@ -37,7 +37,7 @@
     <!-- main compare section -->
     <main class="flex-grow w-full max-w-screen-2xl mx-auto px-4 sm:px-8 pt-12">
       <h1 class="serif text-4xl font-light mb-2 text-center">DEM comparison</h1>
-      <p class="text-center text-gray-600 mb-8">Solver reference, our label-free model, and Samuel’s supervised model side by side</p>
+      <p class="text-center text-gray-600 mb-8">Compare DEM estimates and their agreement with observed AIA</p>
 
       <div class="flex flex-wrap justify-center gap-6 mb-10">
         <div class="text-center">
@@ -51,13 +51,14 @@
         <div class="text-center">
           <label for="viewMode" class="block mb-2 font-light serif text-xl">View</label>
           <select id="viewMode" class="border px-4 py-2 text-base rounded serif">
-        <option value="dems">dems</option>
-        <option value="aia">resynth</option>
-        <option value="jpdfs">joint pdfs</option>
+        <option value="dems">DEMs</option>
+        <option value="aia">Observed &amp; reconstructed AIA</option>
+        <option value="jpdfs">JPDFs: reconstruction vs observed</option>
           </select>
         </div>
       </div>
 
+      <p id="view-description" class="text-center text-gray-600 mb-4" aria-live="polite"></p>
       <div class="overflow-x-auto">
         <table id="comparison-table" class="w-full border-separate border-spacing-y-8"></table>
       </div>

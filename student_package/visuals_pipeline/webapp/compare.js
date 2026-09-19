@@ -5,8 +5,8 @@ const RUN_LABELS = {
   enet_solver: "ENet solver reference",
   bp_mlp6_h232: "Label-free MLP6 (176k)",
   enet_mlp6_h232: "Label-free MLP6 (176k)",
-  bp_supervised: "Samuel's supervised model",
-  enet_supervised: "Samuel's supervised model",
+  bp_supervised: "Supervised model",
+  enet_supervised: "Supervised model",
 };
 
 let openZoomViewer;

@@ -102,7 +102,6 @@ function setupZoomViewer() {
 
 async function initCompare() {
   const select1 = document.getElementById("select1");
-  const select2 = document.getElementById("select2");
   const date = document.getElementById("date");
   const viewMode = document.getElementById("viewMode");
   const table = document.getElementById("comparison-table");
@@ -112,7 +111,6 @@ async function initCompare() {
 
   const runs = [...new Set(entries.map(entry => entry.split("/")[0]))];
   const references = runs.filter(run => run.endsWith("_solver"));
-  const models = runs.filter(run => run.includes("_mlp6_") || run.endsWith("_supervised"));
   references.forEach(run => select1.appendChild(new Option(RUN_LABELS[run] || run, run)));
 
   // One shared date makes a direct side-by-side comparison unambiguous.
@@ -123,48 +121,37 @@ async function initCompare() {
     select.selectedIndex = index >= 0 ? index : fallback;
   };
   choose(select1, query.get("solver"), 0);
-  const refreshModels = (requested) => {
+  const selectedRuns = () => {
     const prefix = select1.value.replace(/_solver$/, "");
-    const family = requested?.endsWith("_supervised") ? "supervised" : "mlp6_h232";
-    const matching = models.filter(run => run.startsWith(`${prefix}_`));
-    select2.replaceChildren();
-    matching.forEach(run => select2.appendChild(new Option(RUN_LABELS[run] || run, run)));
-    choose(select2, matching.includes(requested) ? requested : `${prefix}_${family}`, 0);
+    return [select1.value, `${prefix}_mlp6_h232`, `${prefix}_supervised`];
   };
   const refreshDates = (requested) => {
     const dates = entries
       .filter(entry => entry.startsWith(`${select1.value}/`))
       .map(entry => entry.split("/")[1])
-      .filter(stamp => available.has(`${select2.value}/${stamp}`));
+      .filter(stamp => selectedRuns().every(run => available.has(`${run}/${stamp}`)));
     date.replaceChildren();
     [...new Set(dates)].sort().forEach(stamp => date.appendChild(new Option(stamp, stamp)));
     choose(date, requested, 0);
   };
-  refreshModels(query.get("model"));
   refreshDates(query.get("date"));
   if ([...viewMode.options].some(option => option.value === query.get("mode"))) {
     viewMode.value = query.get("mode");
   }
 
   const renderSelected = () => {
-    const left = `${select1.value}/${date.value}`;
-    const right = `${select2.value}/${date.value}`;
-    if (!available.has(left) || !available.has(right)) {
-      table.innerHTML = `<tr><td class="text-center text-red-700 py-8" colspan="3">Assets for this model/date combination have not been generated.</td></tr>`;
+    const selected = selectedRuns().map(run => `${run}/${date.value}`);
+    if (!selected.every(run => available.has(run))) {
+      table.innerHTML = `<tr><td class="text-center text-red-700 py-8" colspan="4">No common date is available for the solver and both models. Generate and stage all three asset sets.</td></tr>`;
       return;
     }
-    const params = new URLSearchParams({solver: select1.value, model: select2.value, date: date.value, mode: viewMode.value});
+    const params = new URLSearchParams({solver: select1.value, date: date.value, mode: viewMode.value});
     history.replaceState(null, "", `${window.location.pathname}?${params}`);
-    render(left, right, viewMode.value, table);
+    render(selected, viewMode.value, table);
   };
   select1.addEventListener("change", () => {
     const previousDate = date.value;
-    refreshModels(select2.value);
     refreshDates(previousDate);
-    renderSelected();
-  });
-  select2.addEventListener("change", () => {
-    refreshDates(date.value);
     renderSelected();
   });
   [date, viewMode].forEach(select => select.addEventListener("change", renderSelected));
@@ -172,8 +159,17 @@ async function initCompare() {
   renderSelected();
 }
 
-function render(leftModel, rightModel, mode, table) {
+function render(models, mode, table) {
   table.innerHTML = "";
+  const header = table.createTHead().insertRow();
+  for (const label of ["", ...models.map(model => RUN_LABELS[model.split("/")[0]])]) {
+    const cell = document.createElement("th");
+    cell.scope = "col";
+    cell.className = "text-center px-2 font-medium";
+    cell.textContent = label;
+    header.appendChild(cell);
+  }
+  const body = table.createTBody();
 
   const descriptors = {
     dems: ["mean_logt.png", "std_logt.png", ...Array.from({ length: 18 }, (_, i) => `dem_${i}.png`)],
@@ -207,24 +203,31 @@ function render(leftModel, rightModel, mode, table) {
             }
         </div>
         </td>
-      <td><button type="button" id="zoom_${i}_1" class="block cursor-zoom-in" aria-label="Zoom reference image"><img id="img_${i}_1" width=400 height=400 class="border shadow" /></button></td>
-      <td><button type="button" id="zoom_${i}_2" class="block cursor-zoom-in" aria-label="Zoom model image"><img id="img_${i}_2" width=400 height=400 class="border shadow" /></button></td>
     `;
 
-    table.appendChild(row);
-
-    const leftPath = `${path}${leftModel}/${name}`;
-    const rightPath = `${path}${rightModel}/${name}`;
-
-    document.getElementById(`img_${i}_1`).src = leftPath;
-    document.getElementById(`img_${i}_2`).src = rightPath;
+    body.appendChild(row);
     const label = mode === "aia" || mode === "jpdfs"
       ? aiaLabels[i]
       : demLabels[i];
-    document.getElementById(`zoom_${i}_1`).addEventListener("click", () =>
-      openZoomViewer(leftPath, `${RUN_LABELS[leftModel.split("/")[0]] || leftModel} — ${label}`));
-    document.getElementById(`zoom_${i}_2`).addEventListener("click", () =>
-      openZoomViewer(rightPath, `${RUN_LABELS[rightModel.split("/")[0]] || rightModel} — ${label}`));
+    for (const model of models) {
+      const cell = row.insertCell();
+      cell.className = "px-1";
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "block w-full min-w-[220px] cursor-zoom-in";
+      const title = `${RUN_LABELS[model.split("/")[0]]} — ${label}`;
+      button.setAttribute("aria-label", `Zoom ${title}`);
+      const img = document.createElement("img");
+      const src = `${path}${model}/${name}`;
+      img.src = src;
+      img.alt = title;
+      img.width = 400;
+      img.height = 400;
+      img.className = "w-full border shadow";
+      button.appendChild(img);
+      button.addEventListener("click", () => openZoomViewer(src, title));
+      cell.appendChild(button);
+    }
   }
 }
 setupZoomViewer();

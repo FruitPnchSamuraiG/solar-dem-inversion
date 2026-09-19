@@ -9,12 +9,12 @@
     <style>
       .results-section { max-width: 1050px; margin: 0 auto 2.5rem; }
       .results-section table { width: 100%; border-collapse: collapse; font-size: 1rem; font-variant-numeric: tabular-nums; }
-      .results-section th { background: #edf2f7; color: #172337; font-weight: 700; border-bottom: 2px solid #a3afbf; }
+      .results-section table { border-top: 2px solid #555; border-bottom: 2px solid #555; background: white; }
+      .results-section th { background: white; color: #111; font-weight: 700; border-bottom: 1px solid #777; }
       .results-section th, .results-section td { padding: 14px 18px; text-align: right; }
       .results-section th:first-child, .results-section td:first-child { text-align: left; }
-      .results-section td { border-bottom: 1px solid #dce2e9; }
-      .results-section tbody tr:nth-child(even) { background: #f7f9fc; }
-      .results-section tbody tr:hover { background: #edf3fa; }
+      .results-section td { border: 0; background: white; }
+      .results-section tbody tr:nth-child(2n+3) td { border-top: 1px solid #ddd; }
       .linked-panel { overflow: hidden; min-width: 220px; cursor: grab; touch-action: none; }
       .linked-panel:active { cursor: grabbing; }
       .linked-panel img { display: block; transform-origin: 0 0; user-select: none; -webkit-user-drag: none; }
@@ -96,6 +96,6 @@
       </div>
     </div>
 
-    <script src="compare.js?v=20260919-repair"></script>
+    <script src="compare.js?v=20260919-tables"></script>
   </body>
 </html>

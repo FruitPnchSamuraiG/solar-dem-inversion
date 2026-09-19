@@ -383,7 +383,7 @@ async function renderResults(models, container) {
       <div><dt class="font-bold">AIA MAE and MSE ↓</dt><dd>Mean absolute and mean squared differences between reconstructed and observed AIA brightness. MAE is in DN/s and MSE in (DN/s)². The frame diagnostics below average across six channels and image pixels.</dd></div>
     </dl>
     <p>Full includes all valid pixels. Bright means at least one AIA channel reaches its fixed brightness threshold; Quiet is the remaining valid population. Lower is better for all metrics. Supervised models learn solver labels; label-free MLP6 models learn physical objectives.</p>
-    <p class="mt-3">DEM MAE and full-test AIA reconstruction metrics are not available in this comparison. The AIA section below is explicitly limited to the selected frame.</p>`;
+    <p class="mt-3">Full-test AIA reconstruction evaluation is pending. Until it is available, the AIA section below shows selected-frame diagnostics only.</p>`;
   container.appendChild(intro);
   for (const prefix of ["bp", "enet"]) {
     const result = RESULTS[prefix];
@@ -408,6 +408,12 @@ async function renderResults(models, container) {
   note.textContent = "These are saved full-frame diagnostics, not test-set averages or a shared finite-pixel-mask evaluation. Nonfinite or inaccessible metrics are shown as unavailable.";
   section.insertBefore(note, section.querySelector("table"));
   container.appendChild(section);
+  const tailNote = document.createElement("section");
+  tailNote.className = "results-section leading-relaxed";
+  tailNote.innerHTML = `<h2 class="serif text-2xl mb-3">Interpreting large DEM errors</h2>
+    <p>Squared error is strongly concentrated in a small upper tail, especially among bright pixels. For label-free BP, the worst 1% of pixels contribute about 97.80% of total squared error; for label-free ENet, 66.75%. These errors remain part of the reported means—they are not discarded.</p>
+    <p class="mt-3">The approximate median per-pixel DEM squared error (summed over 18 bins) is 0.02618 for label-free BP versus 0.11022 for supervised BP: a lower median despite a higher mean MSE. For ENet, the corresponding medians are 1.39589 versus 1.12525, so supervised ENet has the lower median as well as the lower mean MSE. Divide these median sums by 18 to express them as per-pixel MSE. A lower median does not remove the importance of large tail errors.</p>`;
+  container.appendChild(tailNote);
   const runs = ["bp_mlp6_h232", "bp_supervised", "enet_mlp6_h232", "enet_supervised"];
   const rows = runs.map(run => {
     const row = section.querySelector("tbody").insertRow();

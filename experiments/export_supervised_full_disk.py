@@ -15,7 +15,7 @@ from student_package.table1_dem_metrics.compute_paper_table_metrics import (
 
 
 @torch.inference_mode()
-def predict(model, aia, pixel_batch=8192):
+def predict(model, aia, pixel_batch=8192, progress=True):
     # These supplied models are pointwise. Guard this assumption so a future
     # spatial checkpoint cannot silently lose its neighbourhood context.
     for layer in model.modules():
@@ -37,7 +37,7 @@ def predict(model, aia, pixel_batch=8192):
         if not torch.isfinite(pred).all():
             raise ValueError(f"Nonfinite supervised prediction at batch {start}:{stop}")
         result[:, start:stop] = pred.cpu().numpy()
-        if start == 0 or stop == h * w or start % (pixel_batch * 100) == 0:
+        if progress and (start == 0 or stop == h * w or start % (pixel_batch * 100) == 0):
             print(f"  {stop:,}/{h*w:,} pixels", flush=True)
     return result.reshape(18, h, w)
 

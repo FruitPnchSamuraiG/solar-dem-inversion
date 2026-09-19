@@ -213,15 +213,17 @@ function setupLinkedNavigation(table) {
 function render(models, mode, table) {
   table.innerHTML = "";
   const columns = models.map(model => ({
-    model, label: RUN_LABELS[model.split("/")[0]], observed: false,
+    model, label: RUN_LABELS[model.split("/")[0]], subtitle: "", observed: false,
   }));
   if (mode === "aia") {
     columns.shift();
-    columns.forEach(column => { column.label += " — reconstructed AIA"; });
-    columns.unshift({model: models[0], label: "Observed AIA (preprocessed measurement)", observed: true});
+    columns.forEach(column => { column.subtitle = "reconstruction vs observed AIA"; });
+    columns.unshift({model: models[0], label: "Observed AIA", subtitle: "preprocessed measurement", observed: true});
   } else if (mode === "jpdfs") {
     columns.shift();
-    columns.forEach(column => { column.label += " — reconstruction vs observed AIA"; });
+    columns.forEach(column => { column.subtitle = "reconstruction vs observed AIA"; });
+  } else {
+    columns.forEach(column => { column.subtitle = "DEM estimate"; });
   }
   document.getElementById("view-description").textContent = {
     dems: "Three DEM estimates at the same date and solar location.",
@@ -229,11 +231,13 @@ function render(models, mode, table) {
     jpdfs: "Horizontal axis: observed AIA. Vertical axis: reconstructed AIA. Colour shows pixel counts; the diagonal marks agreement. Axes are logarithmic. Linked zoom matches image positions; plot axis limits may differ.",
   }[mode];
   const header = table.createTHead().insertRow();
-  for (const label of ["", ...columns.map(column => column.label)]) {
+  for (const column of [{label: "", subtitle: ""}, ...columns]) {
     const cell = document.createElement("th");
     cell.scope = "col";
-    cell.className = "text-center px-2 font-medium";
-    cell.textContent = label;
+    cell.className = "text-center align-bottom px-2 font-medium";
+    cell.innerHTML = column.label
+      ? `<div>${column.label}</div><div class="text-xs font-normal text-gray-500 mt-1">${column.subtitle}</div>`
+      : "";
     header.appendChild(cell);
   }
   const body = table.createTBody();

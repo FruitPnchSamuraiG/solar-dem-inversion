@@ -124,7 +124,8 @@ async function initCompare() {
   const date = document.getElementById("date");
   const viewMode = document.getElementById("viewMode");
   const table = document.getElementById("comparison-table");
-  const res = await fetch("models.json");
+  const res = await fetch("models.json", {cache: "no-store"});
+  if (!res.ok) throw new Error(`Cannot load model list (HTTP ${res.status}).`);
   const entries = await res.json();
   const available = new Set(entries);
 
@@ -401,4 +402,7 @@ async function renderResults(models, container) {
   ));
 }
 setupZoomViewer();
-initCompare();
+initCompare().catch(error => {
+  document.getElementById("view-description").textContent =
+    `Viewer could not load: ${error.message}`;
+});

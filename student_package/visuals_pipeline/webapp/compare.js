@@ -17,6 +17,12 @@ const RESULTS = {
       ["Bright", 40.901, 19.82, 0.0785, 8.657, 8.92, 0.0546],
       ["Quiet", 0.0583, 20.53, 0.0853, 0.0335, 20.13, 0.1430],
     ],
+    // Approximate p50 of each pixel's SSE across 18 DEM bins: label-free, supervised.
+    medianSSE: [
+      [0.02617881596111728, 0.11021735890826038],
+      [2.797370560127155, 1.7621789130782846],
+      [0.016548170999431813, 0.08680605106992277],
+    ],
     aiaRows: [
       ["Full", 4.3152880002, 82.5570380168, 2.9461307552, 156.6698630557],
       ["Bright", 12.4006152650, 527.3480279327, 13.1345345278, 1444.9823134077],
@@ -29,6 +35,11 @@ const RESULTS = {
       ["Full", 0.588, 13.45, 0.1176, 0.318, 18.00, 0.1210],
       ["Bright", 4.239, 8.44, 0.0717, 1.926, 14.47, 0.0607],
       ["Quiet", 0.159, 17.23, 0.1230, 0.1296, 20.66, 0.1281],
+    ],
+    medianSSE: [
+      [1.395886155788756, 1.125252534994235],
+      [8.728708696304247, 7.208584604895795],
+      [1.0976149154120272, 0.8860332094442038],
     ],
     aiaRows: [
       ["Full", 0.6692464264, 193.3688050353, 6.3214123554, 597.8457535723],
@@ -377,6 +388,50 @@ function makeResultsTable(title, headers, rows) {
   return section;
 }
 
+function makeMedianChart() {
+  const section = document.createElement("section");
+  section.className = "results-section";
+  section.innerHTML = `<h2 class="serif text-2xl text-center mb-3">Typical-pixel DEM error</h2>
+    <p class="mb-4">Median per-pixel squared error, divided by 18 to match the DEM MSE units above. Within each Full/Bright/Quiet pair, the longer bar is worse. Each pair uses its own scale; the printed values support comparisons across pairs.</p>`;
+  for (const prefix of ["bp", "enet"]) {
+    const result = RESULTS[prefix];
+    const heading = document.createElement("h3");
+    heading.className = "serif text-xl mb-3";
+    heading.textContent = result.title;
+    section.appendChild(heading);
+    result.rows.forEach((row, index) => {
+      const group = document.createElement("div");
+      group.className = "median-chart-group";
+      const label = document.createElement("div");
+      label.className = "font-medium mb-1";
+      label.textContent = row[0];
+      group.appendChild(label);
+      const values = result.medianSSE[index];
+      const max = Math.max(...values);
+      [["Supervised", values[1], "supervised"],
+       ["Label-free MLP6", values[0], "label-free"]].forEach(([name, value, kind]) => {
+        const line = document.createElement("div");
+        line.className = "median-chart-line";
+        const nameCell = document.createElement("span");
+        nameCell.textContent = name;
+        const track = document.createElement("span");
+        track.className = "median-chart-track";
+        const bar = document.createElement("span");
+        bar.className = `median-chart-bar ${kind}`;
+        bar.style.width = `${100 * value / max}%`;
+        track.appendChild(bar);
+        const number = document.createElement("span");
+        number.className = "median-chart-value";
+        number.textContent = (value / 18).toFixed(5);
+        line.append(nameCell, track, number);
+        group.appendChild(line);
+      });
+      section.appendChild(group);
+    });
+  }
+  return section;
+}
+
 function renderResults(models, container) {
   container.innerHTML = "";
   const intro = document.createElement("section");
@@ -386,6 +441,7 @@ function renderResults(models, container) {
     <p class="mb-4">The tables summarize the full shared test set: 153 timestamps and 48,960 blocks, including five solver targets per spatial block. They do not change with the selected viewer date. DEM predictions are compared with the corresponding BP or ENet solver reference, not a directly measured true DEM.</p>
     <dl class="space-y-3 mb-5">
       <div><dt class="font-bold">DEM MSE ↓</dt><dd>Mean squared difference between predicted and reference DEM values, averaged across valid pixels and 18 temperature bins. Large errors receive more weight.</dd></div>
+      <div><dt class="font-bold">Median pixel DEM MSE ↓</dt><dd>Median of each valid pixel's squared error summed over 18 bins and divided by 18. It describes a typical pixel and is approximate because it comes from a fine streaming histogram.</dd></div>
       <div><dt class="font-bold">EM relative error (%) ↓</dt><dd>Sum of absolute errors in each pixel’s total emission, divided by the sum of reference emission, multiplied by 100. This is a ratio of totals, not an average of pixel percentages.</dd></div>
       <div><dt class="font-bold">W1 (dex) ↓</dt><dd>Average temperature-distribution distance between DEM curves normalized to unit total emission. Lower values indicate closer thermal shapes. Only pixels with positive emission in both curves are included.</dd></div>
       <div><dt class="font-bold">AIA MAE and MSE ↓</dt><dd>Mean absolute and mean squared differences between reconstructed and observed AIA brightness. MAE is in DN/s and MSE in (DN/s)², pooled across six channels and valid image pixels.</dd></div>
@@ -395,16 +451,17 @@ function renderResults(models, container) {
   container.appendChild(intro);
   for (const prefix of ["bp", "enet"]) {
     const result = RESULTS[prefix];
-    const rows = result.rows.flatMap(row => [
-      ["Supervised", row[0], row[4].toFixed(4), row[5].toFixed(2), row[6].toFixed(4)],
-      ["Label-free MLP6", row[0], row[1].toFixed(4), row[2].toFixed(2), row[3].toFixed(4)],
+    const rows = result.rows.flatMap((row, index) => [
+      ["Supervised", row[0], row[4].toFixed(4), (result.medianSSE[index][1] / 18).toFixed(5), row[5].toFixed(2), row[6].toFixed(4)],
+      ["Label-free MLP6", row[0], row[1].toFixed(4), (result.medianSSE[index][0] / 18).toFixed(5), row[2].toFixed(2), row[3].toFixed(4)],
     ]);
     container.appendChild(makeResultsTable(
       `${result.title} — full shared test set`,
-      ["Model", "Pixels", "DEM MSE ↓", "EM error (%) ↓", "W1 (dex) ↓"],
+      ["Model", "Pixels", "DEM MSE ↓", "Median pixel DEM MSE ↓", "EM error (%) ↓", "W1 (dex) ↓"],
       rows,
     ));
   }
+  container.appendChild(makeMedianChart());
   for (const prefix of ["bp", "enet"]) {
     const result = RESULTS[prefix];
     const rows = result.aiaRows.flatMap(row => [
@@ -421,7 +478,7 @@ function renderResults(models, container) {
   tailNote.className = "results-section leading-relaxed";
   tailNote.innerHTML = `<h2 class="serif text-2xl mb-3">Interpreting large DEM errors</h2>
     <p>Squared error is strongly concentrated in a small upper tail, especially among bright pixels. For label-free BP, the worst 1% of pixels contribute about 97.80% of total squared error; for label-free ENet, 66.75%. These errors remain part of the reported means—they are not discarded.</p>
-    <p class="mt-3">The approximate median per-pixel DEM squared error (summed over 18 bins) is 0.02618 for label-free BP versus 0.11022 for supervised BP: a lower median despite a higher mean MSE. For ENet, the corresponding medians are 1.39589 versus 1.12525, so supervised ENet has the lower median as well as the lower mean MSE. Divide these median sums by 18 to express them as per-pixel MSE. A lower median does not remove the importance of large tail errors.</p>
+    <p class="mt-3">A lower full-population median does not remove the importance of large tail errors. Label-free BP has the lower median on the full and Quiet populations, but not Bright. Supervised ENet has the lower median in all three populations. Thus bright-pixel disagreement is not explained solely by a few extreme outliers.</p>
     <p class="mt-3">AIA MSE is also sensitive to large residuals: Bright-pixel MSE is much larger than Quiet-pixel MSE, and can disagree with the MAE ranking. We therefore show both MAE and MSE and avoid interpreting MSE alone. AIA error percentiles were not computed.</p>`;
   container.appendChild(tailNote);
 }

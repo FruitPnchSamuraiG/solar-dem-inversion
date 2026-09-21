@@ -15,6 +15,12 @@
       .results-section th:first-child, .results-section td:first-child { text-align: left; }
       .results-section td { border: 0; background: white; }
       .results-section tbody tr:nth-child(2n+3) td { border-top: 1px solid #ddd; }
+      .median-chart-group { border-top: 1px solid #ddd; padding: 10px 0 14px; }
+      .median-chart-line { display: grid; grid-template-columns: 145px minmax(100px, 1fr) 65px; align-items: center; gap: 12px; margin: 5px 0; font-size: 0.9rem; }
+      .median-chart-track { display: block; height: 12px; background: #f1f1f1; }
+      .median-chart-bar { display: block; height: 100%; background: #777; }
+      .median-chart-bar.label-free { background: #222; }
+      .median-chart-value { text-align: right; font-variant-numeric: tabular-nums; }
       .linked-panel { overflow: hidden; min-width: 220px; cursor: grab; touch-action: none; }
       .linked-panel:active { cursor: grabbing; }
       .linked-panel img { display: block; transform-origin: 0 0; user-select: none; -webkit-user-drag: none; }
@@ -96,6 +102,6 @@
       </div>
     </div>
 
-    <script src="compare.js?v=20260919-full-test"></script>
+    <script src="compare.js?v=20260921-medians"></script>
   </body>
 </html>

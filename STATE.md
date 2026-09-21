@@ -1,6 +1,6 @@
 # DEM project state
 
-Last updated: 2026-09-19
+Last updated: 2026-09-21
 
 ## Current status
 
@@ -45,6 +45,19 @@ heavy-tailed: the worst 1% contributes about 97.80% of label-free BP SSE and
 0.02618 vs 0.11022 for label-free vs supervised BP, and 1.39589 vs 1.12525 for
 label-free vs supervised ENet. These tail values are retained, not discarded.
 
+For a meeting explanation: label-free ENet has better AIA MAE and MSE than the
+supervised ENet model on the full test set; label-free BP has better AIA MSE
+but worse AIA MAE than supervised BP. Label-free training fits the AIA
+observations through a fixed response operator and regularized DEM, whereas
+supervised training targets solver-produced DEM labels. This explains why the
+two approaches need not rank the same on AIA reconstruction and DEM-label
+agreement, but does not guarantee label-free AIA superiority on every metric.
+The bright population is about 10.1% of BP pixels and 10.5% of ENet pixels,
+yet accounts for about 98.8% and 75.7%, respectively, of the label-free DEM
+SSE. The bright medians are also worse than the supervised medians, so the gap
+is not solely a few extreme pixels. Do not claim systematic bright-region
+underprediction without examining signed residuals.
+
 ## Validated artifacts
 
 - DEM results: `output/experiments/paper_eval/{bp_h232,enet_h232}_aggregate.json`
@@ -56,7 +69,9 @@ label-free vs supervised ENet. These tail values are retained, not discarded.
   exclusions.
 - AIA evaluation protocol and final summary: `experiments/aia_shared_test.md`.
 - Viewer code: `student_package/visuals_pipeline/webapp/compare.html` and
-  `compare.js`; final results commit `ddbd5fc`.
+  `compare.js`; full-test results commit `ddbd5fc`. A subsequent local update
+  adds median-pixel DEM MSE columns and paired bars; deploy it before relying
+  on those displays during a meeting.
 - Matched viewer assets on Torch:
   `/scratch/hsr3649/dem/visuals/matched_enet_alpha0p001/preview`.
 

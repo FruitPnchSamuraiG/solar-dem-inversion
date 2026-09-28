@@ -103,8 +103,10 @@ def parse_args():
     p.add_argument("--max-pending", type=int, default=160,
                    help="open repeated-input groups per worker before eviction")
     p.add_argument("--summarize", help="re-print the summary of an existing JSON")
+    p.add_argument("--compare", nargs=2, metavar=("LABEL_FREE_JSON", "SUPERVISED_JSON"),
+                   help="print label-free vs supervised side by side from two outputs")
     args = p.parse_args()
-    if not args.summarize:
+    if not (args.summarize or args.compare):
         missing = [k for k in ("model", "data", "reference", "output") if not getattr(args, k)]
         if missing:
             p.error("required: " + ", ".join("--" + k for k in missing))
@@ -319,6 +321,47 @@ def combine_group(into, other):
 
 # ── worker ────────────────────────────────────────────────────────────────────
 
+def load_predictor(path, threads):
+    """Return (predict(obs[6,H,W]) -> DEM[18,H,W], description).
+
+    Label-free mlp6 checkpoints come from train_scaled.py; supervised ones are
+    Samuel's .pth files, recognised by their ``model_name`` key and run exactly
+    as the published Table-1 script does (regression branch only, AIA clamped
+    at zero inside predict_regression_only).
+    """
+    import torch
+    torch.set_num_threads(threads)
+    device = torch.device("cpu")
+    raw = torch.load(path, map_location="cpu", weights_only=False)
+    if isinstance(raw, dict) and "model_name" in raw:
+        from student_package.table1_dem_metrics.compute_paper_table_metrics import (
+            load_model, predict_regression_only)
+        model, meta = load_model(path, device)
+
+        def predict(obs, pixel_batch):
+            C, H, W = obs.shape
+            points = np.ascontiguousarray(obs.reshape(C, -1))
+            out = np.empty((N_BINS, H * W), dtype=np.float32)
+            with torch.no_grad():
+                for s in range(0, H * W, pixel_batch):
+                    e = min(s + pixel_batch, H * W)
+                    batch = torch.from_numpy(points[:, s:e])[None, :, None, :]
+                    out[:, s:e] = predict_regression_only(model, batch)[0, :N_BINS, 0, :].numpy()
+            return out.reshape(N_BINS, H, W)
+        return predict, {"kind": "supervised", **meta}
+
+    from experiments.train_scaled import load_operators
+    from src.scaled_eval import load_scaled_model
+    _, basis_t, n_basis, _ = load_operators(device)
+    model, ckpt = load_scaled_model(path, n_basis, device)
+    if ckpt["variant"] != "mlp6":
+        raise ValueError(f"only the center-pixel mlp6 is supported, got {ckpt['variant']}")
+
+    def predict(obs, pixel_batch):
+        return predict_dem(model, basis_t, obs, ckpt["patch_size"], pixel_batch)
+    return predict, {"kind": "label_free", **{k: ckpt.get(k) for k in ("variant", "loss", "hidden", "epoch")}}
+
+
 def predict_dem(model, basis_t, obs, patch_size, pixel_batch):
     import torch
     C, H, W = obs.shape
@@ -338,21 +381,12 @@ def predict_dem(model, basis_t, obs, patch_size, pixel_batch):
 
 def run_range(job):
     cfg, start, stop, wid = job
-    import torch
     import zarr
-    torch.set_num_threads(cfg["threads"])
-    from experiments.train_scaled import load_operators
-    from src.scaled_eval import load_scaled_model
-
-    device = torch.device("cpu")
-    _, basis_t, n_basis, logt = load_operators(device)
-    model, ckpt = load_scaled_model(cfg["model"], n_basis, device)
-    if ckpt["variant"] != "mlp6":
-        raise ValueError(f"only the center-pixel mlp6 is supported, got {ckpt['variant']}")
+    predict, _ = load_predictor(cfg["model"], cfg["threads"])
+    logt = np.asarray(np.load("RData.npz")["logT"][:N_BINS], dtype=np.float64)
     x = zarr.open(os.path.join(cfg["data"], "test_x.zarr"), mode="r")
     y = zarr.open(os.path.join(cfg["data"], "test_y.zarr"), mode="r")
     thr = np.asarray(cfg["thresholds"], dtype=np.float32)[:, None, None]
-    logt = np.asarray(logt[:N_BINS], dtype=np.float64)
     weights = (1 << np.arange(6, dtype=np.int64))[:, None, None]
 
     acc = new_acc()
@@ -364,8 +398,7 @@ def run_range(job):
         grp = pending.get(key)
         obs = np.ascontiguousarray(xb[:, ::2, ::2])
         if grp is None:
-            pred = predict_dem(model, basis_t, obs, ckpt["patch_size"],
-                               cfg["pixel_batch"])
+            pred = predict(obs, cfg["pixel_batch"])
             acc["stats"]["predicted_blocks"] += 1
         else:
             pred = grp["pred"]
@@ -629,7 +662,8 @@ PAIR_TABLE = [("pix%", None, 7, ".2f"), ("modelMSE", "model_mse", 10, ".3g"),
 
 
 def render_summary(out):
-    L = [f"# Bright-failure diagnostic: {out['reference'].upper()} track",
+    kind = (out.get("model_info") or {}).get("kind", "label_free").replace("_", "-")
+    L = [f"# Bright-failure diagnostic: {out['reference'].upper()} track, {kind} model",
          f"model {out['model']}", f"blocks {out['n_blocks']:,}   valid pixel-targets {out['stats']['valid_pixels']:,}",
          "",
          "Columns: pix% share of pixels | SSE% share of total DEM squared error | MSE per bin |",
@@ -678,6 +712,43 @@ def render_summary(out):
 
 # ── main ──────────────────────────────────────────────────────────────────────
 
+COMPARE_COLS = [("MSE", "dem_mse", ".3g"), ("relSSE", "relative_sse", ".3f"),
+                ("EMr", "em_ratio_pred_over_ref", ".3f"), ("pkR", "peak_ratio_pred_over_ref", ".3f"),
+                ("orth%", "orthogonal_share_pct", ".0f"), ("modM%", "model_multimodal_pct", ".1f"),
+                ("p50", "sse_p50", ".3g")]
+
+
+def render_compare(lf, sup):
+    """Label-free (LF) and supervised (SUP) side by side on the same pixels."""
+    L = [f"# Label-free vs supervised, {lf['reference'].upper()} track",
+         "Same pixels, Bright mask and validity rule in both runs. LF/SUP is the ratio of",
+         "DEM MSE; below 1 means the label-free model is closer to the solver.",
+         f"LF pixels {lf['stats']['valid_pixels']:,}; SUP pixels {sup['stats']['valid_pixels']:,}"]
+    sections = [("Population", "population"), ("By intensity over threshold", "by_intensity_over_threshold"),
+                ("Bright, by dominant channel", "by_dominant_channel"), ("By DEM shape", "by_dem_shape"),
+                ("By reference peak height", "calibration_by_reference_peak")]
+    for title, key in sections:
+        L.append(f"\n## {title}")
+        head = f"{'group':<30} {'pix%':>6} {'LF/SUP':>7}" + "".join(
+            f" {'LF ' + c:>11} {'SUP ' + c:>11}" for c, _, _ in COMPARE_COLS)
+        L += [head, "-" * len(head)]
+        for name, a in lf[key].items():
+            b = sup[key].get(name)
+            if not a or not b:
+                continue
+            ratio = a["dem_mse"] / b["dem_mse"] if b["dem_mse"] else None
+            L.append(f"{name[:30]:<30} {a['pct_of_pixels']:>6.2f} {fmt(ratio, '.3g'):>7}" + "".join(
+                f" {fmt(a.get(k), spec):>11} {fmt(b.get(k), spec):>11}" for _, k, spec in COMPARE_COLS))
+    for name, out in (("LF", lf), ("SUP", sup)):
+        sc = out["solver_scatter"]["population"]
+        for part in ("full", "bright", "quiet"):
+            row = sc.get(part)
+            if row:
+                L.append(f"{name:<4} {part:<7} model MSE {row['model_mse']:.4g} = bias {row['model_bias_mse']:.4g}"
+                         f" + solver scatter {row['solver_scatter_mse']:.4g} ({row['scatter_share_pct']:.1f}%)")
+    return "\n".join(L)
+
+
 def split_ranges(n_blocks, workers):
     chunk = math.ceil(n_blocks / max(workers, 1))
     if n_blocks > BLOCK_ALIGN * workers:
@@ -690,6 +761,10 @@ def main():
     if args.summarize:
         with open(args.summarize) as f:
             print(render_summary(json.load(f)))
+        return
+    if args.compare:
+        with open(args.compare[0]) as f, open(args.compare[1]) as g:
+            print(render_compare(json.load(f), json.load(g)))
         return
     import zarr
     with open(args.thresholds) as f:
@@ -726,11 +801,11 @@ def main():
     for grp in leftovers.values():
         finalize_group(acc, grp)
 
-    from experiments.train_scaled import load_operators
-    import torch
-    _, _, _, logt = load_operators(torch.device("cpu"))
+    _, model_info = load_predictor(cfg["model"], 1)
+    logt = np.load("RData.npz")["logT"]
     meta = {"purpose": "Bright-failure association diagnostic; not a causal inference",
-            "reference": args.reference, "model": cfg["model"], "data": cfg["data"],
+            "reference": args.reference, "model": cfg["model"], "model_info": model_info,
+            "data": cfg["data"],
             "n_blocks": n_blocks, "available_blocks": available, "complete_test": n_blocks == available,
             "bright_thresholds": thresholds.tolist(), "channels_angstrom": [int(c) for c in CHANNELS],
             "definitions": {

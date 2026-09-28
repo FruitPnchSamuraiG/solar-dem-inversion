@@ -10,6 +10,8 @@ Checks for experiments/diagnose_bright_failures.py on a synthetic shared-test se
    inputs whose five targets straddle a worker boundary.
 4. The solver-scatter split is an exact identity: mean target SSE equals
    bias + scatter.
+5. Samuel's supervised checkpoint gives the same Full/Bright/Quiet counts and
+   MSE as his published Table-1 script, compute_paper_table_metrics.py.
 
     uv run python tests/test_diagnose_bright_failures.py
 """
@@ -96,12 +98,31 @@ def make_ckpt(path):
 
 
 def run(root, ckpt, out, workers):
+    """Run the diagnostic; returns its JSON output."""
     subprocess.run([sys.executable, "experiments/diagnose_bright_failures.py", "--model", ckpt,
                     "--data", root, "--reference", "bp", "--output", out, "--workers", str(workers),
                     "--threads-per-worker", "1", "--max-pending", "64"],
                    cwd=ROOT, check=True, stdout=subprocess.DEVNULL)
     with open(out) as f:
         return json.load(f)
+
+
+SUPERVISED = os.path.join(ROOT, "eval_and_enet_specs/checkpoints/model_best_bp.pth")
+
+
+def published_supervised(root):
+    out = os.path.join(root, "table1.json")
+    thr = os.path.join(root, "thr.json")
+    with open(thr, "w") as f:
+        json.dump({"test": THRESHOLDS}, f)
+    subprocess.run([sys.executable, "student_package/table1_dem_metrics/compute_paper_table_metrics.py",
+                    "--model", SUPERVISED, "--data", root, "--variant", "sup", "--reference", "bp",
+                    "--thresholds_json", thr, "--device", "cpu", "--batch_size", "2", "--output", out],
+                   cwd=ROOT, check=True, stdout=subprocess.DEVNULL)
+    with open(out) as f:
+        rows = json.load(f)["rows"]
+    names = {"Full": "full", "Bright": "bright", "Quiet": "quiet"}
+    return {names[r["pixel_type"]]: (r["n_pixels"], r["dem_mse"]) for r in rows}
 
 
 def published(root, ckpt):
@@ -168,6 +189,21 @@ def main():
         pop = one["population"]["full"]
         assert abs(pop["along_reference_share_pct"] + pop["orthogonal_share_pct"] - 100) < 1e-6
         print("[ok] along + orthogonal SSE shares sum to 100%")
+        if os.path.exists(SUPERVISED):
+            sup = run(root, SUPERVISED, os.path.join(root, "sup.json"), 2)
+            ref = published_supervised(root)
+            for key, (n_px, mse) in ref.items():
+                row = sup["population"][key]
+                assert row["n_pixels"] == n_px, (key, row["n_pixels"], n_px)
+                assert np.isclose(row["dem_mse"], mse, rtol=1e-5), (key, row["dem_mse"], mse)
+            print("[ok] supervised checkpoint matches compute_paper_table_metrics: "
+                  + ", ".join(f"{k} n={n:,} mse={m:.5g}" for k, (n, m) in ref.items()))
+            cmp = subprocess.run([sys.executable, "experiments/diagnose_bright_failures.py", "--compare",
+                                  os.path.join(root, "one.json"), os.path.join(root, "sup.json")],
+                                 cwd=ROOT, capture_output=True, text=True, check=True).stdout
+            print(cmp[:1200])
+        else:
+            print("[skip] supervised checkpoint not present")
         print(subprocess.run([sys.executable, "experiments/diagnose_bright_failures.py", "--summarize",
                               os.path.join(root, "one.json")], cwd=ROOT, capture_output=True,
                              text=True, check=True).stdout[:1500])

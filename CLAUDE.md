@@ -91,6 +91,26 @@ From the paper's "Future Work" section:
 
 ## Progress Log (most recent first)
 
+### 2026-09-28 — Bright-failure diagnostic: the gap is flare cores, not Bright pixels
+
+`experiments/diagnose_bright_failures.py` over the full shared test set (Torch
+CPU jobs `18733242` BP, `18733245` ENet; results in
+`results/plots/13_bright_diagnostic_20260928/`, full detail in `STATE.md`).
+
+- Pixels >=10x the Bright threshold are **0.09% of pixels, 94.0% of BP DEM SSE**
+  (ENet 0.08%, 59.6%). Ordinary Bright pixels (1-10x) have *lower* relative
+  error than Quiet pixels on both tracks.
+- At those extremes the model under-predicts emission (BP ratio 0.41, peak
+  0.24 at >=32x): a scale shortfall along the reference curve, cooler by
+  ~0.17 dex, led by the hot 94 A channel. Range compression at the rare
+  extreme, with spurious multi-peaked output (ref unimodal / model multi =
+  22% of BP SSE). Missing BP's second peak costs ~1% of SSE.
+- Solver scatter is 0.4% (BP) / 5.7% (ENet) of the Bright error: not label noise.
+- Label-free BP emits ~15% less EM than BP everywhere (unexplained).
+- The shared test set's five targets are different random 64-of-256 block
+  subsets of one clean image, not five copies of the same blocks.
+- Open: supervised model not run through the same diagnostic.
+
 ### 2026-09-13 — Supervised viewer additions prepared
 
 Matched ENet website generation job `17559157` completed (2:32:49), with

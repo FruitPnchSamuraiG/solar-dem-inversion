@@ -1,14 +1,16 @@
 # DEM project state
 
-Last updated: 2026-09-21
+Last updated: 2026-09-28
 
 ## Current status
 
 The requested label-free DEM study, matched supervised comparison, full-test
-evaluation, and public visualizer are complete. The next step is to present the
-results to Samuel Pérez-Díaz and David Fouhey and use their feedback to choose
-the next deliverable (slides, report, or follow-up experiments). No additional
-compute job is currently required.
+evaluation, and public visualizer are complete. Before presentation, the one
+active follow-up is a targeted **Bright-failure diagnostic**. It will identify
+which AIA-channel threshold combinations define the difficult pixels, whether
+their solver-reference DEMs are multi-peaked, where their error sits in logT,
+and how much of the total DEM SSE each group carries. This is explanatory
+analysis, not another model sweep.
 
 Public viewer:
 https://triborough.cs.nyu.edu/hsr3649/demdemo/webapp/compare.html
@@ -57,6 +59,32 @@ yet accounts for about 98.8% and 75.7%, respectively, of the label-free DEM
 SSE. The bright medians are also worse than the supervised medians, so the gap
 is not solely a few extreme pixels. Do not claim systematic bright-region
 underprediction without examining signed residuals.
+
+## Active diagnostic: why Bright pixels are difficult
+
+Samuel's Bright/Quiet mask is based on the six observed, preprocessed AIA
+intensities, not on DEM bins: a valid pixel is Bright when *any* channel is at
+or above its supplied top-5% threshold. Thus a pixel may be triggered by more
+than one channel. The existing tables store only the union, so they cannot say
+which channel(s) triggered an individual Bright pixel or whether that is related
+to a high DEM error.
+
+The targeted diagnostic will report, separately for BP and matched ENet:
+
+1. inclusive and exclusive AIA threshold-trigger patterns and their population,
+   DEM MSE and share of total SSE;
+2. the reference DEM's interior peak count (unimodal versus >=2 prominent
+   interior peaks), the model's corresponding peak count, and their error;
+3. signed error, absolute error, and squared error in each of the 18 logT bins;
+4. the overlap of trigger pattern and reference shape.
+
+This distinguishes evidence from interpretation. It can show an *association*
+(for example, multi-channel bright pixels having a larger error), but it cannot
+prove that a particular AIA channel physically caused the inversion ambiguity.
+Nor should "multimodal" be equated automatically with true multi-temperature
+plasma: solver DEM peaks may reflect non-identifiability/noise, especially at
+the response-boundary bins. Use only interior peaks with a documented
+prominence threshold for the primary result.
 
 ## Validated artifacts
 

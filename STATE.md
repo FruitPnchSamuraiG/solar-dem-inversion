@@ -67,7 +67,8 @@ Torch jobs `18733242` (BP, 14:28) and `18733245` (ENet, 17:42), CPU, all
 `results/plots/13_bright_diagnostic_20260928/{bp,enet}_bright_failure.{json,txt}`.
 Full MSE (4.19 / 0.588), Bright share and worst-1% share reproduce the website.
 
-1. **The Bright gap is a flare-core gap.** Pixels at >=10x the Bright threshold
+1. **Squared error is dominated by flare cores** (see the supervised section:
+   true of both models). Pixels at >=10x the Bright threshold
    (max over channels of observed/threshold) are 0.09% (BP) / 0.08% (ENet) of
    pixels but carry **94.0% / 59.6%** of all DEM squared error.
 2. **Ordinary Bright pixels are fit relatively better than Quiet ones.** At
@@ -94,9 +95,38 @@ Full MSE (4.19 / 0.588), Bright share and worst-1% share reproduce the website.
 
 Caveats: associations, not causes. Solver scatter comes from blocks where 2-5
 targets overlap (64% of blocks), so it is biased low for pairs; doubling it does
-not change point 6. The supervised model was *not* run through this diagnostic,
-so whether it also fails on flare cores is unknown. That is the one comparison
-needed before claiming "label-free matches supervised outside flare cores".
+not change point 6.
+
+### Supervised through the same diagnostic (jobs 18734665 BP, 18734666 ENet)
+
+Same pixels, mask and validity rule; totals reproduce the website (BP 0.906,
+ENet 0.318). Side-by-side tables: `results/plots/13_bright_diagnostic_20260928/{bp,enet}_compare.txt`
+(regenerate with `diagnose_bright_failures.py --compare LF.json SUP.json`).
+This revises point 1: flare-core dominance of SSE is a property of the metric,
+not of label-free training.
+
+- **Both models put ~90% of BP SSE in the >=32x bin (0.01% of pixels)**: LF
+  89.4%, supervised 90.0%. The headline BP MSE ratio 4.63x is essentially the
+  ratio on that bin (4.59x). ENet: LF 51.1%, supervised 33.9%.
+- **The label-free gap grows with brightness.** LF/supervised MSE by intensity,
+  BP: 0.65 (<0.03x), 0.79, 0.95 (0.1-0.3x), 1.86 (0.3-1x), 2.26, 2.89, 6.0
+  (3.2-10x), 18.4 (10-32x), 4.59 (>=32x). LF is *better* on the faint 47% of
+  pixels. ENet: 1.00-1.27 at every level below 10x, 4.17 and 2.78 above.
+- **Typical-pixel error favours LF on BP**: median per-pixel SSE Quiet 0.016 vs
+  0.085; Bright 2.82 vs 1.78.
+- **LF-specific flare-core failures**, absent from supervised: emission ratio
+  at >=32x BP 0.41 vs 0.92 (ENet 0.72 vs 0.87); peak ratio 0.24 vs 0.91 (ENet
+  0.62 vs 0.92); spurious multi-peaks, model multimodal 83% vs 13% (ENet 81% vs
+  18%). Reference-unimodal / model-multimodal Bright pixels: LF MSE 204x
+  supervised on BP, 39x on ENet.
+- **94 A-dominant pixels** are where LF trails most on both tracks (5.3x BP,
+  5.2x ENet). On ENet, LF *beats* supervised where 131/193/211/335 A dominate
+  (0.73-0.93x) and at reference-multimodal / model-unimodal Bright pixels (0.31x).
+- **Neither model is at the solver-noise floor on Bright pixels**: BP bias MSE
+  57.5 (LF) and 14.7 (supervised) vs scatter 0.22. On Quiet, scatter is 24% of
+  LF and 42% of supervised BP error.
+- LF emits ~15% less EM than BP everywhere; supervised is ~1.0 on BP. On ENet
+  the pattern reverses: LF 0.98, supervised 0.89.
 
 **Test-set layout correction**: the five targets per timestamp are not five
 copies of the same 64 blocks. Each target file contributes its own random 64 of

@@ -91,7 +91,7 @@ From the paper's "Future Work" section:
 
 ## Progress Log (most recent first)
 
-### 2026-09-28 — Bright-failure diagnostic: the gap is flare cores, not Bright pixels
+### 2026-09-28 — Bright-failure diagnostic: flare cores dominate error; label-free gap grows with brightness
 
 `experiments/diagnose_bright_failures.py` over the full shared test set (Torch
 CPU jobs `18733242` BP, `18733245` ENet; results in
@@ -109,7 +109,12 @@ CPU jobs `18733242` BP, `18733245` ENet; results in
 - Label-free BP emits ~15% less EM than BP everywhere (unexplained).
 - The shared test set's five targets are different random 64-of-256 block
   subsets of one clean image, not five copies of the same blocks.
-- Open: supervised model not run through the same diagnostic.
+- Supervised through the same diagnostic (jobs `18734665`/`18734666`): it also
+  puts ~90% of BP SSE in the >=32x bin, so flare-core dominance is the metric,
+  not label-free training. The LF/supervised MSE ratio grows with brightness
+  (BP 0.65 on the faintest pixels to 6-18x on the brightest; ENet 1.0-1.27
+  below 10x). The LF-specific failures are emission collapse (BP 0.41 vs 0.92)
+  and spurious multi-peaks (83% vs 13%) at flare cores, 94 A-led.
 
 ### 2026-09-13 — Supervised viewer additions prepared
 

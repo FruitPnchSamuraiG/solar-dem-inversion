@@ -1,6 +1,6 @@
 # DEM project state
 
-Last updated: 2026-09-28
+Last updated: 2026-09-28 (Claude: diagnostic rewritten, ready to run)
 
 ## Current status
 
@@ -69,22 +69,50 @@ than one channel. The existing tables store only the union, so they cannot say
 which channel(s) triggered an individual Bright pixel or whether that is related
 to a high DEM error.
 
-The targeted diagnostic will report, separately for BP and matched ENet:
+`experiments/diagnose_bright_failures.py` (rewritten 2026-09-28, CPU job
+`experiments/job_diagnose_bright_failures.sbatch`) makes one pass over every
+valid pixel of the shared test set, separately for BP and matched ENet. It
+uses the same validity rule and Bright mask as `eval_full_paper_test.py`; the
+synthetic test `tests/test_diagnose_bright_failures.py` reconciles its
+Full/Bright/Quiet counts and MSE with that script exactly. It reports:
 
-1. inclusive and exclusive AIA threshold-trigger patterns and their population,
-   DEM MSE and share of total SSE;
-2. the reference DEM's interior peak count (unimodal versus >=2 prominent
-   interior peaks), the model's corresponding peak count, and their error;
-3. signed error, absolute error, and squared error in each of the 18 logT bins;
-4. the overlap of trigger pattern and reference shape.
+1. DEM error by exact trigger pattern, inclusive channel, number of channels,
+   dominant channel (largest observed/threshold) and intensity over threshold;
+2. relative SSE (group SSE / reference energy) to separate "Bright pixels are
+   worse" from "Bright pixels simply have larger DEMs";
+3. an exact per-pixel split of SSE into the part along the reference curve
+   (scale) and the part orthogonal to it (temperature placement / spreading),
+   plus emission ratio, peak-height ratio, EM-weighted width and logT shift;
+4. a regression-to-the-mean check: predicted vs reference peak, emission and
+   width in bins of reference peak height;
+5. reference x model multimodality (interior peaks, 15% prominence,
+   zero-padded; vectorised, verified equal to `count_peaks`) with error by
+   shape, and composition of the worst 0.1% / 1% SSE tail;
+6. solver scatter: blocks with bit-identical AIA (the five targets) are grouped,
+   and model MSE splits exactly into model bias (distance to the mean solver
+   DEM) + solver scatter (variance across targets) — the floor no deterministic
+   predictor can beat.
+
+Run on Torch (smoke first; the full jobs start only if it succeeds):
+
+```bash
+cd ~/projects/dem && git pull --ff-only && source env.sh && mkdir -p logs/eval
+job=experiments/job_diagnose_bright_failures.sbatch
+smoke=$(sbatch --parsable --export=ALL,TRACK=bp,MAX_BLOCKS=640,TAG=smoke "$job")
+sbatch --dependency=afterok:$smoke --export=ALL,TRACK=bp "$job"
+sbatch --dependency=afterok:$smoke --export=ALL,TRACK=enet "$job"
+```
+
+Outputs: `output/experiments/diagnostics/{bp,enet}_bright_failure.{json,txt}`.
+The `.txt` is the readable summary. The "groups by number of targets" line
+states whether repeated inputs were found; if they were not, the scatter
+section is empty and everything else still holds.
 
 This distinguishes evidence from interpretation. It can show an *association*
 (for example, multi-channel bright pixels having a larger error), but it cannot
 prove that a particular AIA channel physically caused the inversion ambiguity.
 Nor should "multimodal" be equated automatically with true multi-temperature
-plasma: solver DEM peaks may reflect non-identifiability/noise, especially at
-the response-boundary bins. Use only interior peaks with a documented
-prominence threshold for the primary result.
+plasma: solver DEM peaks may reflect non-identifiability/noise.
 
 ## Validated artifacts
 

@@ -10,7 +10,9 @@
 #SBATCH --time=04:00:00
 #SBATCH --account=torch_pr_41_tandon_advanced
 
-# One track per job. This is targeted full-test analysis, not training.
+# One track per job. This is targeted full-test analysis, not training. The
+# default samples 8 pixels/block for prominence-aware shape tests (~390k curves
+# over the full test); full trigger/error accounting still uses every pixel.
 set -euo pipefail
 cd "${SLURM_SUBMIT_DIR:-$HOME/projects/dem}"
 source env.sh

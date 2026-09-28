@@ -34,7 +34,7 @@ def parse_args():
     p.add_argument("--output", required=True)
     p.add_argument("--pixel-batch", type=int, default=8192)
     p.add_argument("--max-blocks", type=int, default=None)
-    p.add_argument("--shape-samples-per-block", type=int, default=64,
+    p.add_argument("--shape-samples-per-block", type=int, default=8,
                    help="valid pixels sampled per block for peak-shape analysis")
     p.add_argument("--seed", type=int, default=20260928)
     return p.parse_args()

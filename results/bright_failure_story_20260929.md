@@ -1,6 +1,6 @@
 # Why the label-free model trails on Bright pixels
 
-*Diagnostic write-up, 2026-09-29. Full shared test set (153 held-out timestamps), BP and matched ENet tracks. Label-free model: the 176k-parameter MLP6. Supervised model: Samuel's checkpoints. Both are scored on exactly the same pixels, and the totals reproduce the website numbers.*
+*Diagnostic write-up, 2026-09-29. Full shared test set (153 held-out timestamps), BP and matched ENet tracks. Label-free model: the 176k-parameter MLP6. Supervised model: the supervised BP and ENet checkpoints. Both are scored on exactly the same pixels, and the totals reproduce the website numbers.*
 
 ---
 
@@ -8,7 +8,7 @@
 
 **What is measured.** Every number below is **DEM error**. For each pixel, the model outputs a DEM curve: 18 numbers, one per temperature bin from logT 5.5 to 7.2. The solver (BP or ENet) gives its own 18 numbers for the same pixel. The pixel's error is the sum of the 18 squared differences. The website's DEM MSE is the average of these errors, per bin, over all pixels. AIA reconstruction error is a different measurement and is not used here.
 
-**What the AIA intensities are used for.** Only for sorting pixels into groups. Each channel has its own Bright cutoff, its top-5% value on the test set. A pixel's **brightness score** is the largest of its six ratios, observed over cutoff. A score of 1 or more is exactly Samuel's Bright group, and below 1 is exactly his Quiet group.
+**What the AIA intensities are used for.** Only for sorting pixels into groups. Each channel has its own Bright cutoff, its top-5% value on the test set. A pixel's **brightness score** is the largest of its six ratios, observed over cutoff. A score of 1 or more is exactly the standard Bright group, and below 1 is exactly the Quiet group.
 
 | Channel | 94 Å | 131 Å | 171 Å | 193 Å | 211 Å | 335 Å |
 |---|---:|---:|---:|---:|---:|---:|
@@ -252,7 +252,7 @@ Where the 94 Å fit breaks down on BP:
 2. **Try a training fix**: oversample or up-weight flare-core pixels, then re-check the band table and the AIA fit. This is a new training run, so it needs a decision first.
 3. **Report by brightness band plus the median**, not a single MSE decided by 0.01% of pixels.
 
-**Questions for David and Samuel.**
+**Questions for discussion.**
 - Should the headline metric stay plain MSE, or should we also report a relative or per-band measure?
 - Do flare cores matter for the science use of these DEMs? If they do, the flare-core training fix is the next experiment; if not, they can be stated as a known limitation.
 

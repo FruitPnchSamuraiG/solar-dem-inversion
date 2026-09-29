@@ -117,8 +117,15 @@ not of label-free training.
 - **LF-specific flare-core failures**, absent from supervised: emission ratio
   at >=32x BP 0.41 vs 0.92 (ENet 0.72 vs 0.87); peak ratio 0.24 vs 0.91 (ENet
   0.62 vs 0.92); spurious multi-peaks, model multimodal 83% vs 13% (ENet 81% vs
-  18%). Reference-unimodal / model-multimodal Bright pixels: LF MSE 204x
-  supervised on BP, 39x on ENet.
+  18%). Both models draw extra peaks on some Bright pixels where the solver has
+  one (LF 0.24%, supervised 0.41% of pixels on BP), but they cost LF 22% of its
+  error and supervised 0.9%, because LF's sit on flare-core DEMs. (The shape
+  groups are each model's own, so per-group MSE ratios across models are not
+  like-for-like.)
+- Faint-DEM over-prediction: on BP only supervised over-predicts where the
+  solver's peak is tiny (27x vs LF 2.1x at 0.001-0.0032); on ENet both do (96x
+  vs 52x), suggesting the ENet solver drives faint DEMs toward zero.
+- Readable write-up with figures: `results/bright_failure_story_20260929.md`.
 - **94 A-dominant pixels** are where LF trails most on both tracks (5.3x BP,
   5.2x ENet). On ENet, LF *beats* supervised where 131/193/211/335 A dominate
   (0.73-0.93x) and at reference-multimodal / model-unimodal Bright pixels (0.31x).

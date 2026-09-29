@@ -124,7 +124,7 @@
 
 *In the table above, "fraction of solver's" compares each model with the solver: 1.00 means the same as the solver, and 0.41 means 41% of the solver's plasma.*
 
-*How to read the figure below.* Its x axis is the height of the solver's DEM peak, not the brightness bands of Part 4 (the two are related: the tallest peaks are mostly flare cores). Each dot is a group of pixels with a similar solver peak height. The y axis is the model's peak divided by the solver's peak for that group, pooled like Part 4. The dashed line at 1 is a perfect match; above it the model draws a taller peak than the solver, below it a shorter one. Both axes are logarithmic.
+*How to read the figure below.* Its x axis is the height of the solver's DEM peak, not the brightness bands of Part 4 (the two are related: the tallest peaks are mostly flare cores). Each dot is a group of pixels with a similar solver peak height. The y axis is the model's peak divided by the solver's peak for that group, pooled like Part 4. The dashed line at 1 is a perfect match; above it the model draws a taller peak than the solver, below it a shorter one. Both axes are logarithmic. Plotting the model's peak against the solver's would put a perfect model on the diagonal; dividing by the solver's peak turns that diagonal into the flat line at 1. For example, at a solver peak of about 2,000, supervised's 0.92 means it draws about 1,840, and label-free's 0.19 means about 380. At a solver peak of about 0.002, supervised's 27 means it draws about 0.05: large as a ratio, but both values are close to zero, so it adds almost nothing to the error.
 
 ![Predicted over solver peak height, by solver peak height](plots/13_bright_diagnostic_20260928/fig3_peak_height_calibration.png)
 

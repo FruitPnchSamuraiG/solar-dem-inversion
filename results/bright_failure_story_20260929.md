@@ -86,6 +86,8 @@
 
 **What we did.** To remove the big-numbers effect we used **relative error**: within a band, total squared error divided by the total squared size of the solver's DEMs. 0 is perfect; 1 means the error is as big as the DEM itself. We also took the ratio of the two models' MSE in each band.
 
+*How to read it.* Relative error is one pooled number per band, not a mean or median over pixels: add up every squared error in the band, add up every squared solver DEM in the band, and divide. The largest DEMs dominate both sums, so the size effect cancels. In the figure each dot is one brightness band (x axis, as in Part 2) and its height is that band's relative error; lower is better. The ratio columns in the table divide label-free's MSE by supervised's in the same band; above 1 means label-free is worse.
+
 ![Relative DEM error by brightness band, both tracks](plots/13_bright_diagnostic_20260928/fig2_relative_error_by_brightness.png)
 
 | Brightness band | Share of pixels (BP) | BP label-free relative error | BP supervised relative error | BP MSE ratio, label-free ÷ supervised | ENet MSE ratio |
@@ -119,6 +121,10 @@
 | Shift in temperature, logT | 0 | -0.17 | 0.00 | -0.07 | +0.01 |
 | Curves with two or more peaks (solver: BP 18%, ENet 21%) | | 83% | 13% | 81% | 18% |
 | Share of the error that is "wrong amount" | | 97% | 87% | 70% | 51% |
+
+*In the table above, "fraction of solver's" compares each model with the solver: 1.00 means the same as the solver, and 0.41 means 41% of the solver's plasma.*
+
+*How to read the figure below.* Its x axis is the height of the solver's DEM peak, not the brightness bands of Part 4 (the two are related: the tallest peaks are mostly flare cores). Each dot is a group of pixels with a similar solver peak height. The y axis is the model's peak divided by the solver's peak for that group, pooled like Part 4. The dashed line at 1 is a perfect match; above it the model draws a taller peak than the solver, below it a shorter one. Both axes are logarithmic.
 
 ![Predicted over solver peak height, by solver peak height](plots/13_bright_diagnostic_20260928/fig3_peak_height_calibration.png)
 

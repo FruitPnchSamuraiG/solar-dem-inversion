@@ -137,6 +137,14 @@
 - This is the same failure seen in August on a smaller sample, now measured across the full test set: at bright pixels label-free under-reproduced the hot 94 Å and 131 Å channels, and its curves sat 0.1 to 0.15 too cool.
 - ENet shows the same pattern, milder.
 
+**Example curves.** Randomly drawn pixels, not hand-picked: eight flare cores and four ordinary Bright pixels per track, from a seeded random sample of each band.
+
+![Example DEM curves, BP track](plots/13_bright_diagnostic_20260928/fig4_example_curves_bp.png)
+
+- At flare cores the solver and supervised both show a tall hot peak near logT 6.8 to 6.9. Label-free almost entirely misses that peak: it puts a small bump near logT 6.3 to 6.4 and a low tail near 7.0 instead. This is the missing plasma from the table above, and it explains the cooler shift and the "extra peaks".
+- On ordinary Bright pixels all three curves agree closely.
+- ENet looks the same, less severe: label-free reaches part of the hot peak but not its full height ([ENet examples](plots/13_bright_diagnostic_20260928/fig4_example_curves_enet.png)).
+
 ---
 
 ## Part 6. What it is not
@@ -167,9 +175,43 @@
 
 ---
 
-## Part 7. Side findings
+## Part 7. Label-free fails its own training objective at flare cores
 
-1. **Label-free BP predicts about 15% too little plasma everywhere.** Its total emission is 0.85 of the solver's even on Quiet pixels; supervised is at 1.00. On ENet it flips: label-free 0.98, supervised 0.89. Unexplained. One untested guess: label-free BP's training loss penalizes total emission, so the model settles at the low edge of what still fits the AIA data.
+**What we did.** Label-free is trained only to reproduce the six observed AIA intensities, within noise. So we projected each DEM (label-free, supervised and the solver's own) through the AIA response and compared it with the observation, channel by channel and band by band. This asks whether label-free is failing its own objective at flare cores, or fitting the AIA with a different, smaller DEM that the objective allows. The pooled numbers reproduce the website's AIA errors exactly (label-free MAE 4.3153 and supervised 2.9461 on BP; 0.6692 and 6.3214 on ENet).
+
+![Reconstructed over observed AIA at flare cores](plots/13_bright_diagnostic_20260928/fig5_aia_fit_flare_cores.png)
+
+| Flare cores, reconstructed ÷ observed | BP solver | BP label-free | BP supervised | ENet solver | ENet label-free | ENet supervised |
+|---|---:|---:|---:|---:|---:|---:|
+| 94 Å | 0.92 | **0.24** | 0.85 | 0.55 | **0.26** | 0.48 |
+| 131 Å | 1.01 | 0.76 | 0.90 | 0.78 | 0.70 | 0.68 |
+| 171 Å | 0.99 | 1.01 | 0.78 | 1.00 | 0.98 | 0.70 |
+| 193 Å | 1.01 | 1.00 | 0.90 | 0.98 | 0.96 | 0.76 |
+| 211 Å | 0.98 | 0.98 | 0.90 | 0.98 | 0.98 | 0.76 |
+| 335 Å | 1.04 | 0.66 | 0.96 | 0.94 | 0.89 | 0.76 |
+
+Where the 94 Å fit breaks down on BP:
+
+| Brightness band | BP solver, 94 Å | BP label-free, 94 Å |
+|---|---:|---:|
+| 1x to 1.8x | 0.88 | 0.81 |
+| 3.2x to 10x | 0.85 | 0.73 |
+| 10x to 32x | 0.83 | 0.38 |
+| 32x and above | 0.92 | 0.24 |
+
+**What it shows.**
+- **On BP, a DEM that fits the data exists.** The solver reproduces all six channels at flare cores within 8%.
+- **Label-free fits the three cooler channels almost perfectly but not the hot ones.** It reproduces 171, 193 and 211 Å to within 2%, but only 24% of the observed 94 Å, 76% of 131 Å and 66% of 335 Å. 98% of flare-core pixels fall short in 94 Å by more than 10%.
+- **So label-free is failing its own training objective there.** The loss asks for a DEM that reproduces 94 Å; the model does not reach one. It explains the cooler channels with cooler plasma and misses the hot component that makes 94 Å bright, which is exactly the missing hot peak in the example curves.
+- **That makes it a training problem, the more fixable kind.** The objective already asks for the right answer; the model is not learning to give it on these rare pixels. The breakdown starts above about 10x, the same place the relative DEM error turns up in Part 4.
+- **ENet is less clear-cut.** The ENet solver itself reproduces only 55% of 94 Å at flare cores, because its regularization trades fit for smoothness, so part of the gap there is the ENet objective. Label-free still reaches only 26%, worse than the solver.
+- Caveat: this test set has no per-pixel noise estimates, so we cannot test each pixel against its tolerance. At flare cores photon noise is a few percent of the signal, so a 76% shortfall is far outside it, and the solver itself gets to 0.92.
+
+---
+
+## Part 8. Side findings
+
+1. **Label-free BP predicts about 15% too little plasma everywhere.** Its total emission is 0.85 of the solver's even on Quiet pixels; supervised is at 1.00. On ENet it flips: label-free 0.98, supervised 0.89. The AIA check points to a likely reason, not yet proven. On faint pixels the faint channels are noise-dominated, and BP itself sits at the low edge of what fits: on pixels below 0.3x it reproduces only about 0.3 to 0.7 of the observed 94 Å and 131 Å. Label-free sits a little lower still (94 Å at 0.58 against the solver's 0.63 for 0.1x to 0.3x). Both minimise total emission within the noise tolerance, and label-free goes slightly further.
 2. **Faint pixels have their own over-prediction.** Where the solver says there is almost no plasma, the models predict too much:
 
    | Solver peak height | BP label-free | BP supervised | ENet label-free | ENet supervised |
@@ -190,26 +232,30 @@
 3. **The label-free gap grows with brightness.** Relative to DEM size, label-free falls further behind as pixels brighten, and at flare cores its error is nearly as large as the DEM itself. On ENet the gap is small everywhere below 10x.
 4. **At flare cores label-free saturates.** It predicts about 41% of the plasma, with a flattened, wider, slightly cooler curve that often splits into humps. It tracks the solver up to a peak of about 100, then hits a ceiling. Supervised does not.
 5. **It is not solver noise and not missed double peaks.** The Bright error is real model error, concentrated in flare-heated pixels marked by the 94 Å channel.
+6. **Label-free fails its own objective at flare cores.** On BP it reproduces only 24% of the observed 94 Å where the solver reproduces 92%, while fitting the cooler channels almost perfectly. It misses the hot plasma, so this is a training problem, not an objective that permits the wrong answer.
 
 ---
 
 ## Open questions and next steps
 
-**Why does label-free saturate?** Untested possibilities:
+**Why does label-free miss the hot plasma at flare cores?** The AIA check shows the loss already asks for it, so the question is why training does not deliver it. Untested possibilities:
 - Flare cores are about 0.01% of training pixels, so the model barely sees them.
 - Gradient clipping may stop those few pixels from pulling the model hard enough.
-- The loss term that penalizes total emission may favour too little plasma.
+- On these pixels the emission penalty may outweigh the fit term, for example if clipping caps how hard the fit term can pull.
+
+**Done since the first draft.**
+- The AIA fit at flare cores (Part 7): label-free fails its own objective on the hot channels.
+- Example curves (Part 5): randomly drawn flare-core pixels show the missing hot peak directly.
 
 **Next steps, cheapest first.**
-1. **Check the AIA fit at flare cores.** If label-free also under-reproduces the observed 94 Å and 131 Å there, it is failing its own training objective, which points to a fixable training problem. If it fits the AIA well, the loss itself allows the wrong answer. One small job; the most informative next check.
-2. **Try a training fix**: oversample or up-weight flare-core pixels, then re-check the band table.
+1. **Measure the training loss on flare-core pixels** in the training set, and check how often gradient clipping is active on batches that contain them. Evaluation only.
+2. **Try a training fix**: oversample or up-weight flare-core pixels, then re-check the band table and the AIA fit. This is a new training run, so it needs a decision first.
 3. **Report by brightness band plus the median**, not a single MSE decided by 0.01% of pixels.
-4. **Example curves for slides**: a few flare-core pixels showing solver, label-free and supervised side by side (needs one short Torch job).
 
 **Questions for David and Samuel.**
 - Should the headline metric stay plain MSE, or should we also report a relative or per-band measure?
-- Do flare cores matter for the science use of these DEMs, or are they rare enough to state as a known limitation?
+- Do flare cores matter for the science use of these DEMs? If they do, the flare-core training fix is the next experiment; if not, they can be stated as a known limitation.
 
 ---
 
-*Provenance.* Diagnostic `experiments/diagnose_bright_failures.py`, Torch CPU jobs 18733242 / 18733245 (label-free BP / ENet) and 18734665 / 18734666 (supervised BP / ENet). Raw outputs, side-by-side tables and figures in `results/plots/13_bright_diagnostic_20260928/`. Figures regenerate with `uv run python experiments/plot_bright_failures.py`. Associations only: nothing here proves a physical cause.
+*Provenance.* Diagnostic `experiments/diagnose_bright_failures.py`, Torch CPU jobs 18733242 / 18733245 (label-free BP / ENet) and 18734665 / 18734666 (supervised BP / ENet). AIA check and example pixels `experiments/aia_fit_by_brightness.py`, jobs 18783954 / 18783957 (BP / ENet). Raw outputs, side-by-side tables and figures in `results/plots/13_bright_diagnostic_20260928/`. Figures regenerate with `uv run python experiments/plot_bright_failures.py`. Associations only: nothing here proves a physical cause.

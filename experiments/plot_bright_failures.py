@@ -160,6 +160,95 @@ def fig_peak_calibration():
     return out
 
 
+SOLVER = "#3b3a37"
+TRACK_NAME = {"bp": "BP", "enet": "ENet"}
+
+
+def examples(track):
+    path = os.path.join(DIR, f"{track}_aia_fit_examples.npz")
+    return np.load(path) if os.path.exists(path) else None
+
+
+def pick(ex, group, n, seed=0):
+    """n examples drawn at random (seeded) from the stored random sample,
+    skipping repeats of the same observed pixel under another solver target."""
+    obs = ex[f"{group}_obs"]
+    _, first = np.unique(np.round(obs, 5), axis=0, return_index=True)
+    order = np.random.default_rng(seed).permutation(np.sort(first))
+    return order[:n]
+
+
+def fig_example_curves(track="bp"):
+    ex = examples(track)
+    if ex is None:
+        return None
+    root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    logt = np.load(os.path.join(root, "RData.npz"))["logT"][:18]
+    fc = pick(ex, "flare_core", 8, seed=1)
+    ob = pick(ex, "ordinary_bright", 4, seed=2)
+    panels = [("flare_core", i) for i in fc] + [("ordinary_bright", i) for i in ob]
+    fig, axes = plt.subplots(3, 4, figsize=(12, 7.6))
+    for ax, (group, i) in zip(axes.ravel(), panels):
+        for key, color, name, lw in (("ref", SOLVER, "Solver", 2.2), ("label_free", LF, "Label-free", 2),
+                                     ("supervised", SUP, "Supervised", 2)):
+            ax.plot(logt, ex[f"{group}_{key}"][i], color=color, lw=lw, label=name)
+        lead = CHANNEL_NAMES[int(np.argmax(ex[f"{group}_obs"][i] / THRESHOLDS))]
+        ax.set_title(f"{'Flare core' if group == 'flare_core' else 'Ordinary Bright'}: "
+                     f"{ex[f'{group}_score'][i]:.0f}x, led by {lead}", loc="left", fontsize=9.5)
+        ax.set_ylim(bottom=0)
+        ax.tick_params(labelsize=8)
+    for ax in axes[-1]:
+        ax.set_xlabel("logT")
+    for ax in axes[:, 0]:
+        ax.set_ylabel("DEM")
+    axes[0, 0].legend(fontsize=8.5, loc="upper left")
+    fig.suptitle(f"{TRACK_NAME[track]} track: randomly drawn pixels. Top two rows flare cores (32x and above), "
+                 "bottom row ordinary Bright (1x to 10x)", x=0.01, ha="left", fontweight="bold", fontsize=11)
+    fig.tight_layout()
+    out = os.path.join(DIR, f"fig4_example_curves_{track}.png")
+    fig.savefig(out, dpi=150)
+    plt.close(fig)
+    return out
+
+
+CHANNEL_NAMES = ["94 Å", "131 Å", "171 Å", "193 Å", "211 Å", "335 Å"]
+THRESHOLDS = np.array([3.1212, 16.9986, 448.8948, 498.3444, 190.7388, 10.3326])
+
+
+def fig_aia_fit():
+    paths = {t: os.path.join(DIR, f"{t}_aia_fit.json") for t in ("bp", "enet")}
+    if not all(os.path.exists(p) for p in paths.values()):
+        return None
+    fig, axes = plt.subplots(1, 2, figsize=(10.5, 4.3), sharey=True)
+    x = np.arange(6)
+    w = 0.26
+    for ax, track in zip(axes, ("bp", "enet")):
+        with open(paths[track]) as f:
+            res = json.load(f)["results"]
+        for j, (src, color, name) in enumerate((("solver", SOLVER, "Solver"), ("label_free", LF, "Label-free"),
+                                                ("supervised", SUP, "Supervised"))):
+            ch = res[src]["by_band"][">=32x"]["channels"]
+            vals = [ch[c]["recon_over_obs"] for c in ("94", "131", "171", "193", "211", "335")]
+            ax.bar(x + (j - 1) * (w + 0.02), vals, width=w, color=color, label=name, edgecolor=SURFACE)
+        ax.axhline(1, color=INK2, lw=1, ls=(0, (3, 3)))
+        ax.set_xticks(x)
+        ax.set_xticklabels(CHANNEL_NAMES)
+        ax.grid(axis="x", visible=False)
+        ax.set_title(f"{TRACK_NAME[track]} track", loc="left")
+    axes[0].set_ylabel("Reconstructed / observed AIA\n(flare cores, 32x and above)")
+    fig.legend(*axes[0].get_legend_handles_labels(), loc="upper left", ncol=3, fontsize=9,
+               bbox_to_anchor=(0.01, 0.92))
+    fig.suptitle("At flare cores, how well does each DEM reproduce the observed AIA? (1 = perfect)",
+                 x=0.01, ha="left", fontweight="bold")
+    fig.tight_layout(rect=(0, 0, 1, 0.9))
+    out = os.path.join(DIR, "fig5_aia_fit_flare_cores.png")
+    fig.savefig(out, dpi=160)
+    plt.close(fig)
+    return out
+
+
 if __name__ == "__main__":
-    for path in (fig_error_share(), fig_relative_error(), fig_peak_calibration()):
-        print("wrote", path)
+    for path in (fig_error_share(), fig_relative_error(), fig_peak_calibration(),
+                 fig_example_curves("bp"), fig_example_curves("enet"), fig_aia_fit()):
+        if path:
+            print("wrote", path)

@@ -115,6 +115,10 @@ CPU jobs `18733242` BP, `18733245` ENet; results in
   (BP 0.65 on the faintest pixels to 6-18x on the brightest; ENet 1.0-1.27
   below 10x). The LF-specific failures are emission collapse (BP 0.41 vs 0.92)
   and spurious multi-peaks (83% vs 13%) at flare cores, 94 A-led.
+- AIA check (jobs `18783954`/`18783957`): at BP flare cores label-free
+  reproduces only 24% of observed 94 A (solver 92%) while fitting 171/193/211 A
+  to 2%, so it fails its own objective there: a training problem. Write-up with
+  figures: `results/bright_failure_story_20260929.md`.
 
 ### 2026-09-13 — Supervised viewer additions prepared
 

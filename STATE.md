@@ -126,6 +126,25 @@ not of label-free training.
   solver's peak is tiny (27x vs LF 2.1x at 0.001-0.0032); on ENet both do (96x
   vs 52x), suggesting the ENet solver drives faint DEMs toward zero.
 - Readable write-up with figures: `results/bright_failure_story_20260929.md`.
+
+### AIA fit at flare cores (jobs 18783954 BP, 18783957 ENet, 2026-09-29)
+
+`experiments/aia_fit_by_brightness.py` projects label-free, supervised and
+solver DEMs through the AIA response by brightness band; pooled MAE/MSE
+reproduce the website exactly. At flare cores (>=32x) on BP the solver
+reproduces all six channels within 8% (94 A 0.92), while label-free fits
+171/193/211 A to 2% but reproduces only **0.24 of 94 A**, 0.76 of 131 A and
+0.66 of 335 A (98% of pixels short by >10% in 94 A). **Label-free fails its own
+objective there: a training problem, not an objective that permits the smaller
+DEM.** The 94 A fit breaks above ~10x (0.81, 0.73, 0.38, 0.24 across the bright
+bands). ENet is murkier: the ENet solver itself reaches only 0.55 of 94 A at
+flare cores; label-free 0.26. Random example curves (seeded reservoir sample,
+`*_aia_fit_examples.npz`) show label-free missing the hot peak near logT
+6.8-6.9 that solver and supervised both have. Faint pixels: BP solver sits at
+0.3-0.7 of observed 94/131 A (noise-limited) and label-free slightly lower,
+consistent with the 15% emission deficit. Next (not started, needs a decision):
+measure training loss / clipping on flare-core pixels, then oversample or
+up-weight them.
 - **94 A-dominant pixels** are where LF trails most on both tracks (5.3x BP,
   5.2x ENet). On ENet, LF *beats* supervised where 131/193/211/335 A dominate
   (0.73-0.93x) and at reference-multimodal / model-unimodal Bright pixels (0.31x).

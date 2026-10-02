@@ -1,6 +1,32 @@
 # DEM project state
 
-Last updated: 2026-09-28 (Claude: Bright diagnostic run; results below)
+Last updated: 2026-10-02 (Claude: meeting outcome recorded; presentation is the priority)
+
+## 2026-10-02 meeting outcome
+
+- **Priority: consolidate and present everything done so far to the advisor**
+  (slide deck, built section by section). Experiments run in parallel only.
+- **Suggestion 1 (pushed as first): lift the inputs to a higher-dimensional
+  space to fix the flare-core tail.** Square-root the AIA intensities and apply
+  Fourier-feature encoding, as the supervised model does:
+  `sqrt(clamp(aia))` then `src/model.py:posEncode` with 12 frequencies
+  (1.6 to 71 rad per sqrt-DN), plus the raw sqrt channel appended.
+- **Suggestion 2 (lower priority): predict the 18 DEM bins directly** instead of
+  54 basis coefficients, as the supervised model does. Less targeted: the
+  solver uses the same basis and reproduces flare-core AIA within 8%, so the
+  basis can represent the right answer.
+- **Question raised: do we square-root the input? Checked: no.** Label-free uses
+  `log1p` (`NormalizedInput`, `experiments/train_scaled.py`) feeding a plain
+  6-input MLP, with no encoding. log1p compresses the bright end far more:
+  a flare core (~1e4 DN) against a bright active region (~500 DN) is 9.2 vs 6.2
+  under log1p but 100 vs 22 under sqrt.
+- **Proposed experiment (not launched):** h232 BP barrier, sqrt + Fourier-feature
+  input, everything else unchanged (40 epochs, warmup 3000). Score with
+  `diagnose_bright_failures.py` and `aia_fit_by_brightness.py`. Success: flare-core
+  94 A fit up from 0.24 toward the solver's 0.92, flare-core relative DEM error
+  down from 0.80, no loss on the faint half. Watch: the appended raw sqrt channel
+  reaches ~100 at flare cores; keep warmup and the clamped softplus (July
+  collapse came from unscaled inputs).
 
 ## Current status
 

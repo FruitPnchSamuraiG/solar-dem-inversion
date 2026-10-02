@@ -162,9 +162,12 @@ def table(slide, x, y, w, rows, col_w=None, size=10.5, highlight=(), row_h=Inche
     # light horizontal rules only
     for i in range(nr):
         for j in range(nc):
+            # Borders must precede the cell fill in a:tcPr (lnL, lnR, lnT, lnB,
+            # then fill). PowerPoint tolerates the reverse; Google Slides rejects it.
             tcPr = t.cell(i, j)._tc.get_or_add_tcPr()
-            for edge in ("a:lnL", "a:lnR", "a:lnT", "a:lnB"):
-                ln = etree.SubElement(tcPr, qn(edge))
+            for k, edge in enumerate(("a:lnL", "a:lnR", "a:lnT", "a:lnB")):
+                ln = etree.Element(qn(edge))
+                tcPr.insert(k, ln)
                 ln.set("w", "6350" if edge == "a:lnB" else "0")
                 if edge == "a:lnB":
                     fill = etree.SubElement(ln, qn("a:solidFill"))
@@ -176,7 +179,7 @@ def table(slide, x, y, w, rows, col_w=None, size=10.5, highlight=(), row_h=Inche
 
 
 def arrow(slide, x1, y1, x2, y2, color=PURPLE):
-    c = slide.shapes.add_connector(MSO_CONNECTOR.STRAIGHT, x1, y1, x2, y2)
+    c = slide.shapes.add_connector(MSO_CONNECTOR.STRAIGHT, int(x1), int(y1), int(x2), int(y2))
     c.line.color.rgb = color
     c.line.width = Pt(1.5)
     ln = c.line._get_or_add_ln()
@@ -237,7 +240,7 @@ boxes = [("Observed AIA", "6 channels"), ("MLP", "176k params, per pixel"),
          ("Basis weights", "54, all ≥ 0"), ("DEM", "18 bins, logT 5.5–7.2"),
          ("Predicted AIA", "via response R")]
 bw, bh, by = Inches(1.5), Inches(0.95), Inches(1.35)
-bgap = (FULL_W - 5 * bw) / 4
+bgap = (FULL_W - 5 * bw) // 4
 xs = [L + i * (bw + bgap) for i in range(5)]
 for x, (head, sub) in zip(xs, boxes):
     b = card(s, x, by, bw, bh, fill=PURPLE if head == "MLP" else CARD)

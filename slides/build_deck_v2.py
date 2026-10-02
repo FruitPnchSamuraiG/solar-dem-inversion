@@ -142,5 +142,28 @@ text(s, L, TOP + Inches(0.1), FULL_W, Inches(3.3),
         "AIA reconstruction against the observation.", {})]],
      size=14, bullets=True, space_after=14)
 
+
+# ── Section 2: finding a trainable objective ────────────────────────────────
+
+# Slide 6: which loss.
+s = deck.slide("Six channels underdetermine the DEM: the regulariser picks it",
+               "Before any network, five losses optimised directly per pixel on 4 timestamps. Averages: "
+               "AIA MAE against the observation, BP 5.2, barrier 5.0, barrier plus fit 2.6, fit-only "
+               "0.40 to 0.44. DEM MAE against BP: barrier 0.034, barrier plus fit 0.043, fit-only 0.18 to "
+               "0.20. W1 on the brightest 5% of pixels: 0.030 and 0.033 against 0.15 to 0.18. Six "
+               "equations, eighteen unknowns: many DEMs fit within noise, so whatever breaks the tie "
+               "decides the shape. L-BFGS and Adam reach the same curves; SGD often fails to converge.")
+text(s, L, TOP, FULL_W, Inches(1.5),
+     ["Before any network: five losses optimised directly, pixel by pixel, on 4 timestamps, each compared with BP.",
+      "Fit-only losses (χ² + smoothness, max entropy, Tikhonov) reconstruct AIA ~12x better than BP, "
+      "yet land ~5x further from its DEM.",
+      "BP's own terms (noise band + L1) land on BP's DEM: MAE 0.03 vs 0.18–0.20."],
+     size=12.5, bullets=True, space_after=5)
+picture(s, os.path.join(IMG, "loss_pixels.png"), L, Inches(2.12), FULL_W, Inches(2.0))
+caption(s, L, Inches(4.15), FULL_W, "Two example pixels; BP in black. Legend MAE is AIA reconstruction error.")
+text(s, L, Inches(4.5), FULL_W, Inches(0.3),
+     [[("So the network has to train on the solver's objective, not on fit.", {"bold": True, "color": PURPLE})]],
+     size=12.5)
+
 out = deck.save(os.path.join(SLIDES, "DEM_deck_v2.pptx"))
 print("saved", out, "slides:", len(deck.prs.slides))

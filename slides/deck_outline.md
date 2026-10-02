@@ -66,9 +66,18 @@ say; goes into speaker notes, not onto the slide).
 
 ---
 
-## Section 2: Finding a trainable objective
+## Section 2: Finding a trainable objective (draft)
 
-*(next)*
+### Slide 6 · Which loss
+
+- **Title:** Six channels underdetermine the DEM: the regulariser picks it
+- **On slide:**
+  - Before any network: five losses optimised directly, pixel by pixel, on 4 timestamps, each compared with BP.
+  - Fit-only losses (χ² + smoothness, max entropy, Tikhonov) reconstruct AIA ~12x better than BP, yet land ~5x further from its DEM.
+  - BP's own terms (noise band + L1) land on BP's DEM: MAE 0.03 vs 0.18–0.20.
+  - Takeaway (bold): the network has to train on the solver's objective, not on fit.
+- **Visual:** two example pixels side by side (`slides/img/loss_pixels.png`, cropped from `results/plots/01_multiloss_20260609/loss_comparison.png`): BP in black, the barrier losses on top of it, the fit-only losses adding a hot component BP does not need.
+- **Notes:** Averages over 4 timestamps. AIA MAE against the observation: BP 5.2, barrier 5.0, barrier + fit 2.6, fit-only 0.40–0.44. DEM MAE against BP: barrier 0.034, barrier + fit 0.043, fit-only 0.18–0.20. W1 on the brightest 5% of pixels: 0.030 and 0.033 vs 0.15–0.18. Six equations, eighteen unknowns: many DEMs fit within noise, so whatever breaks the tie decides the shape. L-BFGS and Adam reach the same curves; SGD often fails to converge in the same budget.
 
 ## Section 3: Architecture on small data
 

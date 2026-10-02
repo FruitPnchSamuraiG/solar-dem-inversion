@@ -65,11 +65,24 @@ say; goes into speaker notes, not onto the slide).
 - **Notes:** Data: 1,223 Hofmeister-deconvolved timestamps, split by day into 917 train, 153 validation, 153 test. Cost: the solver runs one optimisation per pixel; both networks need one forward pass.
 - **Status:** settled.
 
+### Slide 6 · Data
+
+- **Title:** Data: two years of full-disk AIA, split in time
+- **On slide:**
+  - SDO/AIA, 6 EUV channels, about two images a day in 2014–2015: 1,223 full-disk images.
+  - PSF-deconvolved (Hofmeister); a noise σ per pixel and channel from the AIA error model; DEMs on a 2048² grid.
+  - Our model trains on AIA and σ only: ~30M pixels per epoch, 40 epochs.
+  - Solver DEMs (BP, ElasticNet) for every image: labels for the supervised model, evaluation only for ours.
+  - Test: ~700M pixel DEMs per solver, the clean solve plus 4 noise re-solves.
+- **Visual:** a timeline of the split, to scale: train Jan 2014 – Jun 2015 (917 images), validation Jun – Sep 2015 (153), test Sep – Dec 2015 (153).
+- **Notes:** The split is chronological, so every test image is later than anything seen in training. Each epoch draws 512 pixels from each of 58,688 training blocks (917 images × 64 blocks of 256²). The test set uses 64 random 128² blocks of each test image per solver target, five targets per image: one clean solve and four re-solves under simulated photon noise of the same observation. Pixels where deconvolution clamped a bright channel to zero (about 5%) are excluded.
+- **Status:** draft.
+
 ---
 
 ## Section 2: Finding a trainable objective (draft)
 
-### Slide 6 · Which loss
+### Slide 7 · Which loss
 
 - **Title:** Six channels underdetermine the DEM: the regulariser picks it
 - **On slide:**

@@ -6,7 +6,7 @@ import os
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from deck_lib import (CARD, DARK, FULL_W, IMG, L, LAV, LIGHT, MUTED, PURPLE, SLIDES, TOP,
+from deck_lib import (CARD, DARK, DEEP, FULL_W, IMG, L, LAV, LIGHT, MUTED, PURPLE, SLIDES, TOP,
                       WHITE, Deck, box, caption, card, line, picture, table, text)
 from pptx.enum.text import PP_ALIGN
 from pptx.util import Inches, Pt
@@ -148,9 +148,39 @@ text(s, L, TOP + Inches(0.1), FULL_W, Inches(3.3),
      size=14, bullets=True, space_after=14)
 
 
+# Slide 6: data — the split as a timeline, to scale.
+s = deck.slide("Data: two years of full-disk AIA, split in time",
+               "The split is chronological, so every test image is later than anything seen in training. "
+               "Each epoch draws 512 pixels from each of 58,688 training blocks: 917 images times 64 "
+               "blocks of 256 squared. The test set uses 64 random 128-squared blocks of each test image "
+               "per solver target, five targets per image: one clean solve and four re-solves under "
+               "simulated photon noise of the same observation. Pixels where deconvolution clamped a "
+               "bright channel to zero, about 5%, are excluded.")
+spans = [("Train", "917 images", 17.5, PURPLE, WHITE), ("Validation", "153", 3.2, LAV, PURPLE),
+         ("Test", "153", 3.3, DEEP, WHITE)]
+gap, ty, th = Inches(0.05), TOP + Inches(0.1), Inches(0.62)
+total = sum(m for _, _, m, _, _ in spans)
+x = L
+for name, count, months, fill, color in spans:
+    w = int((FULL_W - 2 * gap) * months / total)
+    box(s, x, ty, w, th, name, count, fill=fill, head_color=color, sub_color=color, head_size=11.5, sub_size=9.5)
+    x += w + gap
+for label, frac in (("Jan 2014", 0), ("Jun 2015", 17.5 / total), ("Sep 2015", 20.7 / total), ("Dec 2015", 1)):
+    lx = min(max(L + int(FULL_W * frac) - Inches(0.45), L), L + FULL_W - Inches(0.9))
+    text(s, lx, ty + th + Inches(0.05), Inches(0.9), Inches(0.25), [label], size=9.5, color=MUTED,
+         align=PP_ALIGN.LEFT if frac == 0 else (PP_ALIGN.RIGHT if frac == 1 else PP_ALIGN.CENTER))
+text(s, L, Inches(2.2), FULL_W, Inches(2.6),
+     ["SDO/AIA, 6 EUV channels, about two images a day in 2014–2015: 1,223 full-disk images.",
+      "PSF-deconvolved (Hofmeister); a noise σ per pixel and channel from the AIA error model; "
+      "DEMs on a 2048² grid.",
+      "Our model trains on AIA and σ only: ~30M pixels per epoch, 40 epochs.",
+      "Solver DEMs (BP, ElasticNet) for every image: labels for the supervised model, evaluation only for ours.",
+      "Test: ~700M pixel DEMs per solver, the clean solve plus 4 noise re-solves."],
+     size=12.5, bullets=True, space_after=7)
+
 # ── Section 2: finding a trainable objective ────────────────────────────────
 
-# Slide 6: which loss.
+# Slide 7: which loss.
 s = deck.slide("Six channels underdetermine the DEM: the regulariser picks it",
                "Before any network, five losses optimised directly per pixel on 4 timestamps. Averages: "
                "AIA MAE against the observation, BP 5.2, barrier 5.0, barrier plus fit 2.6, fit-only "

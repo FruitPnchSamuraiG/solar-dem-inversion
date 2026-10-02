@@ -12,6 +12,7 @@ from pptx import Presentation
 from pptx.dml.color import RGBColor
 from pptx.enum.dml import MSO_LINE
 from pptx.enum.shapes import MSO_CONNECTOR, MSO_SHAPE
+from pptx.enum.shapes import PP_PLACEHOLDER
 from pptx.enum.text import MSO_ANCHOR, PP_ALIGN
 from pptx.oxml.ns import qn
 from pptx.util import Emu, Inches, Pt
@@ -48,9 +49,8 @@ class Deck:
             self.prs.part.drop_rel(sid.get(qn("r:id")))
             ids.remove(sid)
         self.blank = next(l for l in self.prs.slide_layouts if l.name == "BLANK")
-        self.sldnum = [sp for sp in self.blank.shapes._spTree.iterchildren(qn("p:sp"))
-                       if sp.find(".//" + qn("p:ph")) is not None
-                       and sp.find(".//" + qn("p:ph")).get("type") == "sldNum"]
+        self.big = next(l for l in self.prs.slide_layouts if l.name == "BIG_NUMBER")
+        self.sldnum = _sldnum(self.blank)
 
     @property
     def title_slide(self):
@@ -58,7 +58,7 @@ class Deck:
 
     def slide(self, title, notes=""):
         s = self.prs.slides.add_slide(self.blank)
-        for sp in self.sldnum:            # python-pptx does not clone slide numbers
+        for sp in self.sldnum:
             s.shapes._spTree.append(copy.deepcopy(sp))
         text(s, Inches(0.29), Inches(0.24), Inches(9.3), Inches(0.62), [title],
              size=20, color=PURPLE, bold=True)
@@ -66,9 +66,36 @@ class Deck:
             s.notes_slide.notes_text_frame.text = notes
         return s
 
+    def divider(self, part, name):
+        """Section divider on the template's BIG_NUMBER layout: "Part N" over the section name."""
+        s = self.prs.slides.add_slide(self.big)
+        for ph in list(s.placeholders):
+            if ph.placeholder_format.type != PP_PLACEHOLDER.TITLE:
+                ph._element.getparent().remove(ph._element)
+        for sp in _sldnum(self.big):
+            s.shapes._spTree.append(copy.deepcopy(sp))
+        title = s.shapes.title
+        title.left, title.top, title.width, title.height = 311700, 846450, 8520600, 1671000  # as placed in Google Slides
+        p = title.text_frame.paragraphs[0]
+        p.alignment = PP_ALIGN.CENTER
+        for i, words in enumerate((f"Part {part}", name)):
+            if i:
+                p.add_line_break()
+            r = p.add_run()
+            r.text = words
+            r.font.size = Pt(41)
+        return s
+
     def save(self, path):
         self.prs.save(path)
         return path
+
+
+def _sldnum(layout):
+    """The layout's slide-number placeholder, which python-pptx does not clone onto new slides."""
+    return [sp for sp in layout.shapes._spTree.iterchildren(qn("p:sp"))
+            if sp.find(".//" + qn("p:ph")) is not None
+            and sp.find(".//" + qn("p:ph")).get("type") == "sldNum"]
 
 
 def text(slide, x, y, w, h, paras, size=13, color=DARK, bold=False, bullets=False,

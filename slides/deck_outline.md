@@ -6,7 +6,11 @@ sync: change this file first, then the deck is rebuilt from it.
 
 Each slide: **Title** (a takeaway sentence), **On slide** (the actual text, kept
 short), **Visual** (what the image or diagram shows, if any), **Notes** (what to
-say; goes into speaker notes, not onto the slide).
+say; goes into speaker notes, not onto the slide). Each part opens with a
+divider slide ("Part N" over the section name, template's BIG_NUMBER layout).
+
+Edits made in Google Slides get copied back here and into the build script
+before the next rebuild, or the rebuild would discard them.
 
 ---
 
@@ -16,31 +20,34 @@ say; goes into speaker notes, not onto the slide).
 
 - **Title:** Predicting DEM label-free
 
-### Slide 2 · Why label-free
+### Slide 2 · Divider
+
+- **Part 1:** Problem and approach
+
+### Slide 3 · Why label-free
 
 - **Title:** Same physics, different training signal
 - **On slide:**
-  - Solvers (BP, ElasticNet) run one optimisation per pixel: accurate, but slow at full resolution.
-  - Supervised: a network learns to reproduce the solver's DEMs, so it needs them as labels.
-  - Label-free (ours): a network learns to minimise the solver's objective; no labels.
-  - We never train on the solver's DEMs; we use them only to evaluate.
-- **Visual:** the two training loops as two rows of boxes, styled like the model diagram. Supervised: observed AIA, network, DEM, then a "loss" link to the solver's DEM. Label-free: observed AIA, network, DEM, predicted AIA, then a "loss" link to the observed AIA.
+  - Top line: Solvers (BP, ElasticNet) run one optimisation per pixel: accurate, but slow at full resolution.
+  - Row labels: "Supervised: learns the solver's DEMs"; "Label-free (unsupervised): learns the solver's objective implicitly".
+  - Bottom line (bold): We never train on the solver's DEMs; we use them only to evaluate.
+- **Visual:** the two training loops as two rows of boxes, styled like the model diagram. Supervised: observed AIA, model, DEM, then a "loss" link to the solver's DEM. Label-free: observed AIA, model, DEM, predicted AIA, then a "loss" link to the observed AIA.
 - **Status:** settled.
 - **Notes:** The audience knows the inverse problem. This slide only says what is different about our training signal.
 
-### Slide 3 · The model
+### Slide 4 · The model
 
 - **Title:** The model: a small MLP feeding a fixed forward model
 - **On slide:**
   - 6 log-intensities in; 4 hidden layers of 232, SiLU; 54 non-negative basis weights out.
-  - Why weights, not bins: the solvers work this way. BP and ElasticNet solve for the same 54 weights (at each of 18 bins, a spike and Gaussians 0.1 and 0.2 dex wide), and their L1 term acts on those weights.
+  - BP and ElasticNet solve for the same 54 weights (at each of 18 bins, a spike and Gaussians 0.1 and 0.2 dex wide), and their L1 term acts on those weights.
   - DEM = B·w over 18 bins, logT 5.5 to 7.2; predicted AIA = R·DEM. B and R are fixed; only the MLP is learned.
   - 176k parameters; one forward pass per pixel.
 - **Visual:** pipeline diagram: observed AIA, MLP, basis weights ("54, same as solver"), DEM, predicted AIA, with the loss closing the loop.
 - **Notes:** Not everyone knows the solvers' internals: they never solve for the 18 bins directly. Both solve for weights on a fixed basis B (`fullBP.py` `getBasis`, widths 0, 0.1, 0.2), with D = R·B, and report DEM = B·x. Predicting the same weights means the network searches the same space of DEMs the solver does, and BP's sparsity criterion means the same thing for both.
 - **Status:** settled.
 
-### Slide 4 · The loss
+### Slide 5 · The loss
 
 - **Title:** The loss is the solver's own objective
 - **On slide:**
@@ -53,19 +60,19 @@ say; goes into speaker notes, not onto the slide).
 - **Notes:** There is no fit term inside the band. Any DEM within noise is equally good, and sparsity breaks the tie, exactly as in BP.
 - **Status:** settled.
 
-### Slide 5 · Three routes, one test
+### Slide 6 · Three routes, one test
 
 - **Title:** Three routes to a DEM, compared on the same test
 - **On slide (points, no table):**
   - Solver (BP, ElasticNet): optimises its objective for each pixel. This is the reference.
   - Supervised network: learns to predict the solver's DEMs, so it needs them as labels.
-  - Label-free network (ours): learns to minimise the solver's objective, with no labels.
+  - Label-free network: learns to minimise the solver's objective, with no labels.
   - Same test for all: 153 days never seen in training, identical pixels. DEM metrics against the solver; AIA reconstruction against the observation.
 - **Visual:** none.
 - **Notes:** Data: 1,223 Hofmeister-deconvolved timestamps, split by day into 917 train, 153 validation, 153 test. Cost: the solver runs one optimisation per pixel; both networks need one forward pass.
 - **Status:** settled.
 
-### Slide 6 · Data
+### Slide 7 · Data
 
 - **Title:** Data: two years of full-disk AIA, split in time
 - **On slide:**
@@ -82,7 +89,11 @@ say; goes into speaker notes, not onto the slide).
 
 ## Section 2: Finding a trainable objective (draft)
 
-### Slide 7 · Which loss
+### Slide 8 · Divider
+
+- **Part 2:** Finding a trainable objective
+
+### Slide 9 · Which loss
 
 - **Title:** Six channels underdetermine the DEM: the regulariser picks it
 - **On slide:**

@@ -18,7 +18,10 @@ deck = Deck()
 
 # Slide 1: title only (the template's title slide).
 
-# Slide 2: why label-free — two training loops.
+# Slide 2: Part 1 divider.
+deck.divider(1, "Problem and approach")
+
+# Slide 3: why label-free — two training loops.
 s = deck.slide("Same physics, different training signal",
                "The audience knows the inverse problem. This slide only says what is different "
                "about our training signal. BP and ElasticNet solve one optimisation per pixel. A "
@@ -31,17 +34,17 @@ text(s, L, TOP, FULL_W, Inches(0.4),
 bw, bh, gap, lgap = Inches(1.15), Inches(0.7), Inches(0.28), Inches(0.62)
 x0 = Inches(1.95)
 rows = [(Inches(1.6), "Supervised", "learns the solver's DEMs",
-         [("Observed AIA", "6 channels"), ("Network", ""), ("DEM", "18 bins")], ("Solver's DEM", "label")),
-        (Inches(2.8), "Label-free (ours)", "learns the solver's objective",
-         [("Observed AIA", "6 channels"), ("Network", ""), ("DEM", "18 bins"),
+         [("Observed AIA", "6 channels"), ("Model", ""), ("DEM", "18 bins")], ("Solver's DEM", "label")),
+        (Inches(2.8), "Label-free (unsupervised)", "learns the solver's objective implicitly",
+         [("Observed AIA", "6 channels"), ("Model", ""), ("DEM", "18 bins"),
           ("Predicted AIA", "via response R")], ("Observed AIA", "6 channels"))]
 for y, name, sub, chain, target in rows:
-    text(s, L, y + Inches(0.08), Inches(1.45), Inches(0.6),
+    text(s, L, y + Inches(0.08), Inches(1.45), Inches(0.79),
          [[(name, {"bold": True, "color": PURPLE, "size": 12.5})], [(sub, {"size": 10, "color": MUTED})]],
          space_after=2)
     xs = [x0 + i * (bw + gap) for i in range(len(chain))]
     for x, (head, small) in zip(xs, chain):
-        net = head == "Network"
+        net = head == "Model"
         box(s, x, y, bw, bh, head, small, fill=PURPLE if net else CARD,
             head_color=WHITE if net else PURPLE, head_size=11, sub_size=9)
     for i in range(len(chain) - 1):
@@ -55,7 +58,7 @@ text(s, L, Inches(3.9), FULL_W, Inches(0.5),
      [[("We never train on the solver's DEMs; we use them only to evaluate.",
         {"bold": True, "color": PURPLE})]], size=12.5)
 
-# Slide 3: the model — pipeline diagram.
+# Slide 4: the model — pipeline diagram.
 s = deck.slide("The model: a small MLP feeding a fixed forward model",
                "The solvers never solve for the 18 bins directly: both solve for weights on a fixed basis, "
                "a spike and two Gaussians at each bin, and report DEM = B times x. We predict the same "
@@ -86,14 +89,13 @@ line(s, xs[0] + bw // 2, by + bh, xs[0] + bw // 2, ly + Inches(0.3), arrow=False
 line(s, xs[0] + bw // 2, ly + Inches(0.3), xs[1], ly + Inches(0.3))
 text(s, L, Inches(3.45), FULL_W, Inches(1.4),
      ["6 log-intensities in; 4 hidden layers of 232, SiLU; 54 non-negative basis weights out.",
-      [("Why weights, not bins: the solvers work this way. ", {"bold": True, "color": PURPLE}),
-       ("BP and ElasticNet solve for the same 54 weights (at each of 18 bins, a spike and Gaussians "
-        "0.1 and 0.2 dex wide), and their L1 term acts on those weights.", {})],
+      "BP and ElasticNet solve for the same 54 weights (at each of 18 bins, a spike and Gaussians "
+      "0.1 and 0.2 dex wide), and their L1 term acts on those weights.",
       "DEM = B·w over 18 bins; predicted AIA = R·DEM. B and R are fixed; only the MLP is learned.",
       "176k parameters; one forward pass per pixel."],
      size=12, bullets=True, space_after=4)
 
-# Slide 4: the loss.
+# Slide 5: the loss.
 def formula(*pieces):
     """Alternating normal text and subscript pieces, as one paragraph of runs."""
     return [(piece, {"sub": i % 2 == 1}) for i, piece in enumerate(pieces) if piece]
@@ -129,7 +131,7 @@ text(s, L, Inches(4.55), cw, Inches(0.3), ["In both: ŷ = R·B·w, with w ≥ 0.
 picture(s, os.path.join(IMG, "band_penalty.png"), Inches(6.15), TOP + Inches(0.2), Inches(3.45), Inches(2.6))
 caption(s, Inches(6.15), Inches(3.75), Inches(3.45), "The BP band penalty for one channel.")
 
-# Slide 5: three routes, one test.
+# Slide 6: three routes, one test.
 s = deck.slide("Three routes to a DEM, compared on the same test",
                "Data: 1,223 Hofmeister-deconvolved timestamps, split by day into 917 train, 153 "
                "validation and 153 test. The networks never see a test day in training. DEM metrics "
@@ -140,7 +142,7 @@ text(s, L, TOP + Inches(0.1), FULL_W, Inches(3.3),
        ("optimises its objective for each pixel. This is the reference.", {})],
       [("Supervised network: ", {"bold": True, "color": PURPLE}),
        ("learns to predict the solver's DEMs, so it needs them as labels.", {})],
-      [("Label-free network (ours): ", {"bold": True, "color": PURPLE}),
+      [("Label-free network: ", {"bold": True, "color": PURPLE}),
        ("learns to minimise the solver's objective, with no labels.", {})],
       [("Same test for all: ", {"bold": True, "color": PURPLE}),
        ("153 days never seen in training, identical pixels. DEM metrics against the solver; "
@@ -148,7 +150,7 @@ text(s, L, TOP + Inches(0.1), FULL_W, Inches(3.3),
      size=14, bullets=True, space_after=14)
 
 
-# Slide 6: data — the split as a timeline, to scale.
+# Slide 7: data — the split as a timeline, to scale.
 s = deck.slide("Data: two years of full-disk AIA, split in time",
                "The split is chronological, so every test image is later than anything seen in training. "
                "Each epoch draws 512 pixels from each of 58,688 training blocks: 917 images times 64 "
@@ -180,7 +182,10 @@ text(s, L, Inches(2.2), FULL_W, Inches(2.6),
 
 # ── Section 2: finding a trainable objective ────────────────────────────────
 
-# Slide 7: which loss.
+# Slide 8: Part 2 divider.
+deck.divider(2, "Finding a trainable objective")
+
+# Slide 9: which loss.
 s = deck.slide("Six channels underdetermine the DEM: the regulariser picks it",
                "Before any network, five losses optimised directly per pixel on 4 timestamps. Averages: "
                "AIA MAE against the observation, BP 5.2, barrier 5.0, barrier plus fit 2.6, fit-only "

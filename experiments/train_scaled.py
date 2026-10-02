@@ -131,6 +131,11 @@ class NormalizedInput(nn.Module):
             # patch is already floored at MIN_OBS > 0 by the dataloader's mask,
             # but clamp anyway so an unmasked caller cannot produce NaN.
             patch = torch.log1p(patch.clamp(min=0.0))
+        elif self.mode == "sqrt":
+            # The supervised model's input scaling. Spreads the bright end far
+            # more than log1p: flare core ~1e4 DN -> 100 vs bright region ~500
+            # -> 22, against 9.2 vs 6.2 under log1p.
+            patch = torch.sqrt(patch.clamp(min=0.0))
         return self.inner(patch)
 
 
@@ -257,12 +262,13 @@ def train(args):
     if args.variant == "cnn_shuffled":
         perm = np.random.default_rng(args.seed).permutation(args.patch_size ** 2)
     core = build_model(args.variant, n_basis, args.patch_size, args.channels,
-                       perm=perm, hidden=args.hidden)
+                       perm=perm, hidden=args.hidden, fourier_freqs=args.fourier_freqs)
     n_sp = harden_softplus(core, args.softplus_floor)
     init_output_head(core, args.init_bias, args.init_weight_scale)
     model = NormalizedInput(core, args.input_transform).to(device)
     print(f"Model params: {sum(p.numel() for p in model.parameters()):,}  "
-          f"input={args.input_transform}  softplus floor={args.softplus_floor} "
+          f"input={args.input_transform}  fourier_freqs={args.fourier_freqs}  "
+          f"softplus floor={args.softplus_floor} "
           f"({n_sp} replaced)  init bias={args.init_bias} "
           f"wscale={args.init_weight_scale}")
 
@@ -289,6 +295,12 @@ def train(args):
     tag = f"scaled_{args.variant}_{args.loss}"
     if args.hidden is not None:
         tag += f"_h{args.hidden}"
+    # Input-representation variants get their own suffix, so they can never
+    # overwrite a log1p checkpoint such as the production scaled_mlp6_barrier_h232.
+    if args.input_transform != "log1p":
+        tag += f"_{args.input_transform}"
+    if args.fourier_freqs:
+        tag += f"_ff{args.fourier_freqs}"
     out_dir = args.out_dir
     os.makedirs(out_dir, exist_ok=True)
     history = []
@@ -333,6 +345,7 @@ def train(args):
                     "n_bins": args.n_bins, "perm": perm, "epoch": epoch + 1,
                     "hidden": args.hidden,
                     "input_transform": args.input_transform,
+                    "fourier_freqs": args.fourier_freqs,
                     "softplus_floor": args.softplus_floor,
                     "args": vars(args)},
                    os.path.join(out_dir, f"{tag}.pt"))
@@ -393,9 +406,12 @@ def parse_args():
     p.add_argument("--epochs", type=int, default=30)
     p.add_argument("--lr", type=float, default=3e-4)
     p.add_argument("--seed", type=int, default=42)
-    p.add_argument("--input_transform", choices=["none", "log1p"], default="log1p",
+    p.add_argument("--input_transform", choices=["none", "log1p", "sqrt"], default="log1p",
                    help="'none' reproduces the crop runs; full-disk data spans ~6 "
                         "decades and needs compressing (see NormalizedInput)")
+    p.add_argument("--fourier_freqs", type=int, default=0,
+                   help="mlp6 only: lift the 6 inputs to sin/cos at this many frequencies "
+                        "(the supervised model uses 12 on sqrt input); 0 = off")
     p.add_argument("--warmup_steps", type=int, default=500,
                    help="linear LR warmup; 0 disables")
     p.add_argument("--softplus_floor", type=float, default=-20.0,

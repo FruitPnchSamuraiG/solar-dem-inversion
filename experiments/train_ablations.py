@@ -23,6 +23,7 @@ Run from project root, e.g.:
         --crop 1800,1800,128,128
 """
 
+import math
 import sys, os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -43,16 +44,46 @@ from experiments.train_neural_field_amortized import split_dataset, evaluate_val
 
 # ── ablation model variants ────────────────────────────────────────────────────
 
+class FourierFeatures(nn.Module):
+    """Lift each input channel to sin/cos at fixed frequencies, plus itself.
+
+    Same frequencies as src/model.py:posEncode, the encoding the supervised
+    model applies to sqrt(AIA): 2*pi*2**(i/2) for i = -4 .. n_freq-5. Each of
+    C channels becomes 2*n_freq+1 features, so an MLP can represent sharp
+    changes in the input more easily than from the raw value alone. The
+    frequencies are a non-persistent buffer: they are fixed by n_freq, so
+    checkpoints only need to record n_freq.
+    """
+
+    def __init__(self, n_freq):
+        super().__init__()
+        self.n_freq = n_freq
+        freqs = torch.tensor([2 * math.pi * 2 ** (i / 2.0) for i in range(-4, n_freq - 4)])
+        self.register_buffer("freqs", freqs, persistent=False)
+
+    def forward(self, x):  # x: [B, C]
+        arg = x[:, :, None] * self.freqs
+        return torch.cat([torch.sin(arg).flatten(1), torch.cos(arg).flatten(1), x], dim=1)
+
+    def extra_repr(self):
+        return f"n_freq={self.n_freq}"
+
+
 class CenterMLP(nn.Module):
     """Variant mlp6: MLP on the 6 center-pixel channels only, capacity-matched
     to PatchDEMNet (~1.43M params at hidden=680). Same information as the old
-    channel-input DEMNet, ~7x the parameters."""
+    channel-input DEMNet, ~7x the parameters.
 
-    def __init__(self, n_basis=54, patch_size=9, hidden=680):
+    fourier_freqs > 0 lifts the 6 inputs with FourierFeatures first (6 -> 150
+    features at 12 frequencies); 0 keeps the original network exactly."""
+
+    def __init__(self, n_basis=54, patch_size=9, hidden=680, fourier_freqs=0):
         super().__init__()
         self.pad = patch_size // 2
+        self.encode = FourierFeatures(fourier_freqs) if fourier_freqs else nn.Identity()
+        in_dim = 6 * (2 * fourier_freqs + 1) if fourier_freqs else 6
         self.net = nn.Sequential(
-            nn.Linear(6, hidden), nn.SiLU(),
+            nn.Linear(in_dim, hidden), nn.SiLU(),
             nn.Linear(hidden, hidden), nn.SiLU(),
             nn.Linear(hidden, hidden), nn.SiLU(),
             nn.Linear(hidden, hidden), nn.SiLU(),
@@ -61,7 +92,7 @@ class CenterMLP(nn.Module):
         )
 
     def forward(self, patch):  # patch: [B, 6, K, K]
-        return self.net(patch[:, :, self.pad, self.pad])
+        return self.net(self.encode(patch[:, :, self.pad, self.pad]))
 
 
 class FlatPatchMLP(nn.Module):
@@ -106,12 +137,15 @@ class ShuffledPatchCNN(nn.Module):
 VARIANTS = ["cnn", "mlp6", "mlp_patch", "cnn_shuffled"]
 
 
-def build_model(variant, n_basis, patch_size, channels, perm=None, hidden=None):
+def build_model(variant, n_basis, patch_size, channels, perm=None, hidden=None,
+                fourier_freqs=0):
+    if fourier_freqs and variant != "mlp6":
+        raise ValueError("fourier_freqs is only implemented for mlp6")
     if variant == "cnn":
         return PatchDEMNet(n_basis=n_basis, patch_size=patch_size, channels=channels)
     if variant == "mlp6":
         # hidden is the size sweep's knob; None keeps the capacity-matched 680.
-        return CenterMLP(n_basis=n_basis, patch_size=patch_size,
+        return CenterMLP(n_basis=n_basis, patch_size=patch_size, fourier_freqs=fourier_freqs,
                          **({} if hidden is None else {"hidden": hidden}))
     if variant == "mlp_patch":
         return FlatPatchMLP(n_basis=n_basis, patch_size=patch_size)

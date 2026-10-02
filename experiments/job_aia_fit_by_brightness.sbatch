@@ -27,6 +27,9 @@ case "${TRACK:?set TRACK=bp or TRACK=enet}" in
         SUP=eval_and_enet_specs/checkpoints/model_best_en.pth ;;
   *) echo "TRACK must be bp or enet" >&2; exit 2 ;;
 esac
+# LF_MODEL overrides the label-free checkpoint (e.g. a new training run); use with TAG.
+LF=${LF_MODEL:-$LF}
+[ -f "$LF" ] || { echo "missing checkpoint: $LF" >&2; exit 3; }
 args=(--label-free "$LF" --supervised "$SUP" --reference "$TRACK"
       --data "/projects/rps/dff6142/fouheylab/solar_dem/${TRACK}_AIA_hofdeconv_full_DS"
       --output "output/experiments/diagnostics/${TRACK}_aia_fit${TAG:+_$TAG}.json"

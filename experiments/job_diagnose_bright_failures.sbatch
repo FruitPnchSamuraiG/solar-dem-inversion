@@ -33,6 +33,9 @@ case "${TRACK:?set TRACK=bp or TRACK=enet}:${MODEL_KIND:-label_free}" in
   enet:supervised) MODEL=eval_and_enet_specs/checkpoints/model_best_en.pth ;;
   *) echo "TRACK must be bp or enet; MODEL_KIND label_free or supervised" >&2; exit 2 ;;
 esac
+# MODEL_PATH overrides the checkpoint (e.g. a new training run); use with TAG.
+MODEL=${MODEL_PATH:-$MODEL}
+[ -f "$MODEL" ] || { echo "missing checkpoint: $MODEL" >&2; exit 3; }
 DATA=/projects/rps/dff6142/fouheylab/solar_dem/${TRACK}_AIA_hofdeconv_full_DS
 SUFFIX=""
 if [ "${MODEL_KIND:-label_free}" = supervised ]; then SUFFIX=_supervised; fi

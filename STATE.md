@@ -20,8 +20,17 @@ Last updated: 2026-10-02 (Claude: meeting outcome recorded; presentation is the 
   6-input MLP, with no encoding. log1p compresses the bright end far more:
   a flare core (~1e4 DN) against a bright active region (~500 DN) is 9.2 vs 6.2
   under log1p but 100 vs 22 under sqrt.
-- **Proposed experiment (not launched):** h232 BP barrier, sqrt + Fourier-feature
-  input, everything else unchanged (40 epochs, warmup 3000). Score with
+- **Experiment LAUNCHED 2026-10-02 (one run, both changes together, as the
+  supervised model does):** training job `19049208`
+  (`experiments/job_train_input_encoding.sbatch`), h232 BP barrier with
+  `--input_transform sqrt --fourier_freqs 12`, everything else unchanged
+  (40 epochs, batch 16, warmup 3000). Checkpoint:
+  `output/experiments/input_encoding/scaled_mlp6_barrier_h232_sqrt_ff12.pt`.
+  Evaluations start automatically after it (afterany): `19049209` bright
+  diagnostic and `19049210` AIA fit, both TAG=sqrtff12, writing
+  `output/experiments/diagnostics/bp_{bright_failure,aia_fit}_sqrtff12.*`.
+  Code: `FourierFeatures` in `experiments/train_ablations.py` (verified equal to
+  `posEncode`), `sqrt` mode in `NormalizedInput`; defaults unchanged. Score with
   `diagnose_bright_failures.py` and `aia_fit_by_brightness.py`. Success: flare-core
   94 A fit up from 0.24 toward the solver's 0.92, flare-core relative DEM error
   down from 0.80, no loss on the faint half. Watch: the appended raw sqrt channel

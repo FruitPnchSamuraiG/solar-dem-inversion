@@ -14,30 +14,50 @@ say; goes into speaker notes, not onto the slide).
 ### Slide 1 · Title
 
 - **Title:** Predicting DEM label-free
-- **On slide:** A neural DEM inversion trained on the solver's objective, not its labels · Progress update, October 2026
-- **Visual:** NYU title layout, as in the template
-- **Notes:** What we built since June, what each experiment taught us, how it compares with the supervised model, and the one failure that remains.
 
 ### Slide 2 · Why label-free
 
-- **Title:** Goal: solver-quality DEMs, fast, without the solver's labels
+- **Title:** Same physics, different training signal
 - **On slide:**
-  - BP and ElasticNet solve one optimisation per pixel: slow at full resolution, twice a day.
-  - A supervised network is fast, but learns the solver's DEMs as labels.
-  - We train on the solver's objective instead; its DEMs are used only to evaluate.
-- **Visual:** two training loops side by side. Supervised: AIA, network, DEM, compared with the solver's DEM. Label-free: AIA, network, DEM, response R, compared with the observed AIA.
-- **Notes:** The audience knows the inverse problem; this slide only says what is different about our training signal.
+  - Solvers (BP, ElasticNet) run one optimisation per pixel: accurate, but slow at full resolution.
+  - Supervised: a network learns to reproduce the solver's DEMs, so it needs them as labels.
+  - Label-free (ours): a network learns to minimise the solver's objective; no labels.
+  - We never train on the solver's DEMs; we use them only to evaluate.
+- **Visual:** the two training loops as two rows of boxes. Supervised: observed AIA, network, DEM, compared with the solver's DEM. Label-free: observed AIA, network, DEM, predicted AIA, compared with the observed AIA.
+- **Notes:** The audience knows the inverse problem. This slide only says what is different about our training signal.
 
-### Slide 3 · Model and loss
+### Slide 3 · The model
 
-- **Title:** One small network, trained on the solver's own objective
+- **Title:** The model: a small MLP feeding a fixed forward model
 - **On slide:**
-  - Model: 6 log-intensities in; 4 hidden layers of 232, SiLU; 54 non-negative basis weights out; DEM = B·w over 18 bins, logT 5.5 to 7.2. 176k parameters, one pass per pixel.
-  - BP loss: Σ_c [ max(0, |ŷ_c − o_c| − tσ_c) / tσ_c ]² + Σ_k w_k, with ŷ = R·B·w and t = 1.4: stay inside the noise band, then be sparse.
-  - ElasticNet loss: the solver's objective, α = 0.001, l1 ratio 0.5.
-  - Data: 1,223 Hofmeister-deconvolved timestamps, split by day into 917 train, 153 validation, 153 test.
-- **Visual:** pipeline diagram: observed AIA, MLP, basis weights, DEM, response R, predicted AIA, with the loss closing the loop (the diagram from the current deck, slide 3).
-- **Notes:** All results in this talk are on the 153 test days, never seen in training. The loss has no fit term inside the band: any DEM within noise is equally good, and the L1 term then picks the sparsest, which is exactly BP's criterion.
+  - 6 log-intensities in; 4 hidden layers of 232, SiLU; 54 non-negative basis weights out.
+  - DEM = B·w over 18 bins, logT 5.5 to 7.2; predicted AIA = R·DEM. B and R are fixed.
+  - 176k parameters; one forward pass per pixel.
+- **Visual:** pipeline diagram: observed AIA, MLP, basis weights, DEM, predicted AIA, with the loss closing the loop.
+- **Notes:** Only the MLP is learned. The basis and the response are the same ones the solver uses, so the network searches the same space of DEMs the solver does.
+
+### Slide 4 · The loss
+
+- **Title:** The loss is the solver's own objective
+- **On slide:**
+  - BP track: L = Σ_c [ max(0, |ŷ_c − o_c| − tσ_c) / tσ_c ]² + Σ_k w_k
+    - Zero anywhere inside the noise band (t = 1.4), quadratic outside.
+    - Then the L1 term picks the sparsest DEM that fits: BP's own criterion.
+  - ElasticNet track: L = (1/2C) Σ_c [ (ŷ_c − o_c) / tσ_c ]² + αλ Σ_k w_k + ½α(1−λ) Σ_k w_k², with the solver's α = 0.001, λ = 0.5, C = 6.
+  - In both, ŷ = R·B·w and w ≥ 0.
+- **Visual:** the BP band penalty against prediction error: flat at zero inside the noise band, quadratic outside.
+- **Notes:** There is no fit term inside the band. Any DEM within noise is equally good, and sparsity breaks the tie, exactly as in BP.
+
+### Slide 5 · Three routes, one test
+
+- **Title:** Three routes to a DEM, compared on the same test
+- **On slide:** table with three columns: solver, supervised network, label-free network.
+  - How it gets a DEM: optimises the objective per pixel / predicts the solver's DEM / minimises the solver's objective, learned over all pixels.
+  - Trained on solver DEMs: no training / yes / no.
+  - Cost per image: one optimisation per pixel / one forward pass / one forward pass.
+  - Below: 153 unseen test days, identical pixels. DEM metrics compare each network with the solver; AIA reconstruction compares all three with the observation.
+- **Visual:** the table itself.
+- **Notes:** Data: 1,223 Hofmeister-deconvolved timestamps, split by day into 917 train, 153 validation, 153 test. The networks see no test day in training.
 
 ---
 

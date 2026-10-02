@@ -1,6 +1,36 @@
 # DEM project state
 
-Last updated: 2026-10-02 (Claude: sqrt+FF run negative; deck being rebuilt from slides/deck_outline.md)
+Last updated: 2026-10-02 (Claude: fixed-pixel sampling found; both production models retraining with fresh pixels, jobs 19071403/19071406)
+
+## 2026-10-02: every scaled run trained on one fixed 30M-pixel sample
+
+`ZarrPatchBlockDataset.__getitem__` seeded each block's 512-pixel draw by the
+block index alone (`src/zarr_data.py`), so every epoch of every scaled run saw
+the same pixels: 58,688 blocks x 512 = 30M pixels, about 0.8% of the ~3.8B
+training pixels, 40 times over. Results remain valid (test matched validation
+to the third decimal), but rare pixels are under-sampled: flare cores (~0.09%
+of pixels) contribute a fixed ~27k. The capacity-ceiling result was measured
+under the same limit (h960 validation loss was already rising slightly).
+
+Fix (`7067355`): `--resample_pixels` uses `EpochResampler`, which offsets epoch
+e's indices by e x n_blocks; the dataset decodes the draw from the index, so it
+reaches persistent workers. Draw 0 keeps the old seed, so epoch 1 and every
+default loader are unchanged (tested in `tests/test_zarr_data.py`).
+
+**LAUNCHED** (`bash experiments/submit_resample.sh`): production h232 retrained
+with fresh pixels and otherwise identical settings (BP warmup 500 as in sweep
+task 15185224_3; ENet alpha=0.001 warmup 3000 as in 17385814).
+
+| Track | Train | Diagnostic | AIA fit |
+|---|---|---|---|
+| BP | `19071403` | `19071404` | `19071405` |
+| ENet | `19071406` | `19071407` | `19071408` |
+
+Checkpoints: `output/experiments/resample/scaled_mlp6_{barrier,enet}_h232_resample.pt`.
+Evaluations (afterok) write `output/experiments/diagnostics/{bp,enet}_{bright_failure,aia_fit}_resample.*`;
+together they reproduce the full results table (DEM MSE, EM error, W1, AIA
+MAE/MSE) and the flare-core analysis. If the gain is large, rerun the width
+sweep with `--resample_pixels` (decision deferred to the results).
 
 ## 2026-10-02 meeting outcome
 

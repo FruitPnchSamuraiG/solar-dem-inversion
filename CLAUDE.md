@@ -91,6 +91,16 @@ From the paper's "Future Work" section:
 
 ## Progress Log (most recent first)
 
+### 2026-10-02 — Training used one fixed pixel sample; retrains launched
+
+Every scaled run drew the same 512 pixels per block each epoch (seed = block
+index), so training saw one fixed 30M-pixel sample, ~0.8% of the training
+pixels, 40 times. Fixed with `--resample_pixels` (`7067355`, `EpochResampler`
+in `src/zarr_data.py`). Both production h232 models retraining with fresh
+pixels and otherwise identical settings (BP `19071403`, ENet `19071406`), with
+diagnostic and AIA-fit evaluations chained (`experiments/submit_resample.sh`).
+Detail in `STATE.md`.
+
 ### 2026-10-02 — Supervised-style input (sqrt + Fourier features) did not fix flare cores
 
 Meeting suggestion tested (run `19049208`, results in

@@ -122,7 +122,13 @@ class ZarrPatchBlockDataset(Dataset):
         return finite & solved
 
     def __getitem__(self, idx):
-        rng = np.random.default_rng((self.seed * 1_000_003 + idx) % (2 ** 32))
+        # An index past n_blocks is a later draw of the same block (EpochResampler):
+        # draw 0 keeps the original per-block seed, so default loaders are unchanged.
+        draw, idx = divmod(idx, self.n_blocks)
+        if draw == 0:
+            rng = np.random.default_rng((self.seed * 1_000_003 + idx) % (2 ** 32))
+        else:
+            rng = np.random.default_rng((self.seed, draw, idx))
 
         obs = np.asarray(self.X[:, :, :, idx], dtype=np.float32)   # [6, A, A]
         err = np.asarray(self.E[:, :, :, idx], dtype=np.float32)   # [6, A, A]
@@ -187,14 +193,41 @@ def flatten_blocks(batch):
     return tuple(t.flatten(0, 1) for t in batch)
 
 
-def make_loader(root, phase, batch_blocks=8, num_workers=4, shuffle=True, **kwargs):
+class EpochResampler(torch.utils.data.Sampler):
+    """Shuffle blocks, and offset epoch e's indices by e * n_blocks so every block
+    yields fresh pixels each epoch.
+
+    Without this, each block's pixel draw is seeded by the block alone, so every
+    epoch sees the same 512 pixels per block. A set_epoch() on the dataset would
+    not reach persistent workers; the index does, because the sampler runs in the
+    main process.
+    """
+
+    def __init__(self, n_blocks, seed=0):
+        self.n_blocks, self.seed, self.epoch = n_blocks, seed, 0
+
+    def __len__(self):
+        return self.n_blocks
+
+    def __iter__(self):
+        g = torch.Generator()
+        g.manual_seed(self.seed * 1_000_003 + self.epoch)
+        order = torch.randperm(self.n_blocks, generator=g) + self.epoch * self.n_blocks
+        self.epoch += 1
+        return iter(order.tolist())
+
+
+def make_loader(root, phase, batch_blocks=8, num_workers=4, shuffle=True,
+                resample=False, **kwargs):
+    """resample=True draws fresh pixels from every block each epoch (implies shuffle)."""
     from torch.utils.data import DataLoader
 
     ds = ZarrPatchBlockDataset(root, phase, **kwargs)
-    loader = DataLoader(ds, batch_size=batch_blocks, shuffle=shuffle,
-                        num_workers=num_workers, pin_memory=True,
+    sampler = EpochResampler(len(ds), kwargs.get('seed', 0)) if resample else None
+    loader = DataLoader(ds, batch_size=batch_blocks, shuffle=shuffle and sampler is None,
+                        sampler=sampler, num_workers=num_workers, pin_memory=True,
                         persistent_workers=num_workers > 0,
-                        drop_last=shuffle)
+                        drop_last=shuffle or resample)
     return ds, loader
 
 

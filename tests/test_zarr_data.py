@@ -78,6 +78,48 @@ def main():
         print(f"patch {tuple(patch.shape)}  centre row {row[:5]} ...")
         print("all alignment checks passed")
 
+        check_resampling(root)
+
+
+def check_resampling(root):
+    """The default loader repeats each block's pixels every epoch; resample=True
+    draws fresh ones, through persistent workers, and keeps epoch 1 identical."""
+    from src.zarr_data import EpochResampler, make_loader
+
+    ds = ZarrPatchBlockDataset(root, 'train', pixels_per_block=40, seed=3)
+    same = [ds[b][1][:, 0].numpy() for b in range(N)]
+    again = [ds[b][1][:, 0].numpy() for b in range(N)]
+    assert all(np.array_equal(a, b) for a, b in zip(same, again)), "default draw not repeatable"
+
+    sampler = EpochResampler(N, seed=3)
+    epochs = [list(sampler) for _ in range(3)]
+    for e, order in enumerate(epochs):
+        assert sorted(i % N for i in order) == list(range(N)), "a block was skipped or repeated"
+        assert all(i // N == e for i in order), "epoch offset wrong"
+
+    # draw 0 is the original per-block draw; later draws differ from it
+    first = [ds[i][1][:, 0].numpy() for i in range(N)]
+    second = [ds[N + i][1][:, 0].numpy() for i in range(N)]
+    assert all(np.array_equal(a, b) for a, b in zip(first, same)), "draw 0 changed"
+    assert not any(np.array_equal(np.sort(a), np.sort(b)) for a, b in zip(first, second)), \
+        "draw 1 repeated draw 0"
+
+    # through a real DataLoader with persistent workers, epochs differ
+    for workers in (0, 2):
+        _, loader = make_loader(root, 'train', batch_blocks=1, num_workers=workers,
+                                resample=True, pixels_per_block=40, seed=3)
+        e1 = sorted(tuple(np.sort(o[0, :, 0].numpy())) for _, o, _, _ in loader)
+        e2 = sorted(tuple(np.sort(o[0, :, 0].numpy())) for _, o, _, _ in loader)
+        assert e1 == sorted(tuple(np.sort(a)) for a in same), f"epoch 1 != default draw ({workers} workers)"
+        assert set(e1).isdisjoint(e2), f"epoch 2 repeated epoch 1 ({workers} workers)"
+        _, fixed = make_loader(root, 'train', batch_blocks=1, num_workers=workers,
+                               shuffle=True, pixels_per_block=40, seed=3)
+        f1 = sorted(tuple(np.sort(o[0, :, 0].numpy())) for _, o, _, _ in fixed)
+        f2 = sorted(tuple(np.sort(o[0, :, 0].numpy())) for _, o, _, _ in fixed)
+        assert f1 == f2, "default loader should repeat its pixels"
+    print("resampling checks passed: fresh pixels each epoch, epoch 1 unchanged, "
+          "default loader unchanged")
+
 
 if __name__ == '__main__':
     main()

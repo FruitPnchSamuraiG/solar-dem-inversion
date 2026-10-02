@@ -251,6 +251,7 @@ def train(args):
                    min_obs=args.min_obs)
     _, train_loader = make_loader(args.root, 'train', batch_blocks=args.batch_blocks,
                                   num_workers=args.num_workers, shuffle=True,
+                                  resample=args.resample_pixels,
                                   max_blocks=args.max_train_blocks,
                                   with_labels=False, seed=args.seed, **data_kw)
     _, val_loader = make_loader(args.root, 'val', batch_blocks=args.batch_blocks,
@@ -301,6 +302,8 @@ def train(args):
         tag += f"_{args.input_transform}"
     if args.fourier_freqs:
         tag += f"_ff{args.fourier_freqs}"
+    if args.resample_pixels:
+        tag += "_resample"
     out_dir = args.out_dir
     os.makedirs(out_dir, exist_ok=True)
     history = []
@@ -393,6 +396,9 @@ def parse_args():
     p.add_argument("--stride", type=int, default=2,
                    help="AIA stride per patch step; 2 keeps the DEM's own footprint")
     p.add_argument("--pixels_per_block", type=int, default=512)
+    p.add_argument("--resample_pixels", action="store_true",
+                   help="draw fresh pixels from every block each epoch; without it "
+                        "every epoch reuses the same pixels_per_block pixels per block")
     p.add_argument("--batch_blocks", type=int, default=8)
     p.add_argument("--n_bins", type=int, default=N_AIA_BINS)
     p.add_argument("--tolfac", type=float, default=1.4)

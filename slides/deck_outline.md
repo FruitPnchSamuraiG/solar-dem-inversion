@@ -60,19 +60,7 @@ before the next rebuild, or the rebuild would discard them.
 - **Notes:** There is no fit term inside the band. Any DEM within noise is equally good, and sparsity breaks the tie, exactly as in BP.
 - **Status:** settled.
 
-### Slide 6 · Three routes, one test
-
-- **Title:** Three routes to a DEM, compared on the same test
-- **On slide (points, no table):**
-  - Solver (BP, ElasticNet): optimises its objective for each pixel. This is the reference.
-  - Supervised network: learns to predict the solver's DEMs, so it needs them as labels.
-  - Label-free network: learns to minimise the solver's objective, with no labels.
-  - Same test for all: 153 days never seen in training, identical pixels. DEM metrics against the solver; AIA reconstruction against the observation.
-- **Visual:** none.
-- **Notes:** Data: 1,223 Hofmeister-deconvolved timestamps, split by day into 917 train, 153 validation, 153 test. Cost: the solver runs one optimisation per pixel; both networks need one forward pass.
-- **Status:** settled.
-
-### Slide 7 · Data
+### Slide 6 · Data
 
 - **Title:** Data: two years of full-disk AIA, split in time
 - **On slide:**
@@ -89,11 +77,11 @@ before the next rebuild, or the rebuild would discard them.
 
 ## Section 2: Finding a trainable objective (draft)
 
-### Slide 8 · Divider
+### Slide 7 · Divider
 
 - **Part 2:** Finding a trainable objective
 
-### Slide 9 · Which loss
+### Slide 8 · Which loss
 
 - **Title:** Six channels underdetermine the DEM: the regulariser picks it
 - **On slide:**

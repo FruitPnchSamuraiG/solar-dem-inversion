@@ -131,26 +131,7 @@ text(s, L, Inches(4.55), cw, Inches(0.3), ["In both: ŷ = R·B·w, with w ≥ 0.
 picture(s, os.path.join(IMG, "band_penalty.png"), Inches(6.15), TOP + Inches(0.2), Inches(3.45), Inches(2.6))
 caption(s, Inches(6.15), Inches(3.75), Inches(3.45), "The BP band penalty for one channel.")
 
-# Slide 6: three routes, one test.
-s = deck.slide("Three routes to a DEM, compared on the same test",
-               "Data: 1,223 Hofmeister-deconvolved timestamps, split by day into 917 train, 153 "
-               "validation and 153 test. The networks never see a test day in training. DEM metrics "
-               "compare each network with the solver's DEM: MSE, total-emission error and W1. AIA "
-               "reconstruction compares all three with the observation: MAE and MSE.")
-text(s, L, TOP + Inches(0.1), FULL_W, Inches(3.3),
-     [[("Solver (BP, ElasticNet): ", {"bold": True, "color": PURPLE}),
-       ("optimises its objective for each pixel. This is the reference.", {})],
-      [("Supervised network: ", {"bold": True, "color": PURPLE}),
-       ("learns to predict the solver's DEMs, so it needs them as labels.", {})],
-      [("Label-free network: ", {"bold": True, "color": PURPLE}),
-       ("learns to minimise the solver's objective, with no labels.", {})],
-      [("Same test for all: ", {"bold": True, "color": PURPLE}),
-       ("153 days never seen in training, identical pixels. DEM metrics against the solver; "
-        "AIA reconstruction against the observation.", {})]],
-     size=14, bullets=True, space_after=14)
-
-
-# Slide 7: data — the split as a timeline, to scale.
+# Slide 6: data — the split as a timeline, to scale.
 s = deck.slide("Data: two years of full-disk AIA, split in time",
                "The split is chronological, so every test image is later than anything seen in training. "
                "Each epoch draws 512 pixels from each of 58,688 training blocks: 917 images times 64 "
@@ -182,10 +163,10 @@ text(s, L, Inches(2.2), FULL_W, Inches(2.6),
 
 # ── Section 2: finding a trainable objective ────────────────────────────────
 
-# Slide 8: Part 2 divider.
+# Slide 7: Part 2 divider.
 deck.divider(2, "Finding a trainable objective")
 
-# Slide 9: which loss.
+# Slide 8: which loss.
 s = deck.slide("Six channels underdetermine the DEM: the regulariser picks it",
                "Before any network, five losses optimised directly per pixel on 4 timestamps. Averages: "
                "AIA MAE against the observation, BP 5.2, barrier 5.0, barrier plus fit 2.6, fit-only "

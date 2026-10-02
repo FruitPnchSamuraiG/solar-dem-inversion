@@ -433,6 +433,13 @@ va.tick_labels.font.size = Pt(10); va.tick_labels.font.color.rgb = MUTED
 va.format.line.fill.background()
 ca = ch.category_axis
 ca.tick_labels.font.size = Pt(10); ca.tick_labels.font.color.rgb = DARK
+# python-pptx can write negative axis ids, which the schema forbids (unsignedInt)
+# and Google Slides rejects. Remap every id consistently to a positive value.
+_ids = {}
+for el in ch._chartSpace.iter(qn("c:axId"), qn("c:crossAx")):
+    v = el.get("val")
+    if int(v) < 0:
+        el.set("val", _ids.setdefault(v, str(500000001 + len(_ids))))
 text(s, Inches(6.05), TOP + Inches(0.2), Inches(3.55), Inches(3.2),
      ["Swept 10k to 11.2M parameters.",
       "Below 176k the multi-peaked pixels are lost while averages barely move.",

@@ -66,9 +66,9 @@ before the next rebuild, or the rebuild would discard them.
 - **On slide:**
   - SDO/AIA, 6 EUV channels, about two images a day in 2014–2015: 1,223 full-disk images.
   - PSF-deconvolved (Hofmeister); a noise σ per pixel and channel from the AIA error model; DEMs on a 2048² grid.
-  - Our model trains on AIA and σ only: ~30M pixels per epoch, 40 epochs.
+  - Our model trains on AIA and σ only: each training image is cut into 64 blocks of 256×256 per image. Each epoch draws 512 random pixels from each of the 58,688 blocks(917*64), for 40 epochs.
   - Solver DEMs (BP, ElasticNet) for every image: labels for the supervised model, evaluation only for ours.
-  - Test: ~700M pixel DEMs per solver, the clean solve plus 4 noise re-solves.
+  - Test: ~700M pixel DEMs per solver, the clean solve plus 4 noise re-solves(only supervised).
 - **Visual:** a timeline of the split, to scale: train Jan 2014 – Jun 2015 (917 images), validation Jun – Sep 2015 (153), test Sep – Dec 2015 (153).
 - **Notes:** The split is chronological, so every test image is later than anything seen in training. Each epoch draws 512 pixels from each of 58,688 training blocks (917 images × 64 blocks of 256²). The test set uses 64 random 128² blocks of each test image per solver target, five targets per image: one clean solve and four re-solves under simulated photon noise of the same observation. Pixels where deconvolution clamped a bright channel to zero (about 5%) are excluded.
 - **Status:** draft.
@@ -92,9 +92,47 @@ before the next rebuild, or the rebuild would discard them.
 - **Visual:** two example pixels side by side (`slides/img/loss_pixels.png`, cropped from `results/plots/01_multiloss_20260609/loss_comparison.png`): BP in black, the barrier losses on top of it, the fit-only losses adding a hot component BP does not need.
 - **Notes:** Averages over 4 timestamps. AIA MAE against the observation: BP 5.2, barrier 5.0, barrier + fit 2.6, fit-only 0.40–0.44. DEM MAE against BP: barrier 0.034, barrier + fit 0.043, fit-only 0.18–0.20. W1 on the brightest 5% of pixels: 0.030 and 0.033 vs 0.15–0.18. Six equations, eighteen unknowns: many DEMs fit within noise, so whatever breaks the tie decides the shape. L-BFGS and Adam reach the same curves; SGD often fails to converge in the same budget.
 
-## Section 3: Architecture on small data
+## Section 3: Architecture on small data (draft)
 
-*(next)*
+All on 4 images: two X-class flares (X2.1, X1.6), quiet Sun, moderate activity.
+
+### Slide 9 · Divider
+
+- **Part 3:** Architecture on small data
+
+### Slide 10 · First network, then the patch CNN
+
+- **Title:** A per-pixel MLP drew noisy DEMs; a patch CNN fixed it
+- **On slide:**
+  - First try: the 6 intensities of one pixel → MLP (213k params) → 54 weights, trained on the BP loss over ~221k pixels. The loss converged, but per-pixel curves oscillated.
+  - Patch CNN: a 9×9 neighbourhood → CNN (~1.5M params) → 54 weights. Smooth, single-peaked curves at BP's temperatures, sparsity close to BP's on held-out pixels.
+  - Trained on one image, then on all 4 jointly; zeroing the neighbourhood for 10% of batches kept it usable on a single pixel.
+- **Visual:** `slides/img/patch_cnn.png`: patch CNN (dotted) against BP, three pixels of the X2.1 flare image. No figure of the noisy MLP exists: its checkpoint was not kept (the v1 deck's "noisy_nn.png" actually shows the direct-optimisation baselines, not the network).
+- **Notes:** The first MLP is the same architecture as today's production model (4 hidden layers, SiLU, softplus), at width 256 with raw intensities as input. Its noise was attributed at the time to the overlapping basis amplifying small weight errors and to the problem's non-uniqueness.
+- **Status:** draft.
+
+### Slide 11 · Ablation
+
+- **Title:** Ablation: the noise was capacity, not missing context
+- **On slide:**
+  - Four variants at ~1.45M params, same BP loss, same 4 images.
+  - A centre-pixel MLP this size was smooth too: the first MLP's noise was not about the neighbourhood.
+  - The patch CNN was sparsest, but measured on held-out pixels of the training images.
+- **Visual:** dot plot of mean sparsity (effective number of active basis weights, lower = sparser) with BP's 1.79 as a dashed line: patch CNN 1.70, shuffled-patch CNN 1.88, centre-pixel MLP 1.89, flat-patch MLP 1.95.
+- **Notes:** The shuffled-patch CNN (a fixed random permutation of the 81 patch pixels) nearly matches the CNN, so the gain came from neighbouring values more than geometry. The flat-patch MLP was erratic across images (1.61 on the X2.1 flare, 2.27 on quiet Sun). Capacity and setup were never fully separated: the 213k MLP took raw intensities; at full scale a 176k MLP on log1p inputs is smooth.
+- **Status:** draft.
+
+### Slide 12 · Leave one day out
+
+- **Title:** On unseen days, the patch CNN's edge disappeared
+- **On slide:**
+  - Leave one image out: train on 3, test on the 4th; patch CNN and centre-pixel MLP, 4 folds.
+  - Held-out sparsity: CNN lower on 1 day, MLP on 2, tied on 1; the MLP fit AIA better on 3 of 4.
+  - Little overfitting (held-out within ±0.2 of in-sample on 3 folds), except the X1.6 flare: peaks too cool (logT ~6.1 vs BP ~6.4), with one other flare image in training.
+  - Takeaway (bold): carry the simpler centre-pixel MLP forward, and get more flare data → scaling.
+- **Visual:** `slides/img/loo_flare.png`: the held-out X1.6 flare image, both models (dashed) against BP.
+- **Notes:** Held-out sparsity by fold, MLP vs CNN (BP): X2.1 flare 1.59 vs 1.64 (1.97); quiet Sun 1.78 vs 1.61 (1.67); moderate 1.83 vs 1.83 (1.82); X1.6 flare 1.96 vs 2.31 (1.71). The ablation's in-sample edge (1.70 vs 1.89) came from scoring pixels of images the model trained on. Four folds is a small sample; scaling is the real test (Part 4).
+- **Status:** draft.
 
 ## Section 4: Scaling to the full dataset
 

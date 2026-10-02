@@ -6,8 +6,9 @@ import os
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from deck_lib import (CARD, DARK, DEEP, FULL_W, IMG, L, LAV, LIGHT, MUTED, PURPLE, SLIDES, TOP,
+from deck_lib import (CARD, DARK, DEEP, FULL_W, GREY, IMG, L, LAV, LIGHT, MUTED, PURPLE, SLIDES, TOP,
                       WHITE, Deck, box, caption, card, line, picture, table, text)
+from pptx.enum.shapes import MSO_SHAPE
 from pptx.enum.text import PP_ALIGN
 from pptx.util import Inches, Pt
 
@@ -156,9 +157,10 @@ text(s, L, Inches(2.2), FULL_W, Inches(2.6),
      ["SDO/AIA, 6 EUV channels, about two images a day in 2014–2015: 1,223 full-disk images.",
       "PSF-deconvolved (Hofmeister); a noise σ per pixel and channel from the AIA error model; "
       "DEMs on a 2048² grid.",
-      "Our model trains on AIA and σ only: ~30M pixels per epoch, 40 epochs.",
+      "Our model trains on AIA and σ only: each training image is cut into 64 blocks of 256×256 per image. "
+      "Each epoch draws 512 random pixels from each of the 58,688 blocks(917*64), for 40 epochs.",
       "Solver DEMs (BP, ElasticNet) for every image: labels for the supervised model, evaluation only for ours.",
-      "Test: ~700M pixel DEMs per solver, the clean solve plus 4 noise re-solves."],
+      "Test: ~700M pixel DEMs per solver, the clean solve plus 4 noise re-solves(only supervised)."],
      size=12.5, bullets=True, space_after=7)
 
 # ── Section 2: finding a trainable objective ────────────────────────────────
@@ -185,6 +187,86 @@ caption(s, L, Inches(4.15), FULL_W, "Two example pixels; BP in black. Legend MAE
 text(s, L, Inches(4.5), FULL_W, Inches(0.3),
      [[("So the network has to train on the solver's objective, not on fit.", {"bold": True, "color": PURPLE})]],
      size=12.5)
+
+
+# ── Section 3: architecture on small data ───────────────────────────────────
+
+# Slide 9: Part 3 divider.
+deck.divider(3, "Architecture on small data")
+
+# Slide 10: first network, then the patch CNN.
+s = deck.slide("A per-pixel MLP drew noisy DEMs; a patch CNN fixed it",
+               "All of Part 3 uses four images: two X-class flares, quiet Sun and moderate activity. "
+               "The first MLP is the same architecture as today's production model, four hidden layers "
+               "with SiLU and a softplus output, at width 256 with raw intensities as input. Its noise was "
+               "put down at the time to the overlapping basis amplifying small weight errors, and to the "
+               "problem's non-uniqueness. Its checkpoint was not kept, so there is no figure of it.")
+text(s, L, TOP, Inches(5.4), Inches(3.6),
+     [[("First try: ", {"bold": True, "color": PURPLE}),
+       ("the 6 intensities of one pixel → MLP (213k params) → 54 weights, trained on the BP loss "
+        "over ~221k pixels. The loss converged, but per-pixel curves oscillated.", {})],
+      [("Patch CNN: ", {"bold": True, "color": PURPLE}),
+       ("a 9×9 neighbourhood → CNN (~1.5M params) → 54 weights. Smooth, single-peaked curves at "
+        "BP's temperatures, sparsity close to BP's on held-out pixels.", {})],
+      "Trained on one image, then on all 4 jointly; zeroing the neighbourhood for 10% of batches "
+      "kept it usable on a single pixel."],
+     size=12.5, bullets=True, space_after=10)
+picture(s, os.path.join(IMG, "patch_cnn.png"), Inches(6.0), TOP - Inches(0.1), Inches(3.6), Inches(3.5))
+caption(s, Inches(6.0), Inches(4.45), Inches(3.6), "Patch CNN (dotted) vs BP, X2.1 flare image.")
+
+# Slide 11: ablation — a dot plot of sparsity against BP.
+s = deck.slide("Ablation: the noise was capacity, not missing context",
+               "The shuffled-patch CNN applies a fixed random permutation to the 81 patch pixels and nearly "
+               "matches the CNN, so the gain came from neighbouring values more than from geometry. The "
+               "flat-patch MLP was erratic across images: 1.61 on the X2.1 flare, 2.27 on quiet Sun. "
+               "Capacity and setup were never fully separated: the 213k MLP took raw intensities, and at "
+               "full scale a 176k MLP on log1p inputs is smooth.")
+lo, hi = 1.6, 2.0
+px0, px1 = Inches(3.0), Inches(9.2)
+X = lambda v: int(px0 + (px1 - px0) * (v - lo) / (hi - lo))
+rows = [("Patch CNN", 1.70), ("Shuffled-patch CNN", 1.88), ("Centre-pixel MLP", 1.89), ("Flat-patch MLP", 1.95)]
+y0, dy, dot = TOP + Inches(0.35), Inches(0.42), Inches(0.17)
+axis_y = y0 + dy * len(rows)
+for k, (name, v) in enumerate(rows):
+    cy = y0 + dy * k + dy // 2
+    text(s, L, cy - Inches(0.13), Inches(2.5), Inches(0.28), [name], size=12, bold=k == 0,
+         color=PURPLE if k == 0 else DARK)
+    line(s, px0, cy, px1, cy, color=LIGHT, width=0.75, arrow=False)
+    d = s.shapes.add_shape(MSO_SHAPE.OVAL, X(v) - dot // 2, cy - dot // 2, dot, dot)
+    d.fill.solid(); d.fill.fore_color.rgb = PURPLE; d.line.fill.background(); d.shadow.inherit = False
+    text(s, X(v) + Inches(0.13), cy - Inches(0.13), Inches(0.6), Inches(0.26), [f"{v:.2f}"], size=11,
+         color=PURPLE, bold=True)
+line(s, px0, axis_y, px1, axis_y, color=GREY, width=1, arrow=False)
+for t in (1.6, 1.7, 1.8, 1.9, 2.0):
+    text(s, X(t) - Inches(0.3), axis_y + Inches(0.04), Inches(0.6), Inches(0.25), [f"{t:.1f}"], size=10,
+         color=MUTED, align=PP_ALIGN.CENTER)
+line(s, X(1.79), y0 - Inches(0.1), X(1.79), axis_y, color=DARK, width=1.25, arrow=False, dashed=True)
+text(s, X(1.79) - Inches(0.5), y0 - Inches(0.38), Inches(1.0), Inches(0.26), ["BP 1.79"], size=11, bold=True,
+     align=PP_ALIGN.CENTER)
+caption(s, px0, axis_y + Inches(0.28), px1 - px0,
+        "Effective number of active basis weights, mean over 4 images (lower = sparser).")
+text(s, L, Inches(3.55), FULL_W, Inches(1.2),
+     ["Four variants at ~1.45M params, same BP loss, same 4 images.",
+      "A centre-pixel MLP this size was smooth too: the first MLP's noise was not about the neighbourhood.",
+      "The patch CNN was sparsest, but measured on held-out pixels of the training images."],
+     size=12.5, bullets=True, space_after=5)
+
+# Slide 12: leave one image out.
+s = deck.slide("On unseen days, the patch CNN's edge disappeared",
+               "Held-out sparsity by fold, MLP against CNN, with BP in brackets: X2.1 flare 1.59 vs 1.64 "
+               "(1.97); quiet Sun 1.78 vs 1.61 (1.67); moderate 1.83 vs 1.83 (1.82); X1.6 flare 1.96 vs "
+               "2.31 (1.71). The ablation's in-sample edge, 1.70 vs 1.89, came from scoring pixels of "
+               "images the model trained on. Four folds is a small sample; scaling is the real test.")
+text(s, L, TOP, Inches(5.4), Inches(3.7),
+     ["Leave one image out: train on 3, test on the 4th; patch CNN and centre-pixel MLP, 4 folds.",
+      "Held-out sparsity: CNN lower on 1 day, MLP on 2, tied on 1; the MLP fit AIA better on 3 of 4.",
+      "Little overfitting (held-out within ±0.2 of in-sample on 3 folds), except the X1.6 flare: peaks too "
+      "cool (logT ~6.1 vs BP ~6.4), with one other flare image in training.",
+      [("Carry the simpler centre-pixel MLP forward, and get more flare data → scaling.",
+        {"bold": True, "color": PURPLE})]],
+     size=12.5, bullets=True, space_after=9)
+picture(s, os.path.join(IMG, "loo_flare.png"), Inches(6.0), TOP - Inches(0.1), Inches(3.6), Inches(3.6))
+caption(s, Inches(6.0), Inches(4.5), Inches(3.6), "Held-out X1.6 flare image: CNN and MLP (dashed) vs BP.")
 
 out = deck.save(os.path.join(SLIDES, "DEM_deck_v2.pptx"))
 print("saved", out, "slides:", len(deck.prs.slides))

@@ -64,7 +64,7 @@ s = deck.slide("The model: a small MLP feeding a fixed forward model",
                "log-intensities in, four hidden layers of 232 with SiLU, 54 non-negative basis weights "
                "out; DEM = B times w over 18 bins, logT 5.5 to 7.2; predicted AIA = R times DEM. "
                "176k parameters, one forward pass per pixel.")
-heads = [("Observed AIA", "6 channels"), ("MLP", "176k params"), ("Basis weights", "54 ≥ 0, as in the solver"),
+heads = [("Observed AIA", "6 channels"), ("MLP", "176k params"), ("Basis weights", "54, same as solver"),
          ("DEM", "18 bins, logT 5.5–7.2"), ("Predicted AIA", "via response R")]
 bw, bh, by = Inches(1.5), Inches(0.95), Inches(1.3)
 bgap = (FULL_W - 5 * bw) // 4

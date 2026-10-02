@@ -1,7 +1,8 @@
 # Advisor deck: slide outline
 
-Working outline: one block per slide. Edit anything here; once a section is
-settled it gets built into the NYU template. Styling comes last.
+Master outline: one block per slide. This file and the deck
+(`slides/DEM_deck_v2.pptx`, built by `slides/build_deck_v2.py`) are kept in
+sync: change this file first, then the deck is rebuilt from it.
 
 Each slide: **Title** (a takeaway sentence), **On slide** (the actual text, kept
 short), **Visual** (what the image or diagram shows, if any), **Notes** (what to
@@ -9,7 +10,7 @@ say; goes into speaker notes, not onto the slide).
 
 ---
 
-## Section 1: Problem and approach
+## Section 1: Problem and approach (settled)
 
 ### Slide 1 · Title
 
@@ -23,7 +24,8 @@ say; goes into speaker notes, not onto the slide).
   - Supervised: a network learns to reproduce the solver's DEMs, so it needs them as labels.
   - Label-free (ours): a network learns to minimise the solver's objective; no labels.
   - We never train on the solver's DEMs; we use them only to evaluate.
-- **Visual:** the two training loops as two rows of boxes. Supervised: observed AIA, network, DEM, compared with the solver's DEM. Label-free: observed AIA, network, DEM, predicted AIA, compared with the observed AIA.
+- **Visual:** the two training loops as two rows of boxes, styled like the model diagram. Supervised: observed AIA, network, DEM, then a "loss" link to the solver's DEM. Label-free: observed AIA, network, DEM, predicted AIA, then a "loss" link to the observed AIA.
+- **Status:** settled.
 - **Notes:** The audience knows the inverse problem. This slide only says what is different about our training signal.
 
 ### Slide 3 · The model
@@ -35,6 +37,7 @@ say; goes into speaker notes, not onto the slide).
   - 176k parameters; one forward pass per pixel.
 - **Visual:** pipeline diagram: observed AIA, MLP, basis weights, DEM, predicted AIA, with the loss closing the loop.
 - **Notes:** Only the MLP is learned. The basis and the response are the same ones the solver uses, so the network searches the same space of DEMs the solver does.
+- **Status:** settled.
 
 ### Slide 4 · The loss
 
@@ -47,17 +50,19 @@ say; goes into speaker notes, not onto the slide).
   - In both, ŷ = R·B·w and w ≥ 0.
 - **Visual:** the BP band penalty against prediction error: flat at zero inside the noise band, quadratic outside.
 - **Notes:** There is no fit term inside the band. Any DEM within noise is equally good, and sparsity breaks the tie, exactly as in BP.
+- **Status:** settled.
 
 ### Slide 5 · Three routes, one test
 
 - **Title:** Three routes to a DEM, compared on the same test
-- **On slide:** table with three columns: solver, supervised network, label-free network.
-  - How it gets a DEM: optimises the objective per pixel / predicts the solver's DEM / minimises the solver's objective, learned over all pixels.
-  - Trained on solver DEMs: no training / yes / no.
-  - Cost per image: one optimisation per pixel / one forward pass / one forward pass.
-  - Below: 153 unseen test days, identical pixels. DEM metrics compare each network with the solver; AIA reconstruction compares all three with the observation.
-- **Visual:** the table itself.
-- **Notes:** Data: 1,223 Hofmeister-deconvolved timestamps, split by day into 917 train, 153 validation, 153 test. The networks see no test day in training.
+- **On slide (points, no table):**
+  - Solver (BP, ElasticNet): optimises its objective for each pixel. This is the reference.
+  - Supervised network: learns to predict the solver's DEMs, so it needs them as labels.
+  - Label-free network (ours): learns to minimise the solver's objective, with no labels.
+  - Same test for all: 153 days never seen in training, identical pixels. DEM metrics against the solver; AIA reconstruction against the observation.
+- **Visual:** none.
+- **Notes:** Data: 1,223 Hofmeister-deconvolved timestamps, split by day into 917 train, 153 validation, 153 test. Cost: the solver runs one optimisation per pixel; both networks need one forward pass.
+- **Status:** settled.
 
 ---
 

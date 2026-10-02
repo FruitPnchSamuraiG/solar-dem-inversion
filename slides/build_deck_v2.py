@@ -28,30 +28,30 @@ s = deck.slide("Same physics, different training signal",
 text(s, L, TOP, FULL_W, Inches(0.4),
      ["Solvers (BP, ElasticNet) run one optimisation per pixel: accurate, but slow at full resolution."],
      size=12.5)
-bw, bh, gap = Inches(1.22), Inches(0.66), Inches(0.3)
-xs = [Inches(1.95) + i * (bw + gap) for i in range(5)]
-rows = [(Inches(1.65), "Supervised", "learns the solver's DEMs",
-         [("Observed AIA", "6 channels"), ("Network", ""), ("DEM", "18 bins"), ("Solver's DEM", "label")], 3),
-        (Inches(2.85), "Label-free (ours)", "learns the solver's objective",
+bw, bh, gap, lgap = Inches(1.15), Inches(0.7), Inches(0.28), Inches(0.62)
+x0 = Inches(1.95)
+rows = [(Inches(1.6), "Supervised", "learns the solver's DEMs",
+         [("Observed AIA", "6 channels"), ("Network", ""), ("DEM", "18 bins")], ("Solver's DEM", "label")),
+        (Inches(2.8), "Label-free (ours)", "learns the solver's objective",
          [("Observed AIA", "6 channels"), ("Network", ""), ("DEM", "18 bins"),
-          ("Predicted AIA", "via response R"), ("Observed AIA", "")], 4)]
-for y, name, sub, boxes, compare_at in rows:
-    text(s, L, y + Inches(0.06), Inches(1.45), Inches(0.6),
+          ("Predicted AIA", "via response R")], ("Observed AIA", "6 channels"))]
+for y, name, sub, chain, target in rows:
+    text(s, L, y + Inches(0.08), Inches(1.45), Inches(0.6),
          [[(name, {"bold": True, "color": PURPLE, "size": 12.5})], [(sub, {"size": 10, "color": MUTED})]],
          space_after=2)
-    for i, (head, small) in enumerate(boxes):
-        is_target = i == compare_at
-        box(s, xs[i], y, bw, bh, head, small,
-            fill=LIGHT if is_target else (PURPLE if head == "Network" else CARD),
-            head_color=WHITE if head == "Network" else (DARK if is_target else PURPLE),
-            head_size=11, sub_size=9)
-    for i in range(compare_at - 1):
+    xs = [x0 + i * (bw + gap) for i in range(len(chain))]
+    for x, (head, small) in zip(xs, chain):
+        net = head == "Network"
+        box(s, x, y, bw, bh, head, small, fill=PURPLE if net else CARD,
+            head_color=WHITE if net else PURPLE, head_size=11, sub_size=9)
+    for i in range(len(chain) - 1):
         line(s, xs[i] + bw, y + bh // 2, xs[i + 1], y + bh // 2)
-    # the loss: a dashed link between the prediction and its target
-    line(s, xs[compare_at - 1] + bw, y + bh // 2, xs[compare_at], y + bh // 2, arrow=False, dashed=True)
-    text(s, xs[compare_at - 1] + bw - Inches(0.1), y + bh // 2 - Inches(0.27), gap + Inches(0.2),
-         Inches(0.2), ["loss"], size=9, color=PURPLE, bold=True, align=PP_ALIGN.CENTER, space_after=0)
-text(s, L, Inches(3.95), FULL_W, Inches(0.5),
+    tx = xs[-1] + bw + lgap
+    box(s, tx, y, bw, bh, target[0], target[1], fill=LIGHT, head_color=DARK, head_size=11, sub_size=9)
+    line(s, xs[-1] + bw, y + bh // 2, tx, y + bh // 2, arrow=False, dashed=True)
+    pill = box(s, xs[-1] + bw + Inches(0.08), y + bh // 2 - Inches(0.13), lgap - Inches(0.16), Inches(0.26),
+               "loss", fill=LAV, head_size=9)
+text(s, L, Inches(3.9), FULL_W, Inches(0.5),
      [[("We never train on the solver's DEMs; we use them only to evaluate.",
         {"bold": True, "color": PURPLE})]], size=12.5)
 
@@ -130,17 +130,17 @@ s = deck.slide("Three routes to a DEM, compared on the same test",
                "validation and 153 test. The networks never see a test day in training. DEM metrics "
                "compare each network with the solver's DEM: MSE, total-emission error and W1. AIA "
                "reconstruction compares all three with the observation: MAE and MSE.")
-table(s, L, TOP + Inches(0.05), FULL_W,
-      [["", "Solver (BP, ElasticNet)", "Supervised network", "Label-free network (ours)"],
-       ["How it gets a DEM", "Optimises the objective, per pixel", "Predicts the solver's DEM",
-        "Minimises the solver's objective, learned over all pixels"],
-       ["Trained on solver DEMs", "No training", "Yes", "No"],
-       ["Cost per image", "One optimisation per pixel", "One forward pass", "One forward pass"]],
-      col_w=[1.5, 2.1, 2.0, 2.4], size=11, row_h=Inches(0.55), text_cols=4, bold_first_col=True)
-text(s, L, Inches(3.5), FULL_W, Inches(1.2),
-     ["Test: 153 days never seen in training, identical pixels for every method.",
-      "DEM metrics compare each network with the solver; AIA reconstruction compares all three with the observation."],
-     size=12.5, bullets=True)
+text(s, L, TOP + Inches(0.1), FULL_W, Inches(3.3),
+     [[("Solver (BP, ElasticNet): ", {"bold": True, "color": PURPLE}),
+       ("optimises its objective for each pixel. This is the reference.", {})],
+      [("Supervised network: ", {"bold": True, "color": PURPLE}),
+       ("learns to predict the solver's DEMs, so it needs them as labels.", {})],
+      [("Label-free network (ours): ", {"bold": True, "color": PURPLE}),
+       ("learns to minimise the solver's objective, with no labels.", {})],
+      [("Same test for all: ", {"bold": True, "color": PURPLE}),
+       ("153 days never seen in training, identical pixels. DEM metrics against the solver; "
+        "AIA reconstruction against the observation.", {})]],
+     size=14, bullets=True, space_after=14)
 
 out = deck.save(os.path.join(SLIDES, "DEM_deck_v2.pptx"))
 print("saved", out, "slides:", len(deck.prs.slides))

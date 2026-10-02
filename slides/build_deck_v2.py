@@ -57,12 +57,14 @@ text(s, L, Inches(3.9), FULL_W, Inches(0.5),
 
 # Slide 3: the model — pipeline diagram.
 s = deck.slide("The model: a small MLP feeding a fixed forward model",
-               "Only the MLP is learned. The basis B and the response R are the same ones the solver "
-               "uses, so the network searches the same space of DEMs the solver does. Per pixel: six "
+               "The solvers never solve for the 18 bins directly: both solve for weights on a fixed basis, "
+               "a spike and two Gaussians at each bin, and report DEM = B times x. We predict the same "
+               "weights, so the network searches the same space of DEMs the solver does, and BP's "
+               "sparsity criterion means the same thing for both. Only the MLP is learned. Per pixel: six "
                "log-intensities in, four hidden layers of 232 with SiLU, 54 non-negative basis weights "
                "out; DEM = B times w over 18 bins, logT 5.5 to 7.2; predicted AIA = R times DEM. "
                "176k parameters, one forward pass per pixel.")
-heads = [("Observed AIA", "6 channels"), ("MLP", "176k params"), ("Basis weights", "54, all ≥ 0"),
+heads = [("Observed AIA", "6 channels"), ("MLP", "176k params"), ("Basis weights", "54 ≥ 0, as in the solver"),
          ("DEM", "18 bins, logT 5.5–7.2"), ("Predicted AIA", "via response R")]
 bw, bh, by = Inches(1.5), Inches(0.95), Inches(1.3)
 bgap = (FULL_W - 5 * bw) // 4
@@ -82,11 +84,14 @@ r.font.size = Pt(12); r.font.bold = True; r.font.color.rgb = PURPLE
 line(s, xs[4] + bw // 2, by + bh, xs[4] + bw // 2, ly)
 line(s, xs[0] + bw // 2, by + bh, xs[0] + bw // 2, ly + Inches(0.3), arrow=False)
 line(s, xs[0] + bw // 2, ly + Inches(0.3), xs[1], ly + Inches(0.3))
-text(s, L, Inches(3.55), FULL_W, Inches(1.2),
+text(s, L, Inches(3.45), FULL_W, Inches(1.4),
      ["6 log-intensities in; 4 hidden layers of 232, SiLU; 54 non-negative basis weights out.",
-      "DEM = B·w and predicted AIA = R·DEM, with B and R fixed: only the MLP is learned.",
+      [("Why weights, not bins: the solvers work this way. ", {"bold": True, "color": PURPLE}),
+       ("BP and ElasticNet solve for the same 54 weights (at each of 18 bins, a spike and Gaussians "
+        "0.1 and 0.2 dex wide), and their L1 term acts on those weights.", {})],
+      "DEM = B·w over 18 bins; predicted AIA = R·DEM. B and R are fixed; only the MLP is learned.",
       "176k parameters; one forward pass per pixel."],
-     size=12.5, bullets=True)
+     size=12, bullets=True, space_after=4)
 
 # Slide 4: the loss.
 def formula(*pieces):

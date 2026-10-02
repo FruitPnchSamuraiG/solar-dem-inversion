@@ -33,10 +33,11 @@ say; goes into speaker notes, not onto the slide).
 - **Title:** The model: a small MLP feeding a fixed forward model
 - **On slide:**
   - 6 log-intensities in; 4 hidden layers of 232, SiLU; 54 non-negative basis weights out.
-  - DEM = B·w over 18 bins, logT 5.5 to 7.2; predicted AIA = R·DEM. B and R are fixed.
+  - Why weights, not bins: the solvers work this way. BP and ElasticNet solve for the same 54 weights (at each of 18 bins, a spike and Gaussians 0.1 and 0.2 dex wide), and their L1 term acts on those weights.
+  - DEM = B·w over 18 bins, logT 5.5 to 7.2; predicted AIA = R·DEM. B and R are fixed; only the MLP is learned.
   - 176k parameters; one forward pass per pixel.
-- **Visual:** pipeline diagram: observed AIA, MLP, basis weights, DEM, predicted AIA, with the loss closing the loop.
-- **Notes:** Only the MLP is learned. The basis and the response are the same ones the solver uses, so the network searches the same space of DEMs the solver does.
+- **Visual:** pipeline diagram: observed AIA, MLP, basis weights ("54 ≥ 0, as in the solver"), DEM, predicted AIA, with the loss closing the loop.
+- **Notes:** Not everyone knows the solvers' internals: they never solve for the 18 bins directly. Both solve for weights on a fixed basis B (`fullBP.py` `getBasis`, widths 0, 0.1, 0.2), with D = R·B, and report DEM = B·x. Predicting the same weights means the network searches the same space of DEMs the solver does, and BP's sparsity criterion means the same thing for both.
 - **Status:** settled.
 
 ### Slide 4 · The loss

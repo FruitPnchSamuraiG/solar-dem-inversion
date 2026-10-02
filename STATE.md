@@ -1,6 +1,6 @@
 # DEM project state
 
-Last updated: 2026-10-02 (Claude: meeting outcome recorded; presentation is the priority)
+Last updated: 2026-10-02 (Claude: sqrt+FF run negative; deck being rebuilt from slides/deck_outline.md)
 
 ## 2026-10-02 meeting outcome
 
@@ -36,6 +36,36 @@ Last updated: 2026-10-02 (Claude: meeting outcome recorded; presentation is the 
   down from 0.80, no loss on the faint half. Watch: the appended raw sqrt channel
   reaches ~100 at flare cores; keep warmup and the clamped softplus (July
   collapse came from unscaled inputs).
+
+## 2026-10-02 result: sqrt + Fourier-feature input did NOT fix flare cores
+
+Run `19049208` (h232 BP, `--input_transform sqrt --fourier_freqs 12`, 40 epochs,
+completed in 1:48) scored by `19049209`/`19049210`; results and
+`comparison.txt` in `results/plots/14_input_encoding_20261002/`.
+
+| BP track | production (log1p) | sqrt + FF12 | supervised |
+|---|---:|---:|---:|
+| DEM MSE, all pixels | 4.19 | 5.07 | 0.906 |
+| Median pixel error | 0.0257 | 0.0257 | 0.112 |
+| Relative error, 3.2-10x | 0.168 | 0.134 | 0.028 |
+| Relative error, 32x+ | 0.80 | 0.98 | 0.17 |
+| Flare-core emission / solver | 0.41 | 0.19 | 0.92 |
+| Flare-core 94 A fit | 0.24 | 0.09 | 0.85 |
+| Flare-core 131 A fit | 0.76 | 0.20 | 0.90 |
+| Flare-core multi-peaked % | 83 | 5 | 13 |
+| AIA MAE / MSE | 4.32 / 82.6 | 4.40 / 94.9 | 2.95 / 156.7 |
+
+- Flare cores got **worse**: less emission, hot channels fit even more poorly;
+  cool channels (171/193/211 A) still fit to ~2%. Fewer spurious humps (5%),
+  but the curve is now flat and low.
+- Small gains elsewhere: 3.2-10x relative error 0.168 -> 0.134; validation
+  sparsity 1.90 (BP 1.79) vs production 2.08. Validation loss slightly worse
+  (2.223 vs 2.156). Medians unchanged.
+- Reading: the input representation is not what limits flare cores. Untested
+  hypothesis for the drop: Fourier features are periodic, so the rare, very large
+  sqrt values of flare cores alias onto encodings of ordinary pixels, making
+  extrapolation harder. Remaining candidates are training-side: rarity of flare
+  cores, gradient clipping, loss weighting. Production model stays the log1p h232.
 
 ## Current status
 

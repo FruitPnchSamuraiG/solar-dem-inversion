@@ -1,0 +1,22 @@
+BP track                            production   sqrt+FF12  supervised
+----------------------------------------------------------------------
+DEM MSE, all pixels (website)            4.191       5.072       0.906
+DEM MSE, Bright                           40.9        49.6       8.657
+DEM MSE, Quiet                         0.05825     0.05865     0.03346
+Median pixel error, all                 0.0257      0.0257      0.1122
+Median pixel error, Bright               2.818       3.236       1.778
+Relative error, 1-1.8x                  0.1681      0.1632     0.07437
+Relative error, 3.2-10x                 0.1676      0.1344     0.02792
+Relative error, 10-32x                  0.4596      0.5114     0.02491
+Relative error, 32x+                    0.7956      0.9845      0.1732
+Flare-core emission / solver            0.4109      0.1862      0.9228
+Flare-core peak / solver                0.2348      0.1391      0.9128
+Flare-core multi-peaked %                83.05       5.398       12.83
+Relative error, 0.03-0.1x (faint)       0.3908      0.4032      0.4948
+Flare-core 94 A fit (recon/obs)         0.2442     0.08911      0.8543
+Flare-core 131 A fit (recon/obs)        0.7631      0.1962      0.8997
+Flare-core 335 A fit (recon/obs)        0.6615      0.5673       0.961
+AIA MAE, all pixels                      4.315       4.398       2.946
+AIA MSE, all pixels                      82.56       94.87       156.7
+
+solver flare-core 94 A fit: 0.9205

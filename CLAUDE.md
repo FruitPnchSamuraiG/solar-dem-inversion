@@ -91,6 +91,16 @@ From the paper's "Future Work" section:
 
 ## Progress Log (most recent first)
 
+### 2026-10-02 — Supervised-style input (sqrt + Fourier features) did not fix flare cores
+
+Meeting suggestion tested (run `19049208`, results in
+`results/plots/14_input_encoding_20261002/`): the h232 BP model with the
+supervised model's input path made flare cores worse (94 A fit 0.24 -> 0.09,
+emission 0.41 -> 0.19, overall DEM MSE 4.19 -> 5.07) while medians were unchanged
+and 3.2-10x pixels improved slightly. The input representation is not the
+limit; production stays log1p h232. Advisor deck being rebuilt section by
+section from `slides/deck_outline.md` (`slides/build_deck_v2.py`).
+
 ### 2026-09-28 — Bright-failure diagnostic: flare cores dominate error; label-free gap grows with brightness
 
 `experiments/diagnose_bright_failures.py` over the full shared test set (Torch

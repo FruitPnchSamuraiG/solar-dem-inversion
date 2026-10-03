@@ -21,6 +21,7 @@
 # Warmups match each track's h232 resample run. h680 is trained without
 # --hidden (680 is the default), so it and the CNN carry the plain _resample
 # suffix that eval_scaled.py looks for. Submit with submit_sweep_resample.sh.
+# job_sweep_resample_cpu.sbatch runs single tasks (TASK=i) on CPU nodes.
 set -euo pipefail
 cd "${SLURM_SUBMIT_DIR:-$HOME/projects/dem}"
 source env.sh
@@ -28,7 +29,7 @@ mkdir -p logs/sweep output/experiments/resample
 echo "### git HEAD: $(git rev-parse --short HEAD)"
 
 WIDTHS=(680 480 336 160 108 72 48)
-IDX=$SLURM_ARRAY_TASK_ID
+IDX=${SLURM_ARRAY_TASK_ID:-${TASK:?set TASK when not run as an array}}
 BP=$SCRATCH/dem/data/lp_AIA_hofdeconv_full_DS
 EN=$SCRATCH/dem/data/elasticnet_AIA_hofdeconv_full_DS
 ENET_ARGS=(--loss enet --enet_C -1 --enet_alpha 0.001 --enet_lam 0.5)

@@ -43,7 +43,14 @@ ablation patch CNN and BP on 400 held-out pixels per image
 mean 1.00-1.03 local maxima, 0% with 3+, same as the CNN (BP 1.12-1.19). It is
 less accurate than the CNN (sharper peak, hot side cut off near logT 6.5), but
 not oscillating. The June note's "visibly noisy" claim has no surviving figure
-and does not reproduce; slide 10's framing needs revising.
+and does not reproduce; slide 10's framing was revised.
+
+Accuracy against BP on the same 400 held-out pixels per image (job `19095906`,
+mean over the 4 images): DEM MAE first MLP 0.078, ablation centre-pixel MLP
+(1.43M) 0.042, patch CNN 0.047; W1 0.055 / 0.043 / 0.048 dex. The centre-pixel
+MLP is closest on 3 of 4 images (the CNN on the X1.6 flare), so the first MLP's
+gap was capacity (or input scaling), not missing neighbours, and the CNN's
+lower sparsity did not mean DEMs closer to BP. Slides 10-11 now say this.
 
 ## 2026-10-02: every scaled run trained on one fixed 30M-pixel sample
 

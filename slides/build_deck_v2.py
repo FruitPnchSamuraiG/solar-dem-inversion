@@ -203,36 +203,39 @@ text(s, L, Inches(4.5), FULL_W, Inches(0.3),
 deck.divider(3, "Architecture on small data")
 
 # Slide 10: first network, then the patch CNN.
-s = deck.slide("A per-pixel MLP drew noisy DEMs; a patch CNN fixed it",
-               "All of Part 3 uses four images: two X-class flares, quiet Sun and moderate activity. "
-               "The first MLP is the same architecture as today's production model, four hidden layers "
-               "with SiLU and a softplus output, at width 256 with raw intensities as input. Its noise was "
-               "put down at the time to the overlapping basis amplifying small weight errors, and to the "
-               "problem's non-uniqueness. Its checkpoint was not kept, so there is no figure of it.")
+s = deck.slide("A per-pixel MLP missed BP's shape; a patch CNN tracked it",
+               "The June write-up called the first MLP's curves noisy and oscillating, but no figure of them "
+               "survives and its checkpoint was not kept. Retrained with the unchanged June code, its curves are "
+               "smooth: none has three or more peaks. The real difference is accuracy, on 400 held-out pixels "
+               "per image: mean DEM error against BP 0.078 against the CNN's 0.047, W1 0.055 against 0.048 dex. "
+               "It had even seen these pixels in training. It is the same architecture as today's production "
+               "model, at width 256 with raw intensities.")
 text(s, L, TOP - Inches(0.05), FULL_W, Inches(0.3),
-     ["4 images: X2.1 flare (2011-09-06), quiet Sun (2012-06-03), moderate activity (2013-11-13), "
-      "X1.6 flare (2014-09-10); small crops near disk centre."], size=10.5, color=MUTED)
+     ["4 images: X2.1 flare (2011), quiet Sun (2012), moderate activity (2013), X1.6 flare (2014); "
+      "small crops near disk centre."], size=10.5, color=MUTED)
 text(s, L, TOP + Inches(0.4), Inches(5.4), Inches(3.3),
      [[("First try: ", {"bold": True, "color": PURPLE}),
-       ("the 6 intensities of one pixel → MLP (213k params) → 54 weights, trained on the BP loss "
-        "over ~221k pixels. The loss converged, but per-pixel curves oscillated.", {})],
+       ("the 6 intensities of one pixel → MLP (213k params) → 54 weights, trained on the BP loss over "
+        "~221k pixels. Smooth, single-peaked curves, but further from BP: DEM error 0.078 vs the CNN's 0.047.", {})],
       [("Patch CNN: ", {"bold": True, "color": PURPLE}),
-       ("a 9×9 neighbourhood → CNN (~1.5M params) → 54 weights. Smooth, single-peaked curves at "
-        "BP's temperatures, sparsity close to BP's on held-out pixels.", {})],
+       ("a 9×9 neighbourhood → CNN (~1.5M params) → 54 weights. Tracked BP's shape, with sparsity close "
+        "to BP's on held-out pixels.", {})],
       "Trained on one image, then on all 4 jointly; zeroing the neighbourhood for 10% of batches "
       "kept it usable on a single pixel."],
      size=12.5, bullets=True, space_after=10)
-picture(s, os.path.join(IMG, "patch_cnn.png"), Inches(6.0), TOP - Inches(0.1), Inches(3.6), Inches(3.5))
-caption(s, Inches(6.0), Inches(4.45), Inches(3.6), "Patch CNN (dotted) vs BP, X2.1 flare image.")
+picture(s, os.path.join(IMG, "first_mlp_vs_cnn.png"), Inches(6.0), TOP + Inches(0.3), Inches(3.6), Inches(3.25))
+caption(s, Inches(6.0), Inches(4.6), Inches(3.6), "Held-out pixels, X2.1 flare image.")
 
 # Slide 11: ablation — a dot plot of sparsity against BP.
-s = deck.slide("Ablation: the noise was capacity, not missing context",
+s = deck.slide("Ablation: the gap was capacity, not missing context",
                "The shuffled-patch CNN applies a fixed random permutation to the 81 patch pixels. It was "
                "less sparse than the CNN on all 4 images, 1.88 against 1.70 on average, level with the "
                "centre-pixel MLP, so the spatial arrangement of the neighbours mattered. The "
                "flat-patch MLP was erratic across images: 1.61 on the X2.1 flare, 2.27 on quiet Sun. "
-               "Capacity and setup were never fully separated: the 213k MLP took raw intensities, and at "
-               "full scale a 176k MLP on log1p inputs is smooth.")
+               "The centre-pixel MLP was closest to BP on 3 of 4 images; the CNN on the X1.6 flare. So the "
+               "CNN's lower sparsity did not mean DEMs closer to BP. Capacity and input scaling were not "
+               "separated: the 213k MLP took raw intensities, and at full scale a 176k MLP on log1p inputs "
+               "does well.")
 lo, hi = 1.6, 2.0
 px0, px1 = Inches(3.0), Inches(9.2)
 X = lambda v: int(px0 + (px1 - px0) * (v - lo) / (hi - lo))
@@ -259,7 +262,8 @@ caption(s, px0, axis_y + Inches(0.28), px1 - px0,
         "Effective number of active basis weights, mean over 4 images (lower = sparser).")
 text(s, L, Inches(3.55), FULL_W, Inches(1.2),
      ["Four variants at ~1.45M params, same BP loss, same 4 images.",
-      "A centre-pixel MLP this size was smooth too: the first MLP's noise was not about the neighbourhood.",
+      "Size, not neighbours, closed the gap: DEM error vs BP 0.042 for the 1.43M centre-pixel MLP, "
+      "0.047 for the patch CNN, 0.078 for the first MLP.",
       "The patch CNN was sparsest, but measured on held-out pixels of the training images."],
      size=12.5, bullets=True, space_after=5)
 

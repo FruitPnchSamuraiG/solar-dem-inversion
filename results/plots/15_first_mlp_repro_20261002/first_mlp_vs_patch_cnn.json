@@ -9,12 +9,26 @@
    "First MLP (213k)": {
     "n": 400,
     "mean_maxima": 1.0,
-    "pct_3plus": 0.0
+    "pct_3plus": 0.0,
+    "mae_dem": 0.08338915397192644,
+    "w1_dex": 0.058376227724199,
+    "em_ratio_median": 0.8864551699929679
+   },
+   "Centre-pixel MLP (1.43M)": {
+    "n": 400,
+    "mean_maxima": 1.0,
+    "pct_3plus": 0.0,
+    "mae_dem": 0.03319559368460982,
+    "w1_dex": 0.034183451219058386,
+    "em_ratio_median": 0.9840668107049981
    },
    "Patch CNN (1.5M)": {
     "n": 400,
     "mean_maxima": 1.0,
-    "pct_3plus": 0.0
+    "pct_3plus": 0.0,
+    "mae_dem": 0.04482295714522616,
+    "w1_dex": 0.04411730597958306,
+    "em_ratio_median": 1.0067684606502787
    }
   },
   "20120603_0000": {
@@ -26,12 +40,26 @@
    "First MLP (213k)": {
     "n": 400,
     "mean_maxima": 1.03,
-    "pct_3plus": 0.0
+    "pct_3plus": 0.0,
+    "mae_dem": 0.04110770509562153,
+    "w1_dex": 0.04944072883287891,
+    "em_ratio_median": 1.048705282354024
+   },
+   "Centre-pixel MLP (1.43M)": {
+    "n": 400,
+    "mean_maxima": 1.0,
+    "pct_3plus": 0.0,
+    "mae_dem": 0.01999484649788305,
+    "w1_dex": 0.030606726454051766,
+    "em_ratio_median": 1.0037103198023343
    },
    "Patch CNN (1.5M)": {
     "n": 400,
     "mean_maxima": 1.0,
-    "pct_3plus": 0.0
+    "pct_3plus": 0.0,
+    "mae_dem": 0.029626530443633642,
+    "w1_dex": 0.04263583791038586,
+    "em_ratio_median": 1.0515568908191772
    }
   },
   "20131113_0908": {
@@ -43,12 +71,26 @@
    "First MLP (213k)": {
     "n": 400,
     "mean_maxima": 1.0,
-    "pct_3plus": 0.0
+    "pct_3plus": 0.0,
+    "mae_dem": 0.11419175962519311,
+    "w1_dex": 0.04960506697537468,
+    "em_ratio_median": 1.0503122373602836
+   },
+   "Centre-pixel MLP (1.43M)": {
+    "n": 400,
+    "mean_maxima": 1.0125,
+    "pct_3plus": 0.0,
+    "mae_dem": 0.04073926768975403,
+    "w1_dex": 0.03214373685046153,
+    "em_ratio_median": 0.9981121985414296
    },
    "Patch CNN (1.5M)": {
     "n": 400,
     "mean_maxima": 1.0,
-    "pct_3plus": 0.0
+    "pct_3plus": 0.0,
+    "mae_dem": 0.05507783865864617,
+    "w1_dex": 0.039745365376291815,
+    "em_ratio_median": 1.0222162535937498
    }
   },
   "20140910_1731": {
@@ -60,12 +102,26 @@
    "First MLP (213k)": {
     "n": 400,
     "mean_maxima": 1.0,
-    "pct_3plus": 0.0
+    "pct_3plus": 0.0,
+    "mae_dem": 0.07254424595455883,
+    "w1_dex": 0.06368374663887633,
+    "em_ratio_median": 1.0933182488903253
+   },
+   "Centre-pixel MLP (1.43M)": {
+    "n": 400,
+    "mean_maxima": 1.01,
+    "pct_3plus": 0.0,
+    "mae_dem": 0.07532931673196006,
+    "w1_dex": 0.07397534726007059,
+    "em_ratio_median": 1.113335124095368
    },
    "Patch CNN (1.5M)": {
     "n": 400,
     "mean_maxima": 1.0,
-    "pct_3plus": 0.0
+    "pct_3plus": 0.0,
+    "mae_dem": 0.05823026410056963,
+    "w1_dex": 0.06472993626381726,
+    "em_ratio_median": 1.0611561240135192
    }
   }
  },
@@ -79,6 +135,7 @@
   "crop": "1800,1800,128,128",
   "mlp": "output/experiments/barrier_nn_model.pt",
   "cnn": "output/experiments/ablation_cnn_barrier.pt",
+  "big_mlp": "output/experiments/ablation_mlp6_barrier.pt",
   "hidden": 256,
   "tolfac": 1.4,
   "val_frac": 0.2,

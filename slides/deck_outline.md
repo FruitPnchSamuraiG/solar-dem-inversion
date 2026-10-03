@@ -106,25 +106,25 @@ The crops start at AIA pixel (1800, 1800), so they need not contain the flare co
 
 ### Slide 10 · First network, then the patch CNN
 
-- **Title:** A per-pixel MLP drew noisy DEMs; a patch CNN fixed it
+- **Title:** A per-pixel MLP missed BP's shape; a patch CNN tracked it
 - **On slide:**
-  - Top line (muted): 4 images: X2.1 flare (2011-09-06), quiet Sun (2012-06-03), moderate activity (2013-11-13), X1.6 flare (2014-09-10); small crops near disk centre.
-  - First try: the 6 intensities of one pixel → MLP (213k params) → 54 weights, trained on the BP loss over ~221k pixels. The loss converged, but per-pixel curves oscillated.
-  - Patch CNN: a 9×9 neighbourhood → CNN (~1.5M params) → 54 weights. Smooth, single-peaked curves at BP's temperatures, sparsity close to BP's on held-out pixels.
+  - Top line (muted): 4 images: X2.1 flare (2011), quiet Sun (2012), moderate activity (2013), X1.6 flare (2014); small crops near disk centre.
+  - First try: the 6 intensities of one pixel → MLP (213k params) → 54 weights, trained on the BP loss over ~221k pixels. Smooth, single-peaked curves, but further from BP: DEM error 0.078 vs the CNN's 0.047.
+  - Patch CNN: a 9×9 neighbourhood → CNN (~1.5M params) → 54 weights. Tracked BP's shape, with sparsity close to BP's on held-out pixels.
   - Trained on one image, then on all 4 jointly; zeroing the neighbourhood for 10% of batches kept it usable on a single pixel.
-- **Visual:** `slides/img/patch_cnn.png`: patch CNN (dotted) against BP, three pixels of the X2.1 flare image. No figure of the noisy MLP exists: its checkpoint was not kept (the v1 deck's "noisy_nn.png" actually shows the direct-optimisation baselines, not the network).
-- **Notes:** The first MLP is the same architecture as today's production model (4 hidden layers, SiLU, softplus), at width 256 with raw intensities as input. Its noise was attributed at the time to the overlapping basis amplifying small weight errors and to the problem's non-uniqueness.
+- **Visual:** `slides/img/first_mlp_vs_cnn.png` (from `results/plots/15_first_mlp_repro_20261002/`): BP, first MLP and patch CNN on three held-out pixels of the X2.1 flare image.
+- **Notes:** The June write-up called the first MLP's curves noisy and oscillating, but no figure of them survives and its checkpoint was not kept. Retrained with the unchanged June code (job 19077429), its curves are smooth: 0% have 3+ peaks (BP 0.25–0.5%). The real difference is accuracy, scored on 400 held-out pixels per image (job 19095906): mean DEM error vs BP 0.078 against the CNN's 0.047, W1 0.055 against 0.048 dex. The first MLP trained on a 256² crop with no held-out split, so it had seen these pixels and was still further from BP. It is the same architecture as today's production model, at width 256 with raw intensities.
 - **Status:** draft.
 
 ### Slide 11 · Ablation
 
-- **Title:** Ablation: the noise was capacity, not missing context
+- **Title:** Ablation: the gap was capacity, not missing context
 - **On slide:**
   - Four variants at ~1.45M params, same BP loss, same 4 images.
-  - A centre-pixel MLP this size was smooth too: the first MLP's noise was not about the neighbourhood.
+  - Size, not neighbours, closed the gap: DEM error vs BP 0.042 for the 1.43M centre-pixel MLP, 0.047 for the patch CNN, 0.078 for the first MLP.
   - The patch CNN was sparsest, but measured on held-out pixels of the training images.
 - **Visual:** dot plot of mean sparsity (effective number of active basis weights, lower = sparser) with BP's 1.79 as a dashed line: patch CNN 1.70, shuffled-patch CNN 1.88, centre-pixel MLP 1.89, flat-patch MLP 1.95.
-- **Notes:** The shuffled-patch CNN (a fixed random permutation of the 81 patch pixels) was less sparse than the CNN on all 4 images (1.88 vs 1.70 on average, level with the centre-pixel MLP), so the spatial arrangement of the neighbours mattered, not just their values. The flat-patch MLP was erratic across images (1.61 on the X2.1 flare, 2.27 on quiet Sun). Capacity and setup were never fully separated: the 213k MLP took raw intensities; at full scale a 176k MLP on log1p inputs is smooth.
+- **Notes:** The shuffled-patch CNN (a fixed random permutation of the 81 patch pixels) was less sparse than the CNN on all 4 images (1.88 vs 1.70 on average, level with the centre-pixel MLP), so the spatial arrangement of the neighbours mattered, not just their values. The flat-patch MLP was erratic across images (1.61 on the X2.1 flare, 2.27 on quiet Sun). The centre-pixel MLP was closest to BP on 3 of 4 images (DEM error 0.033/0.020/0.041/0.075 vs CNN 0.045/0.030/0.055/0.058); the CNN was closest on the X1.6 flare. So the CNN's lower sparsity did not mean DEMs closer to BP. Capacity and input scaling were not separated: the 213k MLP took raw intensities, and at full scale a 176k MLP on log1p inputs does well.
 - **Status:** draft.
 
 ### Slide 12 · Leave one day out

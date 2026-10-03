@@ -6,7 +6,16 @@ results/plots/13_bright_diagnostic_20260928/ and writes three PNGs beside them.
 No server access needed.
 
     uv run python experiments/plot_bright_failures.py
+
+For another label-free run, point --lf_dir/--tag at its outputs (supervised
+always comes from the 13_ folder); --plain drops the titles and annotations,
+which quote the original run's numbers:
+
+    uv run python experiments/plot_bright_failures.py --plain \
+        --lf_dir results/plots/16_resample_20261002 --tag resample \
+        --out_dir results/plots/16_resample_20261002
 """
+import argparse
 import json
 import os
 
@@ -17,6 +26,7 @@ import numpy as np
 
 DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
                    "results/plots/13_bright_diagnostic_20260928")
+LF_DIR, SUFFIX, OUT_DIR, PLAIN = DIR, "", DIR, False   # overridden by the CLI
 LF, SUP, PIX = "#2a78d6", "#eb6834", "#a3a19a"      # validated pair + neutral
 INK, INK2, GRID, SURFACE = "#0b0b0b", "#52514e", "#e6e5e0", "#fcfcfb"
 
@@ -30,9 +40,17 @@ plt.rcParams.update({
 
 
 def load(track, supervised=False):
-    name = f"{track}_bright_failure{'_supervised' if supervised else ''}.json"
-    with open(os.path.join(DIR, name)) as f:
+    if supervised:
+        path = os.path.join(DIR, f"{track}_bright_failure_supervised.json")
+    else:
+        path = os.path.join(LF_DIR, f"{track}_bright_failure{SUFFIX}.json")
+    with open(path) as f:
         return json.load(f)
+
+
+def headline(fig, text, **kw):
+    if not PLAIN:
+        fig.suptitle(text, x=0.01, ha="left", fontweight="bold", **kw)
 
 
 def merged(rows, keys):
@@ -74,12 +92,11 @@ def fig_error_share():
     ax.set_yticks(y)
     ax.set_yticklabels([b for b, _ in BUCKETS])
     ax.set_xlabel("Percent (log scale)")
-    fig.suptitle("BP track: one pixel in 10,000 holds about 90% of the DEM error",
-                 x=0.01, ha="left", fontweight="bold")
+    headline(fig, "BP track: one pixel in 10,000 holds about 90% of the DEM error")
     fig.legend(*ax.get_legend_handles_labels(), loc="upper left", ncol=3, fontsize=9,
                bbox_to_anchor=(0.01, 0.93))
     fig.tight_layout(rect=(0, 0, 1, 0.9))
-    out = os.path.join(DIR, "fig1_error_share_by_brightness.png")
+    out = os.path.join(OUT_DIR, "fig1_error_share_by_brightness.png")
     fig.savefig(out, dpi=160)
     plt.close(fig)
     return out
@@ -109,10 +126,9 @@ def fig_relative_error():
         ax.set_title(title, loc="left")
     axes[0].set_ylabel("Relative DEM error\n(error size / DEM size, squared)")
     axes[0].legend(loc="lower left", fontsize=9)
-    fig.suptitle("Supervised improves as pixels brighten; label-free turns worse above ~3x",
-                 x=0.01, ha="left", fontweight="bold")
+    headline(fig, "Supervised improves as pixels brighten; label-free turns worse above ~3x")
     fig.tight_layout()
-    out = os.path.join(DIR, "fig2_relative_error_by_brightness.png")
+    out = os.path.join(OUT_DIR, "fig2_relative_error_by_brightness.png")
     fig.savefig(out, dpi=160)
     plt.close(fig)
     return out
@@ -140,21 +156,21 @@ def fig_peak_calibration():
         ax.text(6e-4, 0.82, "perfect match", color=INK2, fontsize=8.5, va="top")
         ax.set_xscale("log")
         ax.set_yscale("log")
-        ax.set_ylim(0.07, 800)
+        ax.set_ylim(0.03 if PLAIN else 0.07, 800)
         ax.set_xlabel("Solver DEM peak height (log scale)")
         ax.set_title(title, loc="left")
     axes[0].set_ylabel("Predicted peak / solver peak\n(log scale)")
     axes[0].legend(loc="upper right", fontsize=9)
-    axes[0].annotate("supervised puts plasma\nwhere the solver has almost none",
-                     xy=(2e-3, 20), xytext=(1.2e-2, 60), fontsize=8.5, color=INK2,
-                     arrowprops=dict(arrowstyle="-", color=INK2, lw=0.8))
-    axes[0].annotate("label-free hits a ceiling\nabove a peak of ~100",
-                     xy=(560, 0.21), xytext=(0.6, 0.09), fontsize=8.5, color=INK2,
-                     arrowprops=dict(arrowstyle="-", color=INK2, lw=0.8))
-    fig.suptitle("Label-free hits a ceiling on the tallest DEMs; on BP, supervised over-predicts the faintest",
-                 x=0.01, ha="left", fontweight="bold")
+    if not PLAIN:
+        axes[0].annotate("supervised puts plasma\nwhere the solver has almost none",
+                         xy=(2e-3, 20), xytext=(1.2e-2, 60), fontsize=8.5, color=INK2,
+                         arrowprops=dict(arrowstyle="-", color=INK2, lw=0.8))
+        axes[0].annotate("label-free hits a ceiling\nabove a peak of ~100",
+                         xy=(560, 0.21), xytext=(0.6, 0.09), fontsize=8.5, color=INK2,
+                         arrowprops=dict(arrowstyle="-", color=INK2, lw=0.8))
+    headline(fig, "Label-free hits a ceiling on the tallest DEMs; on BP, supervised over-predicts the faintest")
     fig.tight_layout()
-    out = os.path.join(DIR, "fig3_peak_height_calibration.png")
+    out = os.path.join(OUT_DIR, "fig3_peak_height_calibration.png")
     fig.savefig(out, dpi=160)
     plt.close(fig)
     return out
@@ -165,7 +181,7 @@ TRACK_NAME = {"bp": "BP", "enet": "ENet"}
 
 
 def examples(track):
-    path = os.path.join(DIR, f"{track}_aia_fit_examples.npz")
+    path = os.path.join(LF_DIR, f"{track}_aia_fit{SUFFIX}_examples.npz")
     return np.load(path) if os.path.exists(path) else None
 
 
@@ -202,10 +218,10 @@ def fig_example_curves(track="bp"):
     for ax in axes[:, 0]:
         ax.set_ylabel("DEM")
     axes[0, 0].legend(fontsize=8.5, loc="upper left")
-    fig.suptitle(f"{TRACK_NAME[track]} track: randomly drawn pixels. Top two rows flare cores (32x and above), "
-                 "bottom row ordinary Bright (1x to 10x)", x=0.01, ha="left", fontweight="bold", fontsize=11)
+    headline(fig, f"{TRACK_NAME[track]} track: randomly drawn pixels. Top two rows flare cores (32x and above), "
+               "bottom row ordinary Bright (1x to 10x)", fontsize=11)
     fig.tight_layout()
-    out = os.path.join(DIR, f"fig4_example_curves_{track}.png")
+    out = os.path.join(OUT_DIR, f"fig4_example_curves_{track}.png")
     fig.savefig(out, dpi=150)
     plt.close(fig)
     return out
@@ -216,7 +232,7 @@ THRESHOLDS = np.array([3.1212, 16.9986, 448.8948, 498.3444, 190.7388, 10.3326])
 
 
 def fig_aia_fit():
-    paths = {t: os.path.join(DIR, f"{t}_aia_fit.json") for t in ("bp", "enet")}
+    paths = {t: os.path.join(LF_DIR, f"{t}_aia_fit{SUFFIX}.json") for t in ("bp", "enet")}
     if not all(os.path.exists(p) for p in paths.values()):
         return None
     fig, axes = plt.subplots(1, 2, figsize=(10.5, 4.3), sharey=True)
@@ -237,17 +253,24 @@ def fig_aia_fit():
         ax.set_title(f"{TRACK_NAME[track]} track", loc="left")
     axes[0].set_ylabel("Reconstructed / observed AIA\n(flare cores, 32x and above)")
     fig.legend(*axes[0].get_legend_handles_labels(), loc="upper left", ncol=3, fontsize=9,
-               bbox_to_anchor=(0.01, 0.92))
-    fig.suptitle("At flare cores, how well does each DEM reproduce the observed AIA? (1 = perfect)",
-                 x=0.01, ha="left", fontweight="bold")
+               bbox_to_anchor=(0.01, 0.99 if PLAIN else 0.92))
+    headline(fig, "At flare cores, how well does each DEM reproduce the observed AIA? (1 = perfect)")
     fig.tight_layout(rect=(0, 0, 1, 0.9))
-    out = os.path.join(DIR, "fig5_aia_fit_flare_cores.png")
+    out = os.path.join(OUT_DIR, "fig5_aia_fit_flare_cores.png")
     fig.savefig(out, dpi=160)
     plt.close(fig)
     return out
 
 
 if __name__ == "__main__":
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--lf_dir", default=DIR)
+    ap.add_argument("--tag", default="")
+    ap.add_argument("--out_dir", default=None)
+    ap.add_argument("--plain", action="store_true")
+    a = ap.parse_args()
+    LF_DIR, SUFFIX, PLAIN = a.lf_dir, (f"_{a.tag}" if a.tag else ""), a.plain
+    OUT_DIR = a.out_dir or a.lf_dir
     for path in (fig_error_share(), fig_relative_error(), fig_peak_calibration(),
                  fig_example_curves("bp"), fig_example_curves("enet"), fig_aia_fit()):
         if path:

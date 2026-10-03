@@ -8,9 +8,13 @@ patch CNN is the ablation's `ablation_cnn_barrier.pt` (crop 1800,1800,128,128,
 which is the top-left quarter of the MLP's crop, so every pixel here was in
 both training sets' images). Pixels come from the ablation's 20% held-out split.
 
-Writes a slide figure (three pixels of the X2.1 flare image) and, over all
-held-out pixels of the four images, how often each method's DEM oscillates:
-the share of curves with 3+ local maxima above 10% of the curve's peak.
+Writes a slide figure (three pixels of the X2.1 flare image) and, over the
+sampled held-out pixels of the four images, how often each method's DEM
+oscillates (3+ local maxima above 10% of the curve's peak) and how closely it
+tracks BP: mean absolute DEM error, W1 in dex (curves normalised over logT),
+and total emission relative to BP. The ablation's capacity-matched centre-pixel
+MLP (`ablation_mlp6_barrier.pt`, 1.43M) is scored too, to separate size from
+neighbourhood.
 
     uv run python experiments/plot_first_mlp_vs_patch_cnn.py \
         --data_dirs data/20110906_2217 data/20120603_0000 data/20131113_0908 data/20140910_1731
@@ -35,6 +39,14 @@ from experiments.train_neural_field_amortized import split_dataset
 from experiments.train_unsupervised import DEMNet
 
 COLORS = {"BP": "#3b3a37", "First MLP (213k)": "#d6452a", "Patch CNN (1.5M)": "#2a78d6"}
+MODELS = ("First MLP (213k)", "Centre-pixel MLP (1.43M)", "Patch CNN (1.5M)")
+
+
+def w1_dex(a, b, dlogt=0.1):
+    """Earth mover's distance between two DEMs treated as distributions over logT."""
+    if a.sum() <= 0 or b.sum() <= 0:
+        return np.nan
+    return float(np.abs(np.cumsum(a / a.sum()) - np.cumsum(b / b.sum())).sum() * dlogt)
 
 
 def local_maxima(dem, frac=0.1):
@@ -66,11 +78,13 @@ def main(args):
     mlp.load_state_dict(torch.load(args.mlp, map_location="cpu", weights_only=False)["model"])
     mlp.eval()
     cnn, _ = load_ablation_model(args.cnn, n_basis, torch.device("cpu"))
-    cnn.eval()
+    big, _ = load_ablation_model(args.big_mlp, n_basis, torch.device("cpu"))
+    cnn.eval(); big.eval()
 
     def predict(patch, obs):
         with torch.no_grad():
             return {"First MLP (213k)": np.maximum(B @ mlp(obs[None]).double().numpy()[0], 0),
+                    "Centre-pixel MLP (1.43M)": np.maximum(B @ big(patch[None]).double().numpy()[0], 0),
                     "Patch CNN (1.5M)": np.maximum(B @ cnn(patch[None]).double().numpy()[0], 0)}
 
     stats, examples = {}, None
@@ -80,7 +94,8 @@ def main(args):
         ds = AIAPatchDataset(data_dir, args.crop, patch_size=9, tolfac=args.tolfac)
         _, val = split_dataset(ds, args.val_frac, args.seed)   # the ablation's held-out pixels
         pick = rng.choice(len(val), size=min(args.n_stats, len(val)), replace=False)
-        counts = {k: [] for k in COLORS}
+        counts = {k: [] for k in ("BP",) + MODELS}
+        err = {k: {"mae": [], "w1": [], "em": []} for k in MODELS}
         rows = []
         for i in pick:
             patch, obs, lb, ub = val[int(i)]
@@ -91,10 +106,18 @@ def main(args):
             curves["BP"] = ref
             for k, c in curves.items():
                 counts[k].append(local_maxima(c))
+            for k in MODELS:
+                err[k]["mae"].append(np.abs(curves[k] - ref).mean())
+                err[k]["w1"].append(w1_dex(curves[k], ref))
+                err[k]["em"].append(curves[k].sum() / ref.sum())
             rows.append((obs[2].item(), curves))
         stats[tag] = {k: {"n": len(v), "mean_maxima": float(np.mean(v)),
                           "pct_3plus": float(100 * np.mean(np.array(v) >= 3))}
                       for k, v in counts.items()}
+        for k in MODELS:
+            stats[tag][k].update(mae_dem=float(np.mean(err[k]["mae"])),
+                                 w1_dex=float(np.nanmean(err[k]["w1"])),
+                                 em_ratio_median=float(np.median(err[k]["em"])))
         print(tag, json.dumps(stats[tag]))
         if tag == args.example_tag:
             examples = rows
@@ -127,6 +150,7 @@ if __name__ == "__main__":
     p.add_argument("--crop", default="1800,1800,128,128")
     p.add_argument("--mlp", default="output/experiments/barrier_nn_model.pt")
     p.add_argument("--cnn", default="output/experiments/ablation_cnn_barrier.pt")
+    p.add_argument("--big_mlp", default="output/experiments/ablation_mlp6_barrier.pt")
     p.add_argument("--hidden", type=int, default=256)
     p.add_argument("--tolfac", type=float, default=1.4)
     p.add_argument("--val_frac", type=float, default=0.2)

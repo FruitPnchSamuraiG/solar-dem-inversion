@@ -4,6 +4,14 @@ Last updated: 2026-10-03 (Claude: DECISION fresh-pixel models are the headline; 
 
 ## 2026-10-03 DECISION: fresh-pixel models are the headline
 
+Deck status: `slides/DEM_deck_v2.pptx` now has all 8 parts (31 slides), built
+from `slides/deck_outline.md`. Parts 6-7 use the fresh-pixel h232 numbers and
+redrawn figures (`results/plots/16_resample_20261002/fig*.png`, via
+`plot_bright_failures.py --plain --lf_dir ... --tag resample`). Slides 17
+(CNN vs MLP), 18 (width sweep) and the last point of 22 (self-consistency)
+still show fixed-sample numbers, labelled, until the rerun lands; their data
+sit in `CNN_VS_MLP`, `SWEEP` and the slide-22 text in `build_deck_v2.py`.
+
 Hriday's call: the method we describe samples fresh pixels every epoch, so the
 deck and paper report the fresh-pixel models (`output/experiments/resample/`),
 even though they score worse. The fixed-sample results are mentioned briefly

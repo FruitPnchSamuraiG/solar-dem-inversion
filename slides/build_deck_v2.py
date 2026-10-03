@@ -6,8 +6,10 @@ import os
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from deck_lib import (CARD, DARK, DEEP, FULL_W, GREY, IMG, L, LAV, LIGHT, MUTED, PURPLE, SLIDES, TOP,
+from deck_lib import (CARD, DARK, DEEP, FULL_W, GREY, fix_chart_axis_ids, IMG, L, LAV, LIGHT, MUTED, PURPLE, SLIDES, TOP,
                       WHITE, Deck, box, caption, card, line, picture, table, text)
+from pptx.chart.data import CategoryChartData
+from pptx.enum.chart import XL_CHART_TYPE, XL_LABEL_POSITION
 from pptx.enum.shapes import MSO_SHAPE
 from pptx.enum.text import PP_ALIGN
 from pptx.util import Inches, Pt
@@ -134,11 +136,11 @@ caption(s, Inches(6.15), Inches(3.75), Inches(3.45), "The BP band penalty for on
 
 # Slide 6: data — the split as a timeline, to scale.
 s = deck.slide("Data: two years of full-disk AIA, split in time",
-               "The fixed sample was not a design choice at first: the sampler seeded each block's draw by "
-               "the block alone, so every run reused the same pixels. Once found, we retrained both production "
-               "models drawing fresh pixels every epoch, everything else identical: validation loss BP 2.156 to "
-               "2.237, ElasticNet 0.0582 to 0.0689, far beyond the 0.2 to 0.4% run-to-run spread; only "
-               "ElasticNet's flare cores improved. "
+               "Every run before October seeded each block's pixel draw by the block alone, so it reused the "
+               "same 30M pixels every epoch. All results from here on use fresh pixels every epoch, as "
+               "described. The fixed-sample runs scored better: validation loss BP 2.156 against 2.237, "
+               "ElasticNet 0.0582 against 0.0689, far beyond the 0.2 to 0.4% run-to-run spread; only "
+               "ElasticNet's flare cores improved with fresh pixels. "
                "The split is chronological, so every test image is later than anything seen in training. "
                "Each epoch draws 512 pixels from each of 58,688 training blocks: 917 images times 64 "
                "blocks of 256 squared. The test set uses 64 random 128-squared blocks of each test image "
@@ -163,10 +165,9 @@ text(s, L, Inches(2.2), FULL_W, Inches(2.6),
       "PSF-deconvolved (Hofmeister); a noise σ per pixel and channel from the AIA error model; "
       "DEMs on a 2048² grid.",
       "Our model trains on AIA and σ only: each training image is cut into 64 blocks of 256×256 per image. "
-      "512 random pixels are drawn once from each of the 58,688 blocks(917*64), and that fixed ~30M-pixel "
-      "sample is reused for 40 epochs.",
-      "Redrawing the pixels every epoch did worse on validation (BP +4%, ElasticNet +18%), so we kept the "
-      "fixed sample.",
+      "Each epoch draws 512 fresh random pixels from each of the 58,688 blocks(917*64), for 40 epochs.",
+      "Earlier runs reused one fixed ~30M-pixel sample (a sampler bug) and scored better on validation "
+      "(BP 4%, ElasticNet 18%).",
       "Solver DEMs (BP, ElasticNet) for every image: labels for the supervised model, evaluation only for ours.",
       "Test: ~700M pixel DEMs per solver, the clean solve plus 4 noise re-solves(only supervised)."],
      size=12.5, bullets=True, space_after=7)
@@ -285,6 +286,278 @@ text(s, L, TOP, Inches(5.4), Inches(3.7),
      size=12.5, bullets=True, space_after=9)
 picture(s, os.path.join(IMG, "loo_flare.png"), Inches(6.0), TOP - Inches(0.1), Inches(3.6), Inches(3.6))
 caption(s, Inches(6.0), Inches(4.5), Inches(3.6), "Held-out X1.6 flare image: CNN and MLP (dashed) vs BP.")
+
+# ── Shared bits for Parts 4-8 ───────────────────────────────────────────────
+
+P16 = os.path.join(os.path.dirname(SLIDES), "results/plots/16_resample_20261002")
+
+
+def muted(slide, y, words, h=Inches(0.3)):
+    text(slide, L, y, FULL_W, h, [words], size=10, color=MUTED, italic=True)
+
+
+def stat(slide, x, y, w, h, big, small):
+    c = card(slide, x, y, w, h)
+    text(slide, x + Inches(0.15), y + Inches(0.12), w - Inches(0.3), Inches(0.6), [big],
+         size=26, bold=True, color=PURPLE, align=PP_ALIGN.CENTER)
+    text(slide, x + Inches(0.15), y + Inches(0.78), w - Inches(0.3), h - Inches(0.85), [small],
+         size=10.5, color=DARK, align=PP_ALIGN.CENTER)
+
+
+def bold_cells(shape, cells):
+    for i, j in cells:
+        for r in shape.table.cell(i, j).text_frame.paragraphs[0].runs:
+            r.font.bold = True
+
+
+# ── Section 4: scaling to the full dataset ──────────────────────────────────
+
+deck.divider(4, "Scaling to the full dataset")
+
+# Slide 14: the collapse.
+s = deck.slide("The first full-disk runs collapsed to an all-zero DEM",
+               "Three submissions died the same way before the fix; the cause was visible at step 0, before "
+               "any weight update. Gradient clipping does not help, because Adam normalises the step size.")
+text(s, L, TOP, Inches(5.7), Inches(3.7),
+     ["Full-disk intensities span ~7 decades (10⁻³ off-limb to 10⁴ in flare cores); the small crops "
+      "spanned about one.",
+      "Fed raw, the untrained network predicted AIA ~7× outside the noise band: loss 5×10¹³ at step 0. "
+      "The output softplus underflowed, its gradient became exactly zero, and every pixel predicted zero.",
+      "Fix: log1p on the input only (loss and metrics stay in physical units), learning-rate warmup, a "
+      "clamped softplus whose gradient cannot vanish, and a guard that stops a run whose loss freezes.",
+      [("A 64-block smoke test could not catch it: it never drew a flare pixel.",
+        {"bold": True, "color": PURPLE})]],
+     size=12.5, bullets=True, space_after=9)
+bx, bw2, bh2 = Inches(6.6), Inches(2.9), Inches(0.8)
+for k, (head, sub) in enumerate([("Raw intensity", "10⁻³ … 10⁴"), ("log1p", "input only"),
+                                  ("Network input", "0 … 9.2")]):
+    y = TOP + Inches(0.2) + k * Inches(1.2)
+    box(s, bx, y, bw2, bh2, head, sub, fill=PURPLE if k == 1 else CARD,
+        head_color=WHITE if k == 1 else PURPLE, sub_color=WHITE if k == 1 else DARK,
+        head_size=13, sub_size=11)
+    if k:
+        line(s, bx + bw2 // 2, y - Inches(0.4), bx + bw2 // 2, y)
+
+# Slide 15: how we evaluate.
+s = deck.slide("How we score at scale",
+               "The Bright cutoffs and the test set come from the supervised side's protocol, so both models "
+               "are scored on identical pixels. W1 treats each DEM as a distribution over logT.")
+text(s, L, TOP + Inches(0.1), FULL_W, Inches(3.6),
+     ["153 test days, never seen in training; each scored on random quarters of the image against 5 solver "
+      "targets (the clean solve and 4 noisy re-solves).",
+      "Bright = any channel above its top-5% cutoff (~10% of pixels); the rest is Quiet.",
+      "DEM against the solver: MSE, total-emission error, W1 (temperature-shape distance). "
+      "AIA reconstruction against the observation: MAE, MSE.",
+      "We also report medians and percentiles: the error is extremely heavy-tailed (one pixel in 5 million "
+      "once made up 94% of a model's mean loss)."],
+     size=13, bullets=True, space_after=12)
+
+# ── Section 5: experiments at scale ─────────────────────────────────────────
+
+deck.divider(5, "Experiments at scale")
+
+# Slide 17: CNN vs MLP at scale. Numbers: earlier fixed-sample runs until the rerun lands.
+CNN_VS_MLP = [["", "BP: MLP", "BP: CNN", "ENet: MLP", "ENet: CNN"],
+              ["Sparsity (BP 1.79)", "1.90", "1.96", "3.68", "3.61"],
+              ["Training objective (val)", "2.145", "2.241", "1.850", "1.858"],
+              ["AIA MAE", "4.88", "4.84", "4.61", "4.75"]]
+CNN_VS_MLP_SOURCE = "Shown: earlier fixed-sample runs (ENet then used α = 1). The fresh-pixel rerun replaces them."
+s = deck.slide("At scale, the centre-pixel MLP matched the patch CNN",
+               "The fourth independent look at CNN against MLP: the ablation, leave-one-out, the 30-epoch run, "
+               "and converged at scale. None found a CNN advantage on unseen days.")
+text(s, L, TOP, FULL_W, Inches(0.7),
+     ["Same 917 training days and losses, ~1.5M parameters each; scored on the 153 test days."],
+     size=12.5, bullets=True)
+tb = table(s, L, TOP + Inches(0.55), FULL_W, CNN_VS_MLP, col_w=[2.4, 1.2, 1.2, 1.2, 1.2], size=11.5,
+           row_h=Inches(0.36))
+text(s, L, Inches(3.15), FULL_W, Inches(0.4),
+     [[("The simplest model scales: no neighbourhood needed.", {"bold": True, "color": PURPLE})]], size=13)
+muted(s, Inches(3.6), CNN_VS_MLP_SOURCE)
+
+# Slide 18: width sweep — multi-peak recall against model size.
+SWEEP = {"params": ["10k", "20k", "42k", "87k", "176k", "360k", "722k", "1.43M"],
+         "recall": [21.4, 7.6, 8.9, 8.1, 26.3, 27.1, 27.7, 29.5]}
+SWEEP_SOURCE = "Shown: earlier fixed-sample sweep. The fresh-pixel sweep replaces it."
+s = deck.slide("176k parameters are enough",
+               "Average metrics alone would have picked a much smaller model: AIA MAE kept improving as "
+               "recall collapsed. The 10k model fires at about the base rate, which is guessing, not detection. "
+               "An earlier run up to 11M parameters found no further gain.")
+cd = CategoryChartData()
+cd.categories = SWEEP["params"]
+cd.add_series("Multi-peak recall (%)", SWEEP["recall"])
+gf = s.shapes.add_chart(XL_CHART_TYPE.LINE_MARKERS, L, TOP, Inches(5.6), Inches(3.3), cd)
+ch = gf.chart
+ch.has_legend = False
+ch.has_title = True
+ch.chart_title.text_frame.text = "BP multi-peak recall by model size"
+ch.chart_title.text_frame.paragraphs[0].runs[0].font.size = Pt(12)
+ch.chart_title.text_frame.paragraphs[0].runs[0].font.bold = True
+ser = ch.plots[0].series[0]
+ser.format.line.color.rgb = PURPLE
+ser.format.line.width = Pt(2.25)
+ser.marker.format.fill.solid(); ser.marker.format.fill.fore_color.rgb = PURPLE
+ser.marker.format.line.color.rgb = PURPLE
+pl = ch.plots[0]
+pl.has_data_labels = True
+pl.data_labels.number_format = '0"%"'
+pl.data_labels.number_format_is_linked = False
+pl.data_labels.font.size = Pt(9)
+pl.data_labels.position = XL_LABEL_POSITION.ABOVE
+va = ch.value_axis
+va.maximum_scale = 35; va.minimum_scale = 0
+va.has_major_gridlines = True
+va.major_gridlines.format.line.color.rgb = LIGHT
+va.tick_labels.font.size = Pt(9)
+ch.category_axis.tick_labels.font.size = Pt(9)
+fix_chart_axis_ids(ch)
+text(s, Inches(6.2), TOP + Inches(0.2), Inches(3.4), Inches(3.0),
+     ["MLP widths from 10k to 1.43M parameters, both tracks.",
+      "Below 176k, detection of multi-peaked pixels collapses; above it, nothing we report improves.",
+      [("Production: 4 hidden layers of 232, 176k parameters.", {"bold": True, "color": PURPLE})]],
+     size=12, bullets=True, space_after=10)
+muted(s, Inches(4.45), SWEEP_SOURCE)
+
+# ── Section 6: results ───────────────────────────────────────────────────────
+
+deck.divider(6, "Results")
+
+# Slide 20: against the supervised model (fresh-pixel label-free).
+s = deck.slide("Against the supervised model: worse DEM MSE, better reconstruction",
+               "Label-free trains on the observation through R; supervised trains on solver DEMs. So supervised "
+               "wins the DEM-against-solver metric, and label-free wins reconstruction of the observation on "
+               "most counts. EM error is the total-emission error; W1 is in dex.")
+RES = [["", "DEM MSE", "EM error", "W1", "AIA MAE", "AIA MSE"],
+       ["BP, label-free", "5.28", "25.5%", "0.091", "4.35", "93"],
+       ["BP, supervised", "0.91", "14.3%", "0.133", "2.95", "157"],
+       ["ENet, label-free", "0.79", "14.7%", "0.126", "0.72", "414"],
+       ["ENet, supervised", "0.32", "18.0%", "0.121", "6.32", "598"]]
+tb = table(s, L, TOP + Inches(0.1), FULL_W, RES, col_w=[2.2, 1.3, 1.3, 1.1, 1.3, 1.3], size=12,
+           row_h=Inches(0.42), bold_first_col=True)
+bold_cells(tb, [(2, 1), (2, 2), (1, 3), (2, 4), (1, 5), (4, 1), (3, 2), (4, 3), (3, 4), (3, 5)])
+text(s, L, Inches(3.4), FULL_W, Inches(0.6),
+     ["Bold = better. Supervised wins DEM MSE on both tracks; we win AIA MSE on both, and most of the rest "
+      "on ElasticNet."], size=12.5, bullets=True)
+muted(s, Inches(4.05), "The earlier fixed-sample models scored better on DEM MSE (BP 4.19, ENet 0.59).")
+
+# Slide 21: mean vs median.
+s = deck.slide("The typical pixel and the average tell different stories",
+               "Per-pixel error is the squared error summed over the 18 bins. BP percentiles, label-free against "
+               "supervised: median 0.030 vs 0.112, p90 5.1 vs 2.0, p99 117 vs 27.")
+stat(s, L, TOP + Inches(0.1), Inches(2.9), Inches(1.45), "0.030 vs 0.112",
+     "BP median pixel error, ours vs supervised: ~4× better on the typical pixel")
+stat(s, L, TOP + Inches(1.75), Inches(2.9), Inches(1.45), "97%",
+     "of our BP error sits in the worst 1% of pixels (supervised 95%)")
+text(s, Inches(3.65), TOP + Inches(0.1), Inches(5.95), Inches(3.4),
+     ["On the typical BP pixel we are ~4× closer to the solver than the supervised model.",
+      "From the 90th percentile up, supervised is better (p99: 27 vs 117).",
+      "The average is set by the worst 1% of pixels, for both models.",
+      "ElasticNet: supervised is better at the median too (1.12 vs 1.70)."],
+     size=13, bullets=True, space_after=12)
+
+# Slide 22: multi-peaked DEMs.
+s = deck.slide("Multi-peaked DEMs: we flag them precisely but find a quarter",
+               "Peaks are counted on the zero-padded curve with prominence 0.15 times the maximum, over the "
+               "full test set. The fixed-sample model had the same recall (25%) at lower precision (46%).")
+MULTI = [["BP track", "Flagged multi-peaked", "Precision", "Recall"],
+         ["Solver (BP)", "13.5% of pixels", "", ""],
+         ["Label-free", "5.0%", "69%", "25%"],
+         ["Supervised", "41.1%", "24%", "72%"]]
+table(s, L, TOP + Inches(0.1), Inches(6.2), MULTI, col_w=[1.8, 2.0, 1.2, 1.2], size=12,
+      row_h=Inches(0.4), bold_first_col=True)
+text(s, L, Inches(2.95), FULL_W, Inches(1.2),
+     ["We flag few pixels, and most are right; the supervised model flags many and misses few.",
+      "Where BP is multi-peaked, our gap is about the size of BP's own re-solve scatter."],
+     size=12.5, bullets=True, space_after=6)
+muted(s, Inches(4.1), "Last point: earlier fixed-sample result; the fresh-pixel check is running.")
+
+# ── Section 7: failures, bright pixels ──────────────────────────────────────
+
+deck.divider(7, "Failures: bright pixels")
+
+# Slide 24: where the error is.
+s = deck.slide("Flare cores, 1 pixel in 10,000, hold ~90% of the error")
+text(s, L, TOP, Inches(3.5), Inches(3.7),
+     ["Pixels at 32× the Bright cutoff or more: 0.01% of pixels, 88% of our BP DEM error, 90% of the "
+      "supervised model's.",
+      "So the squared-error metric itself is set by flare cores, for both models.",
+      "Ordinary Bright pixels (1–10×): 10% of pixels, 5.5% of the error, for both."],
+     size=12.5, bullets=True, space_after=10)
+picture(s, os.path.join(P16, "fig1_error_share_by_brightness.png"), Inches(4.05), TOP - Inches(0.05),
+        Inches(5.55), Inches(3.75))
+
+# Slide 25: gap grows with brightness.
+s = deck.slide("Relative to DEM size, our gap grows with brightness")
+text(s, L, TOP - Inches(0.05), FULL_W, Inches(0.9),
+     ["Our BP error / supervised error: 0.65 on the faintest pixels, 2.1 at 0.3–1×, 9 at 3–10×, 25 at 10–32×.",
+      "Supervised gets relatively better as pixels brighten; we get worse above ~3×. ElasticNet: 1.3–2.5 "
+      "below 10×, ~6 at 10–32×."],
+     size=12, bullets=True, space_after=4)
+picture(s, os.path.join(P16, "fig2_relative_error_by_brightness.png"), L, Inches(1.85), FULL_W, Inches(2.95))
+
+# Slide 26: at flare cores.
+s = deck.slide("At flare cores, the model under-predicts and runs too cool",
+               "ElasticNet flare cores are milder: 73% of the solver's emission, 40% multi-peaked. The "
+               "fixed-sample BP model was less extreme, at 41% of the emission.")
+text(s, L, TOP, Inches(3.6), Inches(3.7),
+     ["BP flare cores: 15% of the solver's emission, peak 12% as high, 0.6 dex too cool.",
+      "89% of our flare-core DEMs have extra peaks (solver 18%); those spurious peaks are 81% of our BP "
+      "error.",
+      "It tracks the solver's peak height up to a peak of ~50, then falls away."],
+     size=12.5, bullets=True, space_after=10)
+picture(s, os.path.join(P16, "fig4_example_curves_bp.png"), Inches(4.1), TOP - Inches(0.05),
+        Inches(5.5), Inches(3.75))
+caption(s, Inches(4.1), Inches(4.6), Inches(5.5),
+        "Random BP pixels, top rows flare cores. Black solver, blue ours, orange supervised.")
+
+# Slide 27: its own objective.
+s = deck.slide("At flare cores, the model fails its own objective",
+               "The supervised model's sqrt plus Fourier-feature input made flare cores worse, consistent "
+               "with a training problem rather than an input-representation one.")
+text(s, L, TOP - Inches(0.05), FULL_W, Inches(1.0),
+     ["The solver's DEM reproduces 92% of the observed 94 Å; ours reproduces 7% (131 Å: 35%). "
+      "The cool channels are fit to within a few percent.",
+      [("So better DEMs exist inside our basis: a training problem, not a representation limit.",
+        {"bold": True, "color": PURPLE})]],
+     size=12, bullets=True, space_after=4)
+picture(s, os.path.join(P16, "fig5_aia_fit_flare_cores.png"), L, Inches(1.9), FULL_W, Inches(2.9))
+
+# Slide 28: ruled out.
+s = deck.slide("Not solver noise, not missed double peaks")
+stat(s, L, TOP + Inches(0.1), Inches(2.9), Inches(1.45), "0.3%",
+     "of our Bright error comes from the solver's own spread across its 5 targets (ENet 4.8%)")
+stat(s, L, TOP + Inches(1.75), Inches(2.9), Inches(1.45), "1.3%",
+     "of our BP error comes from missing the solver's second peak")
+text(s, Inches(3.65), TOP + Inches(0.1), Inches(5.95), Inches(3.4),
+     ["Solver noise: re-solving under photon noise barely moves the solver at bright pixels, so it is not "
+      "the label.",
+      "Missed double peaks: small.",
+      [("What remains is the flare-core shortfall and the spurious peaks.", {"bold": True, "color": PURPLE})]],
+     size=13, bullets=True, space_after=12)
+
+# ── Section 8: lessons and next steps ───────────────────────────────────────
+
+deck.divider(8, "Lessons and next steps")
+
+# Slide 30: lessons.
+s = deck.slide("What we learned")
+text(s, L, TOP + Inches(0.1), FULL_W, Inches(3.7),
+     ["Training on the solver's objective reproduces its DEMs without labels.",
+      "The simplest model scales: a 176k-parameter centre-pixel MLP.",
+      "The error is extremely heavy-tailed: report medians and percentiles, not just means.",
+      "The remaining failure is the rare extreme, flare cores, and it is a training problem.",
+      "Tried, didn't help: the supervised model's sqrt + Fourier input (flare cores worse); fresh pixels "
+      "every epoch scored worse than one fixed sample."],
+     size=13.5, bullets=True, space_after=12)
+
+# Slide 31: next.
+s = deck.slide("Next")
+text(s, L, TOP + Inches(0.1), FULL_W, Inches(3.7),
+     ["Flare cores: oversample or up-weight the brightest pixels; handle the pathological pixels that "
+      "dominate the loss.",
+      "Predict the 18 DEM bins directly instead of basis weights (deferred).",
+      "An uncertainty head: a distribution over DEMs, trained on the solver's noisy re-solves.",
+      "AIA + XRT, for the hot plasma AIA barely constrains."],
+     size=13.5, bullets=True, space_after=12)
 
 out = deck.save(os.path.join(SLIDES, "DEM_deck_v2.pptx"))
 print("saved", out, "slides:", len(deck.prs.slides))

@@ -66,12 +66,12 @@ before the next rebuild, or the rebuild would discard them.
 - **On slide:**
   - SDO/AIA, 6 EUV channels, about two images a day in 2014–2015: 1,223 full-disk images.
   - PSF-deconvolved (Hofmeister); a noise σ per pixel and channel from the AIA error model; DEMs on a 2048² grid.
-  - Our model trains on AIA and σ only: each training image is cut into 64 blocks of 256×256 per image. 512 random pixels are drawn once from each of the 58,688 blocks(917*64), and that fixed ~30M-pixel sample is reused for 40 epochs.
-  - Redrawing the pixels every epoch did worse on validation (BP +4%, ElasticNet +18%), so we kept the fixed sample.
+  - Our model trains on AIA and σ only: each training image is cut into 64 blocks of 256×256 per image. Each epoch draws 512 fresh random pixels from each of the 58,688 blocks(917*64), for 40 epochs.
+  - Earlier runs reused one fixed ~30M-pixel sample (a sampler bug) and scored better on validation (BP 4%, ElasticNet 18%).
   - Solver DEMs (BP, ElasticNet) for every image: labels for the supervised model, evaluation only for ours.
   - Test: ~700M pixel DEMs per solver, the clean solve plus 4 noise re-solves(only supervised).
 - **Visual:** a timeline of the split, to scale: train Jan 2014 – Jun 2015 (917 images), validation Jun – Sep 2015 (153), test Sep – Dec 2015 (153).
-- **Notes:** The fixed sample was not a design choice at first: the sampler seeded each block's draw by the block alone, so every run reused the same pixels. Once found, we retrained both production models drawing fresh pixels every epoch, with everything else identical: validation loss BP 2.156 → 2.237, ElasticNet 0.0582 → 0.0689, far beyond the 0.2–0.4% run-to-run spread; only ElasticNet's flare cores improved. The split is chronological, so every test image is later than anything seen in training. Each epoch draws 512 pixels from each of 58,688 training blocks (917 images × 64 blocks of 256²). The test set uses 64 random 128² blocks of each test image per solver target, five targets per image: one clean solve and four re-solves under simulated photon noise of the same observation. Pixels where deconvolution clamped a bright channel to zero (about 5%) are excluded.
+- **Notes:** Every run before October seeded each block's pixel draw by the block alone, so it reused the same 30M pixels every epoch. All results from here on use fresh pixels every epoch, as described. The fixed-sample runs scored better (validation loss BP 2.156 vs 2.237, ElasticNet 0.0582 vs 0.0689, far beyond the 0.2–0.4% run-to-run spread); only ElasticNet's flare cores improved with fresh pixels. The split is chronological, so every test image is later than anything seen in training. Each epoch draws 512 pixels from each of 58,688 training blocks (917 images × 64 blocks of 256²). The test set uses 64 random 128² blocks of each test image per solver target, five targets per image: one clean solve and four re-solves under simulated photon noise of the same observation. Pixels where deconvolution clamped a bright channel to zero (about 5%) are excluded.
 - **Status:** draft.
 
 ---
@@ -139,22 +139,190 @@ The crops start at AIA pixel (1800, 1800), so they need not contain the flare co
 - **Notes:** Closer to BP's sparsity: CNN on 2 images, MLP on 1, tie on 1; the MLP is closer on average (mean distance 0.19 vs 0.25) because of the X1.6 flare image. Held-out sparsity by fold, MLP vs CNN (BP): X2.1 flare 1.59 vs 1.64 (1.97); quiet Sun 1.78 vs 1.61 (1.67); moderate 1.83 vs 1.83 (1.82); X1.6 flare 1.96 vs 2.31 (1.71). The ablation's in-sample edge (1.70 vs 1.89) came from scoring pixels of images the model trained on. Four folds is a small sample; scaling is the real test (Part 4).
 - **Status:** draft.
 
-## Section 4: Scaling to the full dataset
+## Section 4: Scaling to the full dataset (draft)
 
-*(next)*
+### Slide 13 · Divider
 
-## Section 5: DEM shape, multi-peaked pixels
+- **Part 4:** Scaling to the full dataset
 
-*(next)*
+### Slide 14 · The collapse
 
-## Section 6: Against the supervised model
+- **Title:** The first full-disk runs collapsed to an all-zero DEM
+- **On slide:**
+  - Full-disk intensities span ~7 decades (10⁻³ off-limb to 10⁴ in flare cores); the small crops spanned about one.
+  - Fed raw, the untrained network predicted AIA ~7× outside the noise band: loss 5×10¹³ at step 0. The output softplus underflowed, its gradient became exactly zero, and every pixel predicted zero.
+  - Fix: log1p on the input only (loss and metrics stay in physical units), learning-rate warmup, a clamped softplus whose gradient cannot vanish, and a guard that stops a run whose loss freezes.
+  - Bold: a 64-block smoke test could not catch it: it never drew a flare pixel.
+- **Visual:** a small strip: raw input range 10⁻³ … 10⁴ → log1p → 0 … 9.2.
+- **Notes:** Three submissions died the same way before the fix; the cause was visible at step 0, before any weight update. Gradient clipping does not help (Adam normalises the step).
+- **Status:** draft.
 
-*(next)*
+### Slide 15 · How we evaluate
 
-## Section 7: Why bright pixels fail
+- **Title:** How we score at scale
+- **On slide:**
+  - 153 test days, never seen in training; each scored on random quarters of the image against 5 solver targets (the clean solve and 4 noisy re-solves).
+  - Bright = any channel above its top-5% cutoff (~10% of pixels); the rest is Quiet.
+  - DEM against the solver: MSE, total-emission error, W1 (temperature-shape distance). AIA reconstruction against the observation: MAE, MSE.
+  - We also report medians and percentiles: the error is extremely heavy-tailed (one pixel in 5 million once made up 94% of a model's mean loss).
+- **Visual:** none.
+- **Notes:** The Bright cutoffs and the test set come from the supervised side's protocol, so both models are scored on identical pixels. W1 treats each DEM as a distribution over logT.
+- **Status:** draft.
 
-*(next)*
+## Section 5: Experiments at scale (draft; numbers pending the fresh-pixel rerun)
 
-## Section 8: Lessons and next steps
+### Slide 16 · Divider
 
-*(next)*
+- **Part 5:** Experiments at scale
+
+### Slide 17 · CNN vs MLP at scale
+
+- **Title:** At scale, the centre-pixel MLP matched the patch CNN
+- **On slide:**
+  - Same 917 training days, same losses, ~1.5M parameters each; scored on the 153 test days.
+  - Table: sparsity, AIA MAE and training objective for MLP vs CNN on both tracks.
+  - Bold: the simplest model scales: no neighbourhood needed.
+  - Muted: numbers shown are from the earlier fixed-sample runs; the fresh-pixel rerun (job 19108218) replaces them.
+- **Visual:** small table. Fixed-sample (BP): sparsity 1.90 vs 1.96 (BP 1.79), objective 2.145 vs 2.241, AIA MAE 4.88 vs 4.84; (ENet, alpha=1): 3.68 vs 3.61, 1.850 vs 1.858, 4.61 vs 4.75.
+- **Notes:** Fourth independent look at CNN vs MLP (ablation, leave-one-out, 30-epoch run, converged at scale); none found a CNN advantage on unseen days.
+- **Status:** draft, pending.
+
+### Slide 18 · Width sweep
+
+- **Title:** 176k parameters are enough
+- **On slide:**
+  - MLP widths from 10k to 1.43M parameters (and 2.8M–11M once, earlier), both tracks.
+  - Below 176k, detection of multi-peaked pixels collapses; above it, nothing we report improves.
+  - Bold: production model: 4 hidden layers of 232, 176k parameters.
+  - Muted: earlier fixed-sample sweep; the fresh-pixel sweep (array 19108189) replaces it.
+- **Visual:** line chart: multi-peak recall vs parameter count (fixed-sample: 10k 21%, 20k 8%, 42k 9%, 87k 8%, 176k 26%, 360k 27%, 722k 28%, 1.43M 29%).
+- **Notes:** Average metrics alone would have picked a much smaller model: AIA MAE kept improving as recall collapsed. 10k fires at the base rate (guessing).
+- **Status:** draft, pending.
+
+## Section 6: Results (draft)
+
+### Slide 19 · Divider
+
+- **Part 6:** Results
+
+### Slide 20 · Against the supervised model
+
+- **Title:** Against the supervised model: worse DEM MSE, better reconstruction
+- **On slide:** table, fresh-pixel label-free vs supervised, both tracks (lower is better, winner in bold):
+  - BP: DEM MSE 5.28 vs **0.91**; EM error 25.5% vs **14.3%**; W1 **0.091** vs 0.133; AIA MAE 4.35 vs **2.95**; AIA MSE **93** vs 157.
+  - ENet: DEM MSE 0.79 vs **0.32**; EM error **14.7%** vs 18.0%; W1 0.126 vs **0.121**; AIA MAE **0.72** vs 6.32; AIA MSE **414** vs 598.
+  - Muted: the earlier fixed-sample models scored better on DEM MSE (BP 4.19, ENet 0.59).
+- **Visual:** the table.
+- **Notes:** Label-free trains on the observation through R; supervised trains on solver DEMs. So supervised wins the DEM-vs-solver metric, label-free wins reconstruction of the observation on most counts.
+- **Status:** draft.
+
+### Slide 21 · Mean vs median
+
+- **Title:** The typical pixel and the average tell different stories
+- **On slide:**
+  - BP, median pixel error: label-free 0.030, supervised 0.112: ours ~4× better on the typical pixel.
+  - From the 90th percentile up, supervised is better (p99 27 vs 117).
+  - The worst 1% of pixels hold 97% of our BP error (supervised 95%).
+  - ENet: supervised better at the median too (1.12 vs 1.70).
+- **Visual:** two stat callouts (median BP: 0.030 vs 0.112; worst 1%: 97% of error).
+- **Notes:** Per-pixel error = squared error summed over 18 bins.
+- **Status:** draft.
+
+### Slide 22 · Multi-peaked DEMs
+
+- **Title:** Multi-peaked DEMs: we flag them precisely but find a quarter
+- **On slide:**
+  - BP's DEM has 2+ peaks on 13.5% of test pixels.
+  - Label-free flags 5.0% of pixels: 69% are right (precision), finding 25% of the real ones (recall).
+  - Supervised flags 41%: 24% precision, 72% recall.
+  - Where BP is multi-peaked, our gap is about the size of BP's own re-solve scatter (pending: job 19108236).
+- **Visual:** small 3-row table (solver / label-free / supervised: flagged %, precision, recall).
+- **Notes:** Peaks counted on the zero-padded curve with prominence 0.15 × max, over the full test set. The fixed-sample model had the same recall (25%) at lower precision (46%).
+- **Status:** draft, last point pending.
+
+## Section 7: Failures: bright pixels (draft)
+
+### Slide 23 · Divider
+
+- **Part 7:** Failures: bright pixels
+
+### Slide 24 · Where the error is
+
+- **Title:** Flare cores, 1 pixel in 10,000, hold ~90% of the error
+- **On slide:**
+  - Pixels at 32× the Bright cutoff or more: 0.01% of pixels, 88% of our BP DEM error, 90% of the supervised model's.
+  - So the squared-error metric itself is dominated by flare cores, for both models.
+  - Ordinary Bright pixels (1–10×): 10% of pixels, 5.5% of the error, for both.
+- **Visual:** `fig1_error_share_by_brightness.png` (fresh-pixel version).
+- **Status:** draft.
+
+### Slide 25 · Gap grows with brightness
+
+- **Title:** Relative to DEM size, our gap grows with brightness
+- **On slide:**
+  - Our BP error / supervised error: 0.65 on the faintest pixels, 2.1 at 0.3–1×, 9 at 3–10×, 25 at 10–32×.
+  - Supervised gets relatively better as pixels brighten; we get worse above ~3×.
+  - ENet: ratio 1.3–2.5 below 10×, ~6 at 10–32×.
+- **Visual:** `fig2_relative_error_by_brightness.png`.
+- **Status:** draft.
+
+### Slide 26 · At flare cores
+
+- **Title:** At flare cores, the model under-predicts and runs too cool
+- **On slide:**
+  - BP flare cores: 15% of the solver's emission, peak 12% as high, 0.6 dex too cool.
+  - 89% of our flare-core DEMs have extra peaks the solver doesn't (solver 18%); those spurious peaks are 81% of our BP error.
+  - It tracks the solver's peak height up to a peak of ~50, then falls away.
+- **Visual:** `fig4_example_curves_bp.png` (random flare-core and ordinary Bright pixels).
+- **Notes:** ENet flare cores are milder: 73% of emission, 40% multi-peaked. The fixed-sample BP model was less extreme (41% of emission).
+- **Status:** draft.
+
+### Slide 27 · Its own objective
+
+- **Title:** At flare cores, the model fails its own objective
+- **On slide:**
+  - The solver's DEM reproduces 92% of the observed 94 Å; ours reproduces 7%, and 35% of 131 Å.
+  - The cool channels (171, 193, 211 Å) are fit to within a few percent.
+  - So better DEMs exist inside our basis: this is a training problem, not a representation limit.
+- **Visual:** `fig5_aia_fit_flare_cores.png`.
+- **Notes:** The sqrt + Fourier-feature input (the supervised model's) made flare cores worse, consistent with this.
+- **Status:** draft.
+
+### Slide 28 · Ruled out
+
+- **Title:** Not solver noise, not missed double peaks
+- **On slide:**
+  - Solver noise: the spread across the 5 solver targets is 0.3% of our Bright error (ENet 4.8%).
+  - Missing the solver's second peak: 1.3% of our BP error.
+  - What remains is the flare-core shortfall and spurious peaks.
+- **Visual:** none.
+- **Status:** draft.
+
+## Section 8: Lessons and next steps (draft)
+
+### Slide 29 · Divider
+
+- **Part 8:** Lessons and next steps
+
+### Slide 30 · Lessons
+
+- **Title:** What we learned
+- **On slide:**
+  - Training on the solver's objective reproduces its DEMs without labels.
+  - The simplest model scales: a 176k-parameter centre-pixel MLP.
+  - The error is extremely heavy-tailed: report medians and percentiles, not just means.
+  - The remaining failure is the rare extreme, flare cores, and it is a training problem.
+  - Tried, didn't help: the supervised model's sqrt + Fourier input (flare cores worse); fresh pixels every epoch scored worse than one fixed sample.
+- **Visual:** none.
+- **Status:** draft.
+
+### Slide 31 · Next
+
+- **Title:** Next
+- **On slide:**
+  - Flare cores: oversample or up-weight the brightest pixels; handle the pathological pixels that dominate the loss.
+  - Predict the 18 DEM bins directly instead of basis weights (deferred).
+  - An uncertainty head: a distribution over DEMs, trained on the solver's noisy re-solves.
+  - AIA + XRT, for the hot plasma AIA barely constrains.
+- **Visual:** none.
+- **Status:** draft.

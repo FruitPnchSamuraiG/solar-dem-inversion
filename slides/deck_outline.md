@@ -66,11 +66,12 @@ before the next rebuild, or the rebuild would discard them.
 - **On slide:**
   - SDO/AIA, 6 EUV channels, about two images a day in 2014–2015: 1,223 full-disk images.
   - PSF-deconvolved (Hofmeister); a noise σ per pixel and channel from the AIA error model; DEMs on a 2048² grid.
-  - Our model trains on AIA and σ only: each training image is cut into 64 blocks of 256×256 per image. Each epoch draws 512 random pixels from each of the 58,688 blocks(917*64), for 40 epochs.
+  - Our model trains on AIA and σ only: each training image is cut into 64 blocks of 256×256 per image. 512 random pixels are drawn once from each of the 58,688 blocks(917*64), and that fixed ~30M-pixel sample is reused for 40 epochs.
+  - Redrawing the pixels every epoch did worse on validation (BP +4%, ElasticNet +18%), so we kept the fixed sample.
   - Solver DEMs (BP, ElasticNet) for every image: labels for the supervised model, evaluation only for ours.
   - Test: ~700M pixel DEMs per solver, the clean solve plus 4 noise re-solves(only supervised).
 - **Visual:** a timeline of the split, to scale: train Jan 2014 – Jun 2015 (917 images), validation Jun – Sep 2015 (153), test Sep – Dec 2015 (153).
-- **Notes:** The split is chronological, so every test image is later than anything seen in training. Each epoch draws 512 pixels from each of 58,688 training blocks (917 images × 64 blocks of 256²). The test set uses 64 random 128² blocks of each test image per solver target, five targets per image: one clean solve and four re-solves under simulated photon noise of the same observation. Pixels where deconvolution clamped a bright channel to zero (about 5%) are excluded.
+- **Notes:** The fixed sample was not a design choice at first: the sampler seeded each block's draw by the block alone, so every run reused the same pixels. Once found, we retrained both production models drawing fresh pixels every epoch, with everything else identical: validation loss BP 2.156 → 2.237, ElasticNet 0.0582 → 0.0689, far beyond the 0.2–0.4% run-to-run spread; only ElasticNet's flare cores improved. The split is chronological, so every test image is later than anything seen in training. Each epoch draws 512 pixels from each of 58,688 training blocks (917 images × 64 blocks of 256²). The test set uses 64 random 128² blocks of each test image per solver target, five targets per image: one clean solve and four re-solves under simulated photon noise of the same observation. Pixels where deconvolution clamped a bright channel to zero (about 5%) are excluded.
 - **Status:** draft.
 
 ---

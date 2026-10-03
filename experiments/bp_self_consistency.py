@@ -200,9 +200,9 @@ def main():
     models = {}
     for loss in ("barrier", "enet"):
         models[(loss, "base")], _ = load_scaled_model(
-            find_ckpt(args.base_dir, "mlp6", loss), n_basis, device)
+            find_ckpt(args.base_dir, "mlp6", loss, suffix=args.base_suffix), n_basis, device)
         models[(loss, "small")], _ = load_scaled_model(
-            find_ckpt(args.sweep_dir, "mlp6", loss, suffix=f"_h{args.width}"),
+            find_ckpt(args.sweep_dir, "mlp6", loss, suffix=f"_h{args.width}{args.sweep_suffix}"),
             n_basis, device)
     names = [f"{k[0]}_{k[1]}" for k in models]
     print(f"Loaded {len(models)} models (baseline 1.43M and h{args.width})")
@@ -233,6 +233,10 @@ def parse_args():
     p.add_argument("--base_dir", default="output/experiments")
     p.add_argument("--out_dir", default="output/experiments/final")
     p.add_argument("--width", type=int, default=232)
+    p.add_argument("--base_suffix", default="",
+                   help="e.g. _resample for the fresh-pixel 1.43M baseline")
+    p.add_argument("--sweep_suffix", default="",
+                   help="appended after _h<width>, e.g. _resample")
     p.add_argument("--patch_size", type=int, default=9)
     p.add_argument("--n_blocks", type=int, default=20)
     p.add_argument("--n_study", type=int, default=80,

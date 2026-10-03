@@ -94,7 +94,10 @@ before the next rebuild, or the rebuild would discard them.
 
 ## Section 3: Architecture on small data (draft)
 
-All on 4 images: two X-class flares (X2.1, X1.6), quiet Sun, moderate activity.
+All on 4 images, each a crop near disk centre (128² for the CNNs, 256² for the first MLP):
+taken during the X2.1 flare of 2011-09-06 (AR 11283), quiet Sun on 2012-06-03,
+moderate activity on 2013-11-13, and during the X1.6 flare of 2014-09-10 (AR 12158).
+The crops start at AIA pixel (1800, 1800), so they need not contain the flare cores.
 
 ### Slide 9 · Divider
 
@@ -104,6 +107,7 @@ All on 4 images: two X-class flares (X2.1, X1.6), quiet Sun, moderate activity.
 
 - **Title:** A per-pixel MLP drew noisy DEMs; a patch CNN fixed it
 - **On slide:**
+  - Top line (muted): 4 images: X2.1 flare (2011-09-06), quiet Sun (2012-06-03), moderate activity (2013-11-13), X1.6 flare (2014-09-10); small crops near disk centre.
   - First try: the 6 intensities of one pixel → MLP (213k params) → 54 weights, trained on the BP loss over ~221k pixels. The loss converged, but per-pixel curves oscillated.
   - Patch CNN: a 9×9 neighbourhood → CNN (~1.5M params) → 54 weights. Smooth, single-peaked curves at BP's temperatures, sparsity close to BP's on held-out pixels.
   - Trained on one image, then on all 4 jointly; zeroing the neighbourhood for 10% of batches kept it usable on a single pixel.
@@ -119,7 +123,7 @@ All on 4 images: two X-class flares (X2.1, X1.6), quiet Sun, moderate activity.
   - A centre-pixel MLP this size was smooth too: the first MLP's noise was not about the neighbourhood.
   - The patch CNN was sparsest, but measured on held-out pixels of the training images.
 - **Visual:** dot plot of mean sparsity (effective number of active basis weights, lower = sparser) with BP's 1.79 as a dashed line: patch CNN 1.70, shuffled-patch CNN 1.88, centre-pixel MLP 1.89, flat-patch MLP 1.95.
-- **Notes:** The shuffled-patch CNN (a fixed random permutation of the 81 patch pixels) nearly matches the CNN, so the gain came from neighbouring values more than geometry. The flat-patch MLP was erratic across images (1.61 on the X2.1 flare, 2.27 on quiet Sun). Capacity and setup were never fully separated: the 213k MLP took raw intensities; at full scale a 176k MLP on log1p inputs is smooth.
+- **Notes:** The shuffled-patch CNN (a fixed random permutation of the 81 patch pixels) was less sparse than the CNN on all 4 images (1.88 vs 1.70 on average, level with the centre-pixel MLP), so the spatial arrangement of the neighbours mattered, not just their values. The flat-patch MLP was erratic across images (1.61 on the X2.1 flare, 2.27 on quiet Sun). Capacity and setup were never fully separated: the 213k MLP took raw intensities; at full scale a 176k MLP on log1p inputs is smooth.
 - **Status:** draft.
 
 ### Slide 12 · Leave one day out
@@ -127,11 +131,11 @@ All on 4 images: two X-class flares (X2.1, X1.6), quiet Sun, moderate activity.
 - **Title:** On unseen days, the patch CNN's edge disappeared
 - **On slide:**
   - Leave one image out: train on 3, test on the 4th; patch CNN and centre-pixel MLP, 4 folds.
-  - Held-out sparsity: CNN lower on 1 day, MLP on 2, tied on 1; the MLP fit AIA better on 3 of 4.
+  - Neither is consistently closer to BP's sparsity on the unseen image; the MLP fits AIA better on 3 of 4.
   - Little overfitting (held-out within ±0.2 of in-sample on 3 folds), except the X1.6 flare: peaks too cool (logT ~6.1 vs BP ~6.4), with one other flare image in training.
   - Takeaway (bold): carry the simpler centre-pixel MLP forward, and get more flare data → scaling.
 - **Visual:** `slides/img/loo_flare.png`: the held-out X1.6 flare image, both models (dashed) against BP.
-- **Notes:** Held-out sparsity by fold, MLP vs CNN (BP): X2.1 flare 1.59 vs 1.64 (1.97); quiet Sun 1.78 vs 1.61 (1.67); moderate 1.83 vs 1.83 (1.82); X1.6 flare 1.96 vs 2.31 (1.71). The ablation's in-sample edge (1.70 vs 1.89) came from scoring pixels of images the model trained on. Four folds is a small sample; scaling is the real test (Part 4).
+- **Notes:** Closer to BP's sparsity: CNN on 2 images, MLP on 1, tie on 1; the MLP is closer on average (mean distance 0.19 vs 0.25) because of the X1.6 flare image. Held-out sparsity by fold, MLP vs CNN (BP): X2.1 flare 1.59 vs 1.64 (1.97); quiet Sun 1.78 vs 1.61 (1.67); moderate 1.83 vs 1.83 (1.82); X1.6 flare 1.96 vs 2.31 (1.71). The ablation's in-sample edge (1.70 vs 1.89) came from scoring pixels of images the model trained on. Four folds is a small sample; scaling is the real test (Part 4).
 - **Status:** draft.
 
 ## Section 4: Scaling to the full dataset

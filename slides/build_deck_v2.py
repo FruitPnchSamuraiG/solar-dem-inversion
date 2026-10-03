@@ -201,7 +201,10 @@ s = deck.slide("A per-pixel MLP drew noisy DEMs; a patch CNN fixed it",
                "with SiLU and a softplus output, at width 256 with raw intensities as input. Its noise was "
                "put down at the time to the overlapping basis amplifying small weight errors, and to the "
                "problem's non-uniqueness. Its checkpoint was not kept, so there is no figure of it.")
-text(s, L, TOP, Inches(5.4), Inches(3.6),
+text(s, L, TOP - Inches(0.05), FULL_W, Inches(0.3),
+     ["4 images: X2.1 flare (2011-09-06), quiet Sun (2012-06-03), moderate activity (2013-11-13), "
+      "X1.6 flare (2014-09-10); small crops near disk centre."], size=10.5, color=MUTED)
+text(s, L, TOP + Inches(0.4), Inches(5.4), Inches(3.3),
      [[("First try: ", {"bold": True, "color": PURPLE}),
        ("the 6 intensities of one pixel → MLP (213k params) → 54 weights, trained on the BP loss "
         "over ~221k pixels. The loss converged, but per-pixel curves oscillated.", {})],
@@ -216,8 +219,9 @@ caption(s, Inches(6.0), Inches(4.45), Inches(3.6), "Patch CNN (dotted) vs BP, X2
 
 # Slide 11: ablation — a dot plot of sparsity against BP.
 s = deck.slide("Ablation: the noise was capacity, not missing context",
-               "The shuffled-patch CNN applies a fixed random permutation to the 81 patch pixels and nearly "
-               "matches the CNN, so the gain came from neighbouring values more than from geometry. The "
+               "The shuffled-patch CNN applies a fixed random permutation to the 81 patch pixels. It was "
+               "less sparse than the CNN on all 4 images, 1.88 against 1.70 on average, level with the "
+               "centre-pixel MLP, so the spatial arrangement of the neighbours mattered. The "
                "flat-patch MLP was erratic across images: 1.61 on the X2.1 flare, 2.27 on quiet Sun. "
                "Capacity and setup were never fully separated: the 213k MLP took raw intensities, and at "
                "full scale a 176k MLP on log1p inputs is smooth.")
@@ -253,13 +257,15 @@ text(s, L, Inches(3.55), FULL_W, Inches(1.2),
 
 # Slide 12: leave one image out.
 s = deck.slide("On unseen days, the patch CNN's edge disappeared",
+               "Closer to BP's sparsity: the CNN on 2 images, the MLP on 1, one tie; the MLP is closer on "
+               "average, 0.19 against 0.25, because of the X1.6 flare image. "
                "Held-out sparsity by fold, MLP against CNN, with BP in brackets: X2.1 flare 1.59 vs 1.64 "
                "(1.97); quiet Sun 1.78 vs 1.61 (1.67); moderate 1.83 vs 1.83 (1.82); X1.6 flare 1.96 vs "
                "2.31 (1.71). The ablation's in-sample edge, 1.70 vs 1.89, came from scoring pixels of "
                "images the model trained on. Four folds is a small sample; scaling is the real test.")
 text(s, L, TOP, Inches(5.4), Inches(3.7),
      ["Leave one image out: train on 3, test on the 4th; patch CNN and centre-pixel MLP, 4 folds.",
-      "Held-out sparsity: CNN lower on 1 day, MLP on 2, tied on 1; the MLP fit AIA better on 3 of 4.",
+      "Neither is consistently closer to BP's sparsity on the unseen image; the MLP fits AIA better on 3 of 4.",
       "Little overfitting (held-out within ±0.2 of in-sample on 3 folds), except the X1.6 flare: peaks too "
       "cool (logT ~6.1 vs BP ~6.4), with one other flare image in training.",
       [("Carry the simpler centre-pixel MLP forward, and get more flare data → scaling.",

@@ -1,9 +1,11 @@
 """Advisor deck, built section by section from slides/deck_outline.md.
 
-    uv run --with python-pptx --with lxml --with pillow python slides/build_deck_v2.py
+    uv run --with python-pptx --with lxml --with pillow --with numpy python slides/build_deck_v2.py
 """
 import os
 import sys
+
+import numpy as np
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from deck_lib import (CARD, DARK, DEEP, FULL_W, GREY, fix_chart_axis_ids, IMG, L, LAV, LIGHT, MUTED, PURPLE, SLIDES, TOP,
@@ -17,12 +19,48 @@ from pptx.util import Inches, Pt
 deck = Deck()
 
 
+# ── Helpers ──────────────────────────────────────────────────────────────────
+
+def head_card(slide, x, y, w, h, head, body, num=None, size=11.5):
+    """A card with a bold purple head line and a short body."""
+    card(slide, x, y, w, h)
+    label = f"{num}. {head}" if num else head
+    text(slide, x + Inches(0.18), y + Inches(0.14), w - Inches(0.36), Inches(0.35), [label],
+         size=13, bold=True, color=PURPLE)
+    text(slide, x + Inches(0.18), y + Inches(0.52), w - Inches(0.36), h - Inches(0.6), [body],
+         size=size, color=DARK)
+
+
+def card_grid(slide, items, cols, top=TOP + Inches(0.1), h=Inches(1.5), gap=Inches(0.2), numbered=False,
+              size=11.5):
+    w = (FULL_W - gap * (cols - 1)) // cols
+    for k, (head, body) in enumerate(items):
+        r, c = divmod(k, cols)
+        head_card(slide, L + c * (w + gap), top + r * (h + gap), w, h, head, body,
+                  num=k + 1 if numbered else None, size=size)
+
+
 # ── Section 1: problem and approach ─────────────────────────────────────────
 
 # Slide 1: title only (the template's title slide).
 
+# Summary, before Part 1.
+s = deck.slide("In one slide",
+               "The four things to remember. Numbers are from the fresh-pixel models on the shared test set: "
+               "153 days never seen in training.")
+card_grid(s, [
+    ("No labels needed", "A network trained on the solver's own objective reproduces its DEMs. Solver DEMs "
+                         "are used only to evaluate."),
+    ("Small is enough", "A 176k-parameter MLP on one pixel's 6 intensities: one forward pass per pixel, "
+                        "no neighbourhood."),
+    ("Typical pixels: closer to BP", "Median pixel error 0.030 vs the supervised model's 0.112, and better "
+                                     "AIA reconstruction (MSE, both tracks)."),
+    ("Flare cores: the open problem", "0.01% of pixels, ~90% of the DEM error. There our model misses the hot "
+                                      "channels: a training problem.")],
+    cols=2, h=Inches(1.6), size=13.5)
+
 # Slide 2: Part 1 divider.
-deck.divider(1, "Problem and approach")
+deck.divider(1, "Problem and approach", "What we train, and on what")
 
 # Slide 3: why label-free — two training loops.
 s = deck.slide("Same physics, different training signal",
@@ -175,7 +213,7 @@ text(s, L, Inches(2.2), FULL_W, Inches(2.6),
 # ── Section 2: finding a trainable objective ────────────────────────────────
 
 # Slide 7: Part 2 divider.
-deck.divider(2, "Finding a trainable objective")
+deck.divider(2, "Finding a trainable objective", "Which loss gives BP's DEMs?")
 
 # Slide 8: which loss.
 s = deck.slide("Six channels underdetermine the DEM: the regulariser picks it",
@@ -201,7 +239,7 @@ text(s, L, Inches(4.5), FULL_W, Inches(0.3),
 # ── Section 3: architecture on small data ───────────────────────────────────
 
 # Slide 9: Part 3 divider.
-deck.divider(3, "Architecture on small data")
+deck.divider(3, "Architecture on small data", "Which network, on four images")
 
 # Slide 10: first network, then the patch CNN.
 s = deck.slide("A per-pixel MLP missed BP's shape; a patch CNN tracked it",
@@ -312,7 +350,7 @@ def bold_cells(shape, cells):
 
 # ── Section 4: scaling to the full dataset ──────────────────────────────────
 
-deck.divider(4, "Scaling to the full dataset")
+deck.divider(4, "Scaling to the full dataset", "What broke at full scale, and how we score")
 
 # Slide 14: the collapse.
 s = deck.slide("The first full-disk runs collapsed to an all-zero DEM",
@@ -342,7 +380,7 @@ for k, (head, sub) in enumerate([("Raw intensity", "10⁻³ … 10⁴"), ("log1p
 s = deck.slide("How we score at scale",
                "The Bright cutoffs and the test set come from the supervised side's protocol, so both models "
                "are scored on identical pixels. W1 treats each DEM as a distribution over logT.")
-text(s, L, TOP + Inches(0.1), FULL_W, Inches(3.6),
+text(s, L, TOP, Inches(5.6), Inches(3.8),
      ["153 test days, never seen in training; each scored on random quarters of the image against 5 solver "
       "targets (the clean solve and 4 noisy re-solves).",
       "Bright = any channel above its top-5% cutoff (~10% of pixels); the rest is Quiet.",
@@ -350,11 +388,23 @@ text(s, L, TOP + Inches(0.1), FULL_W, Inches(3.6),
       "AIA reconstruction against the observation: MAE, MSE.",
       "We also report medians and percentiles: the error is extremely heavy-tailed (one pixel in 5 million "
       "once made up 94% of a model's mean loss)."],
-     size=13, bullets=True, space_after=12)
+     size=12, bullets=True, space_after=9)
+gx, gy, cell = Inches(6.35), TOP + Inches(0.05), Inches(0.17)
+picked = set(np.random.default_rng(3).choice(256, 64, replace=False).tolist())
+for k in range(256):
+    r, c = divmod(k, 16)
+    sq = s.shapes.add_shape(MSO_SHAPE.RECTANGLE, gx + c * cell, gy + r * cell, cell, cell)
+    sq.fill.solid(); sq.fill.fore_color.rgb = PURPLE if k in picked else CARD
+    sq.line.color.rgb = WHITE; sq.line.width = Pt(0.5); sq.shadow.inherit = False
+text(s, gx, gy + 16 * cell + Inches(0.08), 16 * cell, Inches(0.9),
+     [[("One test day: ", {"bold": True, "color": PURPLE}),
+       ("2048² DEM image = 256 blocks of 128². One target is scored on its own random 64 (purple). "
+        "× 5 targets: the clean solve + 4 noisy re-solves.", {})]],
+     size=9.5, color=DARK)
 
 # ── Section 5: experiments at scale ─────────────────────────────────────────
 
-deck.divider(5, "Experiments at scale")
+deck.divider(5, "Experiments at scale", "CNN or MLP, and how big")
 
 # Slide 17: CNN vs MLP at scale. Numbers: earlier fixed-sample runs until the rerun lands.
 CNN_VS_MLP = [["", "BP: MLP", "BP: CNN", "ENet: MLP", "ENet: CNN"],
@@ -419,7 +469,7 @@ muted(s, Inches(4.45), SWEEP_SOURCE)
 
 # ── Section 6: results ───────────────────────────────────────────────────────
 
-deck.divider(6, "Results")
+deck.divider(6, "Results", "Against the solver and the supervised model")
 
 # Slide 20: against the supervised model (fresh-pixel label-free).
 s = deck.slide("Against the supervised model: worse DEM MSE, better reconstruction",
@@ -472,7 +522,7 @@ muted(s, Inches(4.1), "Last point: earlier fixed-sample result; the fresh-pixel 
 
 # ── Section 7: failures, bright pixels ──────────────────────────────────────
 
-deck.divider(7, "Failures: bright pixels")
+deck.divider(7, "Failures: bright pixels", "Where the error is, and why")
 
 # Slide 24: where the error is.
 s = deck.slide("Flare cores, 1 pixel in 10,000, hold ~90% of the error")
@@ -536,28 +586,37 @@ text(s, Inches(3.65), TOP + Inches(0.1), Inches(5.95), Inches(3.4),
 
 # ── Section 8: lessons and next steps ───────────────────────────────────────
 
-deck.divider(8, "Lessons and next steps")
+deck.divider(8, "Lessons and next steps", "What we learned, and what to decide")
 
 # Slide 30: lessons.
 s = deck.slide("What we learned")
-text(s, L, TOP + Inches(0.1), FULL_W, Inches(3.7),
-     ["Training on the solver's objective reproduces its DEMs without labels.",
-      "The simplest model scales: a 176k-parameter centre-pixel MLP.",
-      "The error is extremely heavy-tailed: report medians and percentiles, not just means.",
-      "The remaining failure is the rare extreme, flare cores, and it is a training problem.",
-      "Tried, didn't help: the supervised model's sqrt + Fourier input (flare cores worse); fresh pixels "
-      "every epoch scored worse than one fixed sample."],
-     size=13.5, bullets=True, space_after=12)
+card_grid(s, [
+    ("Train on the objective", "The solver's own objective reproduces its DEMs without labels."),
+    ("Simple scales", "A 176k centre-pixel MLP; the patch CNN's edge vanished on unseen days."),
+    ("Heavy tails", "Report medians and percentiles: a handful of pixels can own the mean."),
+    ("The open failure", "Flare cores. The model misses the hot channels there: a training problem."),
+    ("Tried, didn't help", "The supervised model's sqrt + Fourier input; fresh pixels vs one fixed sample.")],
+    cols=3, h=Inches(1.55), numbered=True, size=12.5)
 
 # Slide 31: next.
 s = deck.slide("Next")
+card_grid(s, [
+    ("Flare cores", "Oversample or up-weight the brightest pixels; handle the pathological pixels that "
+                    "dominate the loss."),
+    ("Direct DEM output", "Predict the 18 bins instead of 54 basis weights (deferred)."),
+    ("Uncertainty", "A distribution over DEMs, trained on the solver's noisy re-solves."),
+    ("AIA + XRT", "For the hot plasma AIA barely constrains.")],
+    cols=2, h=Inches(1.6), size=13.5)
+
+# Slide 32: for discussion.
+s = deck.slide("For discussion")
 text(s, L, TOP + Inches(0.1), FULL_W, Inches(3.7),
-     ["Flare cores: oversample or up-weight the brightest pixels; handle the pathological pixels that "
-      "dominate the loss.",
-      "Predict the 18 DEM bins directly instead of basis weights (deferred).",
-      "An uncertainty head: a distribution over DEMs, trained on the solver's noisy re-solves.",
-      "AIA + XRT, for the hot plasma AIA barely constrains."],
-     size=13.5, bullets=True, space_after=12)
+     ["Which metric should lead the paper? DEM MSE is set by 0.01% of pixels; the median, W1 and AIA "
+      "reconstruction tell a different story.",
+      "Is fixing flare cores worth changing the training objective, or do we report it as the known limitation?",
+      "Next model change: up-weight flare cores, or predict the 18 bins directly?",
+      "Is AIA + XRT in scope for this paper?"],
+     size=14, bullets=True, space_after=14)
 
 out = deck.save(os.path.join(SLIDES, "DEM_deck_v2.pptx"))
 print("saved", out, "slides:", len(deck.prs.slides))

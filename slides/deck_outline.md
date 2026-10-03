@@ -7,7 +7,8 @@ sync: change this file first, then the deck is rebuilt from it.
 Each slide: **Title** (a takeaway sentence), **On slide** (the actual text, kept
 short), **Visual** (what the image or diagram shows, if any), **Notes** (what to
 say; goes into speaker notes, not onto the slide). Each part opens with a
-divider slide ("Part N" over the section name, template's BIG_NUMBER layout).
+divider slide ("Part N" over the section name, template's BIG_NUMBER layout),
+with a one-line subtitle: the question that part answers.
 
 Edits made in Google Slides get copied back here and into the build script
 before the next rebuild, or the rebuild would discard them.
@@ -20,9 +21,21 @@ before the next rebuild, or the rebuild would discard them.
 
 - **Title:** Predicting DEM label-free
 
+### Slide 1b · Summary
+
+- **Title:** In one slide
+- **On slide (four cards):**
+  - No labels needed: a network trained on the solver's own objective reproduces its DEMs; solver DEMs are only used to evaluate.
+  - Small is enough: a 176k-parameter MLP on one pixel's 6 intensities, one forward pass per pixel.
+  - Typical pixels: closer to BP than the supervised model (median pixel error 0.030 vs 0.112), and better AIA reconstruction (MSE, both tracks).
+  - Flare cores are the open problem: 0.01% of pixels, ~90% of the DEM error; there our model misses the hot channels, a training problem.
+- **Visual:** 2×2 cards.
+- **Status:** draft.
+
 ### Slide 2 · Divider
 
 - **Part 1:** Problem and approach
+- **Subtitle:** What we train, and on what
 
 ### Slide 3 · Why label-free
 
@@ -81,6 +94,7 @@ before the next rebuild, or the rebuild would discard them.
 ### Slide 7 · Divider
 
 - **Part 2:** Finding a trainable objective
+- **Subtitle:** Which loss gives BP's DEMs?
 
 ### Slide 8 · Which loss
 
@@ -103,6 +117,7 @@ The crops start at AIA pixel (1800, 1800), so they need not contain the flare co
 ### Slide 9 · Divider
 
 - **Part 3:** Architecture on small data
+- **Subtitle:** Which network, on four images
 
 ### Slide 10 · First network, then the patch CNN
 
@@ -144,6 +159,7 @@ The crops start at AIA pixel (1800, 1800), so they need not contain the flare co
 ### Slide 13 · Divider
 
 - **Part 4:** Scaling to the full dataset
+- **Subtitle:** What broke at full scale, and how we score
 
 ### Slide 14 · The collapse
 
@@ -165,7 +181,7 @@ The crops start at AIA pixel (1800, 1800), so they need not contain the flare co
   - Bright = any channel above its top-5% cutoff (~10% of pixels); the rest is Quiet.
   - DEM against the solver: MSE, total-emission error, W1 (temperature-shape distance). AIA reconstruction against the observation: MAE, MSE.
   - We also report medians and percentiles: the error is extremely heavy-tailed (one pixel in 5 million once made up 94% of a model's mean loss).
-- **Visual:** none.
+- **Visual:** diagram of one test day: the 2048² DEM image as a 16×16 grid of 128² blocks, 64 of them highlighted (one target's random quarter), with "× 5 targets: the clean solve + 4 noisy re-solves, each with its own 64 blocks".
 - **Notes:** The Bright cutoffs and the test set come from the supervised side's protocol, so both models are scored on identical pixels. W1 treats each DEM as a distribution over logT.
 - **Status:** draft.
 
@@ -174,6 +190,7 @@ The crops start at AIA pixel (1800, 1800), so they need not contain the flare co
 ### Slide 16 · Divider
 
 - **Part 5:** Experiments at scale
+- **Subtitle:** CNN or MLP, and how big
 
 ### Slide 17 · CNN vs MLP at scale
 
@@ -204,6 +221,7 @@ The crops start at AIA pixel (1800, 1800), so they need not contain the flare co
 ### Slide 19 · Divider
 
 - **Part 6:** Results
+- **Subtitle:** Against the solver and the supervised model
 
 ### Slide 20 · Against the supervised model
 
@@ -245,6 +263,7 @@ The crops start at AIA pixel (1800, 1800), so they need not contain the flare co
 ### Slide 23 · Divider
 
 - **Part 7:** Failures: bright pixels
+- **Subtitle:** Where the error is, and why
 
 ### Slide 24 · Where the error is
 
@@ -303,6 +322,7 @@ The crops start at AIA pixel (1800, 1800), so they need not contain the flare co
 ### Slide 29 · Divider
 
 - **Part 8:** Lessons and next steps
+- **Subtitle:** What we learned, and what to decide
 
 ### Slide 30 · Lessons
 
@@ -313,7 +333,7 @@ The crops start at AIA pixel (1800, 1800), so they need not contain the flare co
   - The error is extremely heavy-tailed: report medians and percentiles, not just means.
   - The remaining failure is the rare extreme, flare cores, and it is a training problem.
   - Tried, didn't help: the supervised model's sqrt + Fourier input (flare cores worse); fresh pixels every epoch scored worse than one fixed sample.
-- **Visual:** none.
+- **Visual:** five cards (head + one line): Train on the objective / Simple scales / Heavy tails / The open failure / Tried, didn't help.
 - **Status:** draft.
 
 ### Slide 31 · Next
@@ -324,5 +344,16 @@ The crops start at AIA pixel (1800, 1800), so they need not contain the flare co
   - Predict the 18 DEM bins directly instead of basis weights (deferred).
   - An uncertainty head: a distribution over DEMs, trained on the solver's noisy re-solves.
   - AIA + XRT, for the hot plasma AIA barely constrains.
-- **Visual:** none.
+- **Visual:** four cards.
+- **Status:** draft.
+
+### Slide 32 · For discussion
+
+- **Title:** For discussion
+- **On slide:**
+  - Which metric should lead the paper? DEM MSE is set by 0.01% of pixels; the median, W1 and AIA reconstruction tell a different story.
+  - Is fixing flare cores worth changing the training objective, or do we report it as the known limitation?
+  - Next model change: up-weight flare cores, or predict the 18 bins directly?
+  - Is AIA + XRT in scope for this paper?
+- **Visual:** none (numbered questions).
 - **Status:** draft.

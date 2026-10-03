@@ -66,8 +66,9 @@ class Deck:
             s.notes_slide.notes_text_frame.text = notes
         return s
 
-    def divider(self, part, name):
-        """Section divider on the template's BIG_NUMBER layout: "Part N" over the section name."""
+    def divider(self, part, name, sub=None):
+        """Section divider on the template's BIG_NUMBER layout: "Part N" over the section
+        name, with an optional one-line subtitle below."""
         s = self.prs.slides.add_slide(self.big)
         for ph in list(s.placeholders):
             if ph.placeholder_format.type != PP_PLACEHOLDER.TITLE:
@@ -84,6 +85,9 @@ class Deck:
             r = p.add_run()
             r.text = words
             r.font.size = Pt(41)
+        if sub:
+            text(s, Inches(0.5), Inches(2.85), Inches(9.0), Inches(0.5), [sub], size=18,
+                 color=MUTED, align=PP_ALIGN.CENTER, italic=True)
         return s
 
     def save(self, path):

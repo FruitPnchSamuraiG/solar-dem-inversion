@@ -1,6 +1,30 @@
 # DEM project state
 
-Last updated: 2026-10-03 (Claude: fresh-pixel retrains came out WORSE; production models stay; June noisy MLP did not reproduce)
+Last updated: 2026-10-03 (Claude: DECISION fresh-pixel models are the headline; sweep + CNN rerun with fresh pixels, array 19108189)
+
+## 2026-10-03 DECISION: fresh-pixel models are the headline
+
+Hriday's call: the method we describe samples fresh pixels every epoch, so the
+deck and paper report the fresh-pixel models (`output/experiments/resample/`),
+even though they score worse. The fixed-sample results are mentioned briefly
+where it matters (they scored better). This supersedes "production stays"
+below. Production is now `scaled_mlp6_{barrier,enet}_h232_resample.pt`.
+
+Everything measured on fixed-sample models is being redone (submitted
+2026-10-03 03:30, `bash experiments/submit_sweep_resample.sh`):
+
+- Array `19108189` (`job_sweep_resample.sbatch`, %4): mlp6 widths
+  680/480/336/160/108/72/48 x {barrier (warmup 500), enet alpha=0.001 (warmup
+  3000)} plus patch cnn x both. h232 is the existing resample pair.
+  h680 and cnn are saved with the plain `_resample` suffix.
+- Per mlp6 task, afterok: diagnostic + AIA fit, TAG=`resample_h<W>`, jobs
+  `19108190`-`19108217` (task i -> 19108190+2i diag, +1 aia). The diagnostic's
+  `by_dem_shape` cross-tab gives multi-peak recall/precision on the full test set.
+- `19108218` (afterany array): `eval_scaled.py --ckpt_dir output/experiments/resample
+  --ckpt_suffix _resample` -> CNN vs MLP on the test split,
+  `output/experiments/eval_scaled_resample/`.
+- `19108236` (afterok tasks 0, 7): `bp_self_consistency.py` on the fresh-pixel
+  1.43M and h232 models -> `output/experiments/final_resample/`.
 
 ## 2026-10-03 RESULT: fresh pixels made both models worse; production stays
 

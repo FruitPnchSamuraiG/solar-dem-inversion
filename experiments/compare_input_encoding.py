@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-"""Production label-free BP model vs the sqrt + Fourier-feature run vs supervised.
+"""Production label-free model vs a retrained variant vs supervised, one track.
 
 Reads diagnose_bright_failures.py and aia_fit_by_brightness.py outputs:
-  production  results/plots/13_bright_diagnostic_20260928/bp_{bright_failure,aia_fit}.json
-  supervised  results/plots/13_bright_diagnostic_20260928/bp_bright_failure_supervised.json
-  new run     <dir>/bp_{bright_failure,aia_fit}_sqrtff12.json
+  production  results/plots/13_bright_diagnostic_20260928/{track}_{bright_failure,aia_fit}.json
+  supervised  results/plots/13_bright_diagnostic_20260928/{track}_bright_failure_supervised.json
+  new run     <dir>/{track}_{bright_failure,aia_fit}_{tag}.json
 
-    uv run python experiments/compare_input_encoding.py <dir with the new JSONs>
+    uv run python experiments/compare_input_encoding.py <dir> [tag=sqrtff12] [track=bp]
 """
 import json
 import os
@@ -23,11 +23,13 @@ def load(path):
 
 def main():
     new_dir = sys.argv[1] if len(sys.argv) > 1 else BASE
-    prod = load(os.path.join(BASE, "bp_bright_failure.json"))
-    sup = load(os.path.join(BASE, "bp_bright_failure_supervised.json"))
-    new = load(os.path.join(new_dir, "bp_bright_failure_sqrtff12.json"))
-    prod_aia = load(os.path.join(BASE, "bp_aia_fit.json"))["results"]
-    new_aia = load(os.path.join(new_dir, "bp_aia_fit_sqrtff12.json"))["results"]
+    tag = sys.argv[2] if len(sys.argv) > 2 else "sqrtff12"
+    track = sys.argv[3] if len(sys.argv) > 3 else "bp"
+    prod = load(os.path.join(BASE, f"{track}_bright_failure.json"))
+    sup = load(os.path.join(BASE, f"{track}_bright_failure_supervised.json"))
+    new = load(os.path.join(new_dir, f"{track}_bright_failure_{tag}.json"))
+    prod_aia = load(os.path.join(BASE, f"{track}_aia_fit.json"))["results"]
+    new_aia = load(os.path.join(new_dir, f"{track}_aia_fit_{tag}.json"))["results"]
 
     def g(d, *keys):
         for k in keys:
@@ -39,6 +41,8 @@ def main():
     rows = []
     for label, path in [
             ("DEM MSE, all pixels (website)", ("population", "full", "dem_mse")),
+            ("EM error %, all pixels", ("population", "full", "em_abs_rel_err_pct")),
+            ("W1 (dex), all pixels", ("population", "full", "w1_dex")),
             ("DEM MSE, Bright", ("population", "bright", "dem_mse")),
             ("DEM MSE, Quiet", ("population", "quiet", "dem_mse")),
             ("Median pixel error, all", ("population", "full", "sse_p50")),
@@ -61,7 +65,7 @@ def main():
                      g(prod_aia, "supervised", "pooled_full", key)))
 
     fmt = lambda v: "-" if v is None else f"{v:.4g}"
-    print(f"{'BP track':<34}{'production':>12}{'sqrt+FF12':>12}{'supervised':>12}")
+    print(f"{track.upper() + ' track':<34}{'production':>12}{tag:>12}{'supervised':>12}")
     print("-" * 70)
     for label, a, b, c in rows:
         print(f"{label:<34}{fmt(a):>12}{fmt(b):>12}{fmt(c):>12}")

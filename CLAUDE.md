@@ -91,6 +91,17 @@ From the paper's "Future Work" section:
 
 ## Progress Log (most recent first)
 
+### 2026-10-03 — Fresh-pixel retrains came out worse; June noisy MLP did not reproduce
+
+Both retrains with `--resample_pixels` are worse than production beyond seed
+noise (validation loss BP +3.8%, ENet +18%; identical configs agree to 0.2-0.4%):
+BP DEM MSE 4.19 -> 5.28, flare-core 94 A fit 0.24 -> 0.07. ENet flare cores
+improved (multi-peaked 81% -> 40%) but everything else got worse. Production
+(fixed-sample) models stay; no sweep rerun. Retraining the June per-pixel MLP
+with unchanged code gave smooth single-peaked curves (0% with 3+ maxima), so
+the "noisy curves" claim does not reproduce. Detail in `STATE.md`;
+`results/plots/15_first_mlp_repro_20261002/`, `16_resample_20261002/`.
+
 ### 2026-10-02 — Training used one fixed pixel sample; retrains launched
 
 Every scaled run drew the same 512 pixels per block each epoch (seed = block

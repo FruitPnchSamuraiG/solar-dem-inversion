@@ -1,0 +1,92 @@
+{
+ "stats": {
+  "20110906_2217": {
+   "BP": {
+    "n": 400,
+    "mean_maxima": 1.185,
+    "pct_3plus": 0.5
+   },
+   "First MLP (213k)": {
+    "n": 400,
+    "mean_maxima": 1.0,
+    "pct_3plus": 0.0
+   },
+   "Patch CNN (1.5M)": {
+    "n": 400,
+    "mean_maxima": 1.0,
+    "pct_3plus": 0.0
+   }
+  },
+  "20120603_0000": {
+   "BP": {
+    "n": 400,
+    "mean_maxima": 1.1175,
+    "pct_3plus": 0.0
+   },
+   "First MLP (213k)": {
+    "n": 400,
+    "mean_maxima": 1.03,
+    "pct_3plus": 0.0
+   },
+   "Patch CNN (1.5M)": {
+    "n": 400,
+    "mean_maxima": 1.0,
+    "pct_3plus": 0.0
+   }
+  },
+  "20131113_0908": {
+   "BP": {
+    "n": 400,
+    "mean_maxima": 1.15,
+    "pct_3plus": 0.5
+   },
+   "First MLP (213k)": {
+    "n": 400,
+    "mean_maxima": 1.0,
+    "pct_3plus": 0.0
+   },
+   "Patch CNN (1.5M)": {
+    "n": 400,
+    "mean_maxima": 1.0,
+    "pct_3plus": 0.0
+   }
+  },
+  "20140910_1731": {
+   "BP": {
+    "n": 400,
+    "mean_maxima": 1.1775,
+    "pct_3plus": 0.25
+   },
+   "First MLP (213k)": {
+    "n": 400,
+    "mean_maxima": 1.0,
+    "pct_3plus": 0.0
+   },
+   "Patch CNN (1.5M)": {
+    "n": 400,
+    "mean_maxima": 1.0,
+    "pct_3plus": 0.0
+   }
+  }
+ },
+ "settings": {
+  "data_dirs": [
+   "data/20110906_2217",
+   "data/20120603_0000",
+   "data/20131113_0908",
+   "data/20140910_1731"
+  ],
+  "crop": "1800,1800,128,128",
+  "mlp": "output/experiments/barrier_nn_model.pt",
+  "cnn": "output/experiments/ablation_cnn_barrier.pt",
+  "hidden": 256,
+  "tolfac": 1.4,
+  "val_frac": 0.2,
+  "seed": 42,
+  "n_stats": 400,
+  "n_examples": 3,
+  "example_tag": "20110906_2217",
+  "threads": 16,
+  "out_dir": "output/experiments/first_mlp_repro"
+ }
+}

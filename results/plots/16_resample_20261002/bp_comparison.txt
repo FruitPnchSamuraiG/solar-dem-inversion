@@ -1,0 +1,24 @@
+BP track                            production    resample  supervised
+----------------------------------------------------------------------
+DEM MSE, all pixels (website)            4.191       5.282       0.906
+EM error %, all pixels                   20.16        25.5       14.34
+W1 (dex), all pixels                   0.08452     0.09109      0.1334
+DEM MSE, Bright                           40.9        51.6       8.657
+DEM MSE, Quiet                         0.05825     0.06747     0.03346
+Median pixel error, all                 0.0257     0.02951      0.1122
+Median pixel error, Bright               2.818        5.37       1.778
+Relative error, 1-1.8x                  0.1681       0.221     0.07437
+Relative error, 3.2-10x                 0.1676      0.2471     0.02792
+Relative error, 10-32x                  0.4596      0.6176     0.02491
+Relative error, 32x+                    0.7956      0.9922      0.1732
+Flare-core emission / solver            0.4109      0.1515      0.9228
+Flare-core peak / solver                0.2348      0.1239      0.9128
+Flare-core multi-peaked %                83.05       89.18       12.83
+Relative error, 0.03-0.1x (faint)       0.3908       0.425      0.4948
+Flare-core 94 A fit (recon/obs)         0.2442     0.07062      0.8543
+Flare-core 131 A fit (recon/obs)        0.7631      0.3462      0.8997
+Flare-core 335 A fit (recon/obs)        0.6615      0.4506       0.961
+AIA MAE, all pixels                      4.315       4.354       2.946
+AIA MSE, all pixels                      82.56        93.3       156.7
+
+solver flare-core 94 A fit: 0.9205

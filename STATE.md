@@ -1,6 +1,49 @@
 # DEM project state
 
-Last updated: 2026-10-02 (Claude: fixed-pixel sampling found; both production models retraining with fresh pixels, jobs 19071403/19071406)
+Last updated: 2026-10-03 (Claude: fresh-pixel retrains came out WORSE; production models stay; June noisy MLP did not reproduce)
+
+## 2026-10-03 RESULT: fresh pixels made both models worse; production stays
+
+All six jobs completed (`19071403`-`19071408`). Outputs and side-by-side
+tables in `results/plots/16_resample_20261002/` (`{bp,enet}_comparison.txt`,
+from `experiments/compare_input_encoding.py <dir> resample <track>`).
+
+| Metric | BP prod | BP resample | ENet prod | ENet resample |
+|---|---:|---:|---:|---:|
+| Validation loss (final) | 2.156 | 2.237 | 0.0582 | 0.0689 |
+| DEM MSE, all pixels | 4.19 | 5.28 | 0.588 | 0.794 |
+| Median pixel error | 0.0257 | 0.0295 | 1.41 | 1.70 |
+| Relative error, 1-1.8x | 0.168 | 0.221 | 0.111 | 0.220 |
+| Flare-core emission / solver | 0.41 | 0.15 | 0.72 | 0.73 |
+| Flare-core multi-peaked % | 83 | 89 | 81 | 40 |
+| Flare-core 94 A fit | 0.24 | 0.07 | 0.26 | 0.40 |
+| AIA MAE / MSE | 4.32 / 82.6 | 4.35 / 93.3 | 0.67 / 193 | 0.72 / 414 |
+
+**Not seed noise.** `train_scaled.py` seeds neither the weights nor the block
+order, but identical configs already in the logs agree to 0.2-0.4% in final
+validation loss (h680 barrier 2.1446 vs 2.1395; h680 ENet alpha=1 1.8501 vs
+1.8567). Fresh pixels moved it +3.8% (BP) and +18% (ENet). ENet flare cores did
+improve (multi-peaked 81% -> 40%, 94 A 0.26 -> 0.40), nothing else did.
+
+Untested hypothesis: the objective is heavy-tailed (mean barrier loss is ~94%
+one pixel). A fixed sample lets the model absorb its pathological pixels once;
+fresh pixels bring new ones every epoch, and their clipped gradients dominate
+the steps. **Decision: keep the production (fixed-sample) models; do not rerun
+the width sweep.** The data slide should say each block contributes one fixed
+random sample of 512 pixels.
+
+## 2026-10-03: the June "noisy" per-pixel MLP did not reproduce
+
+Job `19077429` retrained it with the unchanged June code
+(`train_unsupervised.py`, 4 images, crop 1800,1800,256,256, hidden 256, raw
+inputs, barrier loss, 30 epochs; final loss 2.03) and compared it with the
+ablation patch CNN and BP on 400 held-out pixels per image
+(`experiments/plot_first_mlp_vs_patch_cnn.py`, results in
+`results/plots/15_first_mlp_repro_20261002/`). Its curves are single-peaked:
+mean 1.00-1.03 local maxima, 0% with 3+, same as the CNN (BP 1.12-1.19). It is
+less accurate than the CNN (sharper peak, hot side cut off near logT 6.5), but
+not oscillating. The June note's "visibly noisy" claim has no surviving figure
+and does not reproduce; slide 10's framing needs revising.
 
 ## 2026-10-02: every scaled run trained on one fixed 30M-pixel sample
 

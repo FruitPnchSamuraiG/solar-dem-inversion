@@ -1,6 +1,32 @@
 # DEM project state
 
-Last updated: 2026-10-03 (Claude: DECISION fresh-pixel models are the headline; sweep + CNN rerun with fresh pixels, array 19108189)
+Last updated: 2026-10-03 (Claude: fresh-pixel sweep mostly in; h232 no longer the clear choice; CNN runs + ENet h72/h48 pending)
+
+## 2026-10-03 evening: fresh-pixel sweep results (BP complete, ENet partial)
+
+`results/plots/17_sweep_resample_20261003/sweep_table.txt` (diagnostic + AIA fit
+per width on the full shared test set; val loss/sparsity from training).
+
+- **No recall cliff any more.** BP multi-peak recall is 26% at 1.43M, 25% at
+  176k, 22% at 87k and 42k, 17% at 20k; h48 collapsed (val loss 61, recall 0).
+  The fixed-sample sweep's 26% -> 8% cliff at h160 does not reproduce.
+- **Bigger is better on the typical pixel, both tracks:** median pixel error BP
+  0.023 (1.43M) / 0.026 (360k) / 0.030 (176k) / 0.043 (87k) / 0.068 (20k);
+  ENet 0.81 / 1.07 / 1.70 / 1.55 / 2.24. AIA MAE moves the other way (smaller
+  models fit AIA slightly better), as in the fixed-sample sweep.
+- **DEM MSE is erratic across widths** because flare cores dominate it: BP
+  4.28-5.45 with flare-core emission ratio jumping 0.12-0.40 non-monotonically;
+  ENet h680 is 36.2 (flare cores over-predicted, 1.15x) against 0.48 at h336.
+- **h336 (360k) beats h232 on nearly every test metric on both tracks** (BP DEM
+  MSE 4.28 vs 5.28, median 0.026 vs 0.030; ENet 0.48 vs 0.79, 1.07 vs 1.70)
+  and has the best BP validation loss (2.148 vs 2.237). Production width is
+  Hriday's call; slide 18's "176k is enough" no longer holds as stated.
+- Self-consistency (job 19108236): at BP-multimodal pixels the h232 gap is
+  0.99x BP's own re-solve scatter (h680 0.96x); unimodal 0.77x / 0.68x.
+- ENet h72 (`19108189_12`) was cancelled by HPC for low GPU use at epoch 38/40
+  (tiny model, slow node, past 2 h); its epoch-38 checkpoint is being
+  evaluated (`19130153`, `19130154`). ENet h48 and both CNNs still running or
+  queued; eval_scaled `19108218` runs after the array.
 
 ## 2026-10-03 DECISION: fresh-pixel models are the headline
 

@@ -340,7 +340,7 @@ function render(models, mode, table) {
       button.type = "button";
       button.className = "block text-sm underline mt-2";
       button.textContent = "Open full image";
-      const title = `${column.label} — ${label}`;
+      const title = `${column.label}: ${label}`;
       button.setAttribute("aria-label", `Zoom ${title}`);
       const img = document.createElement("img");
       const filename = column.observed ? `aia_${i}.png` : name;
@@ -459,7 +459,7 @@ function renderResults(models, container) {
       ["Label-free MLP", row[0], row[1].toFixed(4), (result.medianSSE[index][0] / 18).toFixed(5), row[2].toFixed(2), row[3].toFixed(4)],
     ]);
     container.appendChild(makeResultsTable(
-      `${result.title} — full shared test set`,
+      `${result.title}: full shared test set`,
       ["Model", "Pixels", "DEM MSE ↓", "Median pixel DEM MSE ↓", "EM error (%) ↓", "W1 (dex) ↓"],
       rows,
     ));
@@ -472,7 +472,7 @@ function renderResults(models, container) {
       ["Label-free MLP", row[0], row[1].toFixed(4), row[2].toFixed(4)],
     ]);
     container.appendChild(makeResultsTable(
-      `${result.title} — AIA reconstruction on full shared test set`,
+      `${result.title}: AIA reconstruction on the full shared test set`,
       ["Model", "Pixels", "AIA MAE ↓", "AIA MSE ↓"],
       rows,
     ));
@@ -480,7 +480,7 @@ function renderResults(models, container) {
   const tailNote = document.createElement("section");
   tailNote.className = "results-section leading-relaxed";
   tailNote.innerHTML = `<h2 class="serif text-2xl mb-3">Interpreting large DEM errors</h2>
-    <p>Squared error is strongly concentrated in a small upper tail, especially among bright pixels. For label-free BP, the worst 1% of pixels contribute about 97.9% of total squared error (supervised 95.2%); for label-free ENet, 54.9% (supervised 49.4%). On BP, pixels at 32 times the Bright threshold or more (about 1 in 10,000) hold about 90% of the squared error for both models. These errors remain part of the reported means—they are not discarded.</p>
+    <p>Squared error is strongly concentrated in a small upper tail, especially among bright pixels. For label-free BP, the worst 1% of pixels contribute about 97.9% of total squared error (supervised 95.2%); for label-free ENet, 54.9% (supervised 49.4%). On BP, pixels at 32 times the Bright threshold or more (about 1 in 10,000) hold about 90% of the squared error for both models. These errors remain part of the reported means; they are not discarded.</p>
     <p class="mt-3">A lower full-population median does not remove the importance of large tail errors. Label-free BP has the lower median on the full and Quiet populations, but not Bright, so its bright-pixel disagreement is not explained solely by a few extreme outliers. Label-free ENet has the lower median in all three populations.</p>
     <p class="mt-3">AIA MSE is also sensitive to large residuals: Bright-pixel MSE is much larger than Quiet-pixel MSE, and can disagree with the MAE ranking. We therefore show both MAE and MSE and avoid interpreting MSE alone. AIA error percentiles were not computed.</p>`;
   container.appendChild(tailNote);

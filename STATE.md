@@ -1,6 +1,23 @@
 # DEM project state
 
-Last updated: 2026-10-04 (Claude: FINAL = one h336 (360k) MLP per track, fresh pixels; deck rebuilt; sqrt+FF on h336 running)
+Last updated: 2026-10-04 (Claude: FINAL = h336 per track; BP log1p input, ENet sqrt+Fourier input; deck rebuilt)
+
+## 2026-10-04 FINAL (settled): h336 per track; BP log1p input, ENet sqrt+Fourier input
+
+BP sqrt+FF h336 (`19146096`, evals 19146097/98): validation 2.1472 vs log1p
+2.1478, a tie, and mixed on test (median 0.0234 vs 0.0257 better; DEM MSE 4.56
+vs 4.28, flare-core emission 0.35 vs 0.40, 94 A 0.15 vs 0.23 worse). Tie, so the
+simpler log1p stays for BP. ENet takes sqrt+FF (validation 0.0533 vs 0.0575).
+
+Final checkpoints:
+- BP: `output/experiments/resample/scaled_mlp6_barrier_h336_resample.pt`
+- ENet: `output/experiments/input_encoding/scaled_mlp6_enet_h336_sqrt_ff12_resample.pt`
+`results/plots/19_final_models_20261004/` (tag `final`) holds exactly these;
+README there. ENet vs supervised: wins all five headline metrics (DEM MSE
+0.310 vs 0.318); ratio to supervised 0.47-0.98 from 0.1x to 32x, 1.28 at flare
+cores; flare cores 99% of emission, 94 A fit 0.53 (solver 0.55). Deck rebuilt
+(summary, model slide, slide 19 input bullet, 21-29, lessons card "Input
+encoding"). Remaining todo: move `logs/` to scratch now that no jobs run.
 
 ## 2026-10-04 RESULT: sqrt + Fourier input on ENet 360k (fresh pixels) beats everything
 

@@ -53,8 +53,8 @@ card_grid(s, [
                          "are used only to evaluate."),
     ("Small is enough", "A 360k-parameter MLP on one pixel's 6 intensities: one forward pass per pixel, "
                         "no neighbourhood."),
-    ("Close to the supervised model", "BP: typical-pixel error 4× lower (median 0.026 vs 0.112). ElasticNet: "
-                                      "same error on 90% of pixels, 10× lower AIA error."),
+    ("Beats the supervised model on ElasticNet", "ElasticNet: better on every metric, DEM error included. "
+                                                 "BP: typical-pixel error 4× lower (median 0.026 vs 0.112)."),
     ("Flare cores: the open problem", "0.01% of pixels, ~90% of the BP error. There our BP model misses the "
                                       "hot channels: a training problem.")],
     cols=2, h=Inches(1.6), size=13.5)
@@ -105,7 +105,8 @@ s = deck.slide("The model: a small MLP feeding a fixed forward model",
                "a spike and two Gaussians at each bin, and report DEM = B times x. We predict the same "
                "weights, so the network searches the same space of DEMs the solver does, and BP's "
                "sparsity criterion means the same thing for both. Only the MLP is learned. Per pixel: six "
-               "log-intensities in, four hidden layers of 336 with SiLU, 54 non-negative basis weights out; "
+               "intensities in (log1p for BP; for ElasticNet the supervised model's encoding, square root "
+               "then Fourier features), four hidden layers of 336 with SiLU, 54 non-negative basis weights out; "
                "DEM = B times w over 18 bins, logT 5.5 to 7.2; predicted AIA = R times DEM. 360k parameters, "
                "one forward pass per pixel. The size is chosen in Part 5.")
 heads = [("Observed AIA", "6 channels"), ("MLP", "360k params"), ("Basis weights", "54, same as solver"),
@@ -129,7 +130,8 @@ line(s, xs[4] + bw // 2, by + bh, xs[4] + bw // 2, ly)
 line(s, xs[0] + bw // 2, by + bh, xs[0] + bw // 2, ly + Inches(0.3), arrow=False)
 line(s, xs[0] + bw // 2, ly + Inches(0.3), xs[1], ly + Inches(0.3))
 text(s, L, Inches(3.45), FULL_W, Inches(1.4),
-     ["6 log-intensities in; 4 hidden layers of 336, SiLU; 54 non-negative basis weights out.",
+     ["6 intensities in (log1p for BP; √ + Fourier features for ElasticNet); 4 hidden layers of 336, SiLU; "
+      "54 non-negative basis weights out.",
       "BP and ElasticNet solve for the same 54 weights (at each of 18 bins, a spike and Gaussians "
       "0.1 and 0.2 dex wide), and their L1 term acts on those weights.",
       "DEM = B·w over 18 bins; predicted AIA = R·DEM. B and R are fixed; only the MLP is learned.",
@@ -438,7 +440,10 @@ s = deck.slide("Choosing the model: 360k parameters, for both tracks",
                "validation is best at 1.43M (0.0528), but its 722k and 1.43M models predict a few bright pixels "
                "orders of magnitude too bright (AIA MSE 41,849 and 908,611 against 650 at 360k); validation "
                "scores a fixed 512 pixels per block and never saw them. 10k collapsed and is left off the chart. "
-               "Multi-peak recall is 22-26% from 42k up; the fixed-sample cliff below 176k does not reproduce.")
+               "Multi-peak recall is 22-26% from 42k up; the fixed-sample cliff below 176k does not reproduce. "
+               "With the old fixed sample nothing above 176k helped; with fresh pixels size pays off up to 360k. "
+               "Input encoding: BP validation 2.1472 with square root plus Fourier features against 2.1478 "
+               "with log1p, a tie, so the simpler log1p stays; ElasticNet 0.0533 against 0.0575.")
 cd = CategoryChartData()
 cd.categories = SWEEP["params"]
 cd.add_series("BP median pixel error", SWEEP["median"])
@@ -480,10 +485,11 @@ text(s, Inches(5.95), TOP + Inches(0.05), Inches(3.65), Inches(3.5),
       "the size and with worse tails.",
       "ElasticNet: from 722k up, a few bright pixels blow up by orders of magnitude; 360k is the largest "
       "stable size.",
-      "With the old fixed sample nothing above 176k helped; with fresh pixels, size pays off up to here."],
+      "Input, also by validation: log1p for BP (√ + Fourier ties); √ + Fourier features for ElasticNet "
+      "(7% better)."],
      size=11.5, bullets=True, space_after=7)
 text(s, L, Inches(4.4), FULL_W, Inches(0.35),
-     [[("Final: one 360k-parameter MLP per track (4 hidden layers of 336).", {"bold": True, "color": PURPLE})]],
+     [[("Final: one 360k MLP per track; ElasticNet with the √ + Fourier input.", {"bold": True, "color": PURPLE})]],
      size=13)
 
 # ── Section 6: results ───────────────────────────────────────────────────────
@@ -491,28 +497,28 @@ text(s, L, Inches(4.4), FULL_W, Inches(0.35),
 deck.divider(6, "Results", "Against the solver and the supervised model")
 
 # Slide 20: against the supervised model (final models).
-s = deck.slide("Against supervised: close on ElasticNet, behind on BP's DEM error",
+s = deck.slide("Against supervised: better on ElasticNet, behind on BP's DEM error",
                "Label-free trains on the observation through R; supervised trains on solver DEMs. Supervised "
-               "wins the DEM-against-solver metric on both tracks. On ElasticNet we win total-emission error, "
-               "W1 and AIA MAE (10 times lower); on BP we win W1 and AIA MSE, and the BP DEM MSE is set by "
-               "flare cores (Part 7). EM error is the total-emission error; W1 is in dex.")
+               "wins the DEM-against-solver metric on BP. On ElasticNet, with the square-root plus Fourier "
+               "input, we win all five, DEM MSE included (0.310 vs 0.318). On BP we win W1 and AIA MSE, and "
+               "the BP DEM MSE is set by flare cores (Part 7). EM error is the total-emission error; W1 is in dex.")
 RES = [["", "DEM MSE", "EM error", "W1", "AIA MAE", "AIA MSE"],
        ["BP, label-free", "4.28", "19.6%", "0.083", "4.34", "83"],
        ["BP, supervised", "0.91", "14.3%", "0.133", "2.95", "157"],
-       ["ENet, label-free", "0.48", "12.7%", "0.111", "0.60", "650"],
+       ["ENet, label-free", "0.31", "12.2%", "0.103", "0.56", "161"],
        ["ENet, supervised", "0.32", "18.0%", "0.121", "6.32", "598"]]
 tb = table(s, L, TOP + Inches(0.1), FULL_W, RES, col_w=[2.5, 1.2, 1.2, 1.1, 1.2, 1.2], size=12,
            row_h=Inches(0.42), bold_first_col=True)
-bold_cells(tb, [(2, 1), (2, 2), (1, 3), (2, 4), (1, 5), (4, 1), (3, 2), (3, 3), (3, 4), (4, 5)])
+bold_cells(tb, [(2, 1), (2, 2), (1, 3), (2, 4), (1, 5), (3, 1), (3, 2), (3, 3), (3, 4), (3, 5)])
 text(s, L, Inches(3.4), FULL_W, Inches(0.9),
-     ["Bold = better. ElasticNet: we win emission, W1 and AIA MAE (10× lower). BP: we win W1 and AIA MSE; "
-      "the DEM error is set by flare cores (Part 7)."], size=12.5, bullets=True)
+     ["Bold = better. ElasticNet: we win all five, DEM MSE included. BP: we win W1 and AIA MSE; the DEM "
+      "error is set by flare cores (Part 7)."], size=12.5, bullets=True)
 
 # Slide 21: mean vs median.
 s = deck.slide("The typical pixel and the average tell different stories",
                "Per-pixel error is the squared error summed over the 18 bins. BP percentiles, label-free against "
-               "supervised: median 0.026 vs 0.112, p90 3.5 vs 2.0, p99 71 vs 27. ElasticNet: median 1.07 vs "
-               "1.12, p99 35.5 vs 35.5, p99.9 155 vs 178.")
+               "supervised: median 0.026 vs 0.112, p90 3.5 vs 2.0, p99 71 vs 27. ElasticNet: median 0.85 vs "
+               "1.12, p99 30 vs 35, p99.9 102 vs 178.")
 stat(s, L, TOP + Inches(0.1), Inches(2.9), Inches(1.45), "0.026 vs 0.112",
      "BP median pixel error, ours vs supervised: ~4× better on the typical pixel")
 stat(s, L, TOP + Inches(1.75), Inches(2.9), Inches(1.45), "98%",
@@ -520,7 +526,7 @@ stat(s, L, TOP + Inches(1.75), Inches(2.9), Inches(1.45), "98%",
 text(s, Inches(3.65), TOP + Inches(0.1), Inches(5.95), Inches(3.4),
      ["On the typical BP pixel we are ~4× closer to the solver than the supervised model.",
       "From the 90th percentile up, supervised is better on BP (p99: 27 vs 71).",
-      "ElasticNet: ours is as good or better at the median, p99 and p99.9.",
+      "ElasticNet: ours is better at the median, p99 and p99.9.",
       "The BP average is set by the worst 1% of pixels, for both models."],
      size=13, bullets=True, space_after=12)
 
@@ -529,7 +535,8 @@ s = deck.slide("Multi-peaked DEMs: we find a quarter, within BP's own noise",
                "Peaks are counted on the zero-padded curve with prominence 0.15 times the maximum, over the "
                "full test set. Self-consistency: 80 multi-peaked bright pixels, 30 BP re-solves each under "
                "photon noise; our deviation from BP is 0.97 times BP's own re-solve scatter (0.70 at "
-               "single-peaked pixels). On ElasticNet both models find ~85% of multi-peaked pixels.")
+               "single-peaked pixels). On ElasticNet both models find most multi-peaked pixels: ours 82% recall at 87% "
+               "precision, supervised 84% at 80%.")
 MULTI = [["BP track", "Flagged multi-peaked", "Precision", "Recall"],
          ["Solver (BP)", "13.5% of pixels", "", ""],
          ["Label-free", "9.9%", "36%", "26%"],
@@ -558,16 +565,16 @@ picture(s, os.path.join(P19, "fig1_error_share_by_brightness.png"), Inches(4.05)
         Inches(5.55), Inches(3.75))
 
 # Slide 25: gap grows with brightness.
-s = deck.slide("On BP, our gap grows with brightness; on ElasticNet it stays small")
+s = deck.slide("On BP, our gap grows with brightness; on ElasticNet we are ahead")
 text(s, L, TOP - Inches(0.05), FULL_W, Inches(0.9),
      ["BP, our error / supervised: 0.64 on the faintest pixels, 1.8 at 0.3–1×, 5 at 3–10×, 18 at 10–32×.",
-      "ElasticNet: 1.0–1.07 below 3× (90% of pixels), 1.5 at 3–10×, 7 at 10–32×, 1.6 at flare cores."],
+      "ElasticNet: ours is ahead from 0.1× to 32× (0.5–1.0), level on the faintest, 1.3 at flare cores."],
      size=12, bullets=True, space_after=4)
 picture(s, os.path.join(P19, "fig2_relative_error_by_brightness.png"), L, Inches(1.85), FULL_W, Inches(2.95))
 
 # Slide 26: at flare cores.
 s = deck.slide("At BP flare cores, the model under-predicts and runs too cool",
-               "ElasticNet flare cores are close to the solver: 88% of its emission, peak 79% as high, and 20% "
+               "ElasticNet flare cores match the solver: 99% of its emission, peak 101% as high, and 18% "
                "multi-peaked against the solver's 21%.")
 text(s, L, TOP, Inches(3.6), Inches(3.7),
      ["BP flare cores: 40% of the solver's emission, peak 23% as high, 0.2 dex too cool.",
@@ -582,10 +589,11 @@ caption(s, Inches(4.1), Inches(4.6), Inches(5.5),
 
 # Slide 27: its own objective.
 s = deck.slide("At BP flare cores, the model fails its own objective",
-               "On ElasticNet our flare-core reconstruction matches the solver's (94 A: 0.41 vs 0.55; cool "
-               "channels 1.00 vs 0.98) and beats the supervised model's (0.70 to 0.76 on the cool channels). "
-               "The supervised model's sqrt plus Fourier input made BP flare cores worse, consistent with a "
-               "training problem rather than an input-representation one.")
+               "On ElasticNet our flare-core reconstruction matches the solver's (94 A: 0.53 vs 0.55; cool "
+               "channels 0.97 vs 0.98 to 1.00) and beats the supervised model's (0.70 to 0.76 on the cool "
+               "channels). On BP, the supervised model's square-root plus Fourier input does not fix flare "
+               "cores either (94 A 0.15 vs 0.23), consistent with a training problem rather than an "
+               "input-representation one.")
 text(s, L, TOP - Inches(0.05), FULL_W, Inches(1.0),
      ["BP: the solver's DEM reproduces 92% of the observed 94 Å; ours reproduces 23% (131 Å: 76%). "
       "The cool channels are fit to within a few percent.",
@@ -597,7 +605,7 @@ picture(s, os.path.join(P19, "fig5_aia_fit_flare_cores.png"), L, Inches(1.9), FU
 # Slide 28: ruled out.
 s = deck.slide("Not solver noise, not missed double peaks")
 stat(s, L, TOP + Inches(0.1), Inches(2.9), Inches(1.45), "0.4%",
-     "of our BP Bright error comes from the solver's own spread across its 5 targets (ENet 6%)")
+     "of our BP Bright error comes from the solver's own spread across its 5 targets (ENet 8%)")
 stat(s, L, TOP + Inches(1.75), Inches(2.9), Inches(1.45), "1.2%",
      "of our BP error comes from missing the solver's second peak")
 text(s, Inches(3.65), TOP + Inches(0.1), Inches(5.95), Inches(3.4),
@@ -620,7 +628,8 @@ card_grid(s, [
                         "size pays off up to 360k."),
     ("Heavy tails", "Report medians and percentiles: a handful of pixels can own the mean, or blow up."),
     ("The open failure", "BP flare cores. The model misses the hot channels there: a training problem."),
-    ("Tried, didn't help", "The supervised model's sqrt + Fourier input made BP flare cores worse.")],
+    ("Input encoding", "The supervised model's √ + Fourier input lifts ElasticNet past the supervised "
+                       "model; on BP it changes nothing.")],
     cols=3, h=Inches(1.55), numbered=True, size=12)
 
 # Slide 31: next.

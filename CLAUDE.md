@@ -91,6 +91,15 @@ From the paper's "Future Work" section:
 
 ## Progress Log (most recent first)
 
+### 2026-10-04 (settled) — Final inputs: log1p for BP, sqrt + Fourier for ElasticNet
+
+With fresh pixels, the supervised model's input encoding (sqrt then 12 Fourier
+frequencies) lifts the 360k ElasticNet model past the supervised model on every
+headline metric (DEM MSE 0.310 vs 0.318, AIA MSE 161 vs 598) and is chosen by
+validation (0.0533 vs 0.0575). On BP it ties on validation and leaves flare
+cores unsolved, so BP keeps log1p. Final checkpoints and numbers in `STATE.md`
+and `results/plots/19_final_models_20261004/`.
+
 ### 2026-10-04 (later) — Final: one 360k MLP per track
 
 BP switched from 1.43M to 360k: its own validation best (2.148 vs 2.155, a tie)

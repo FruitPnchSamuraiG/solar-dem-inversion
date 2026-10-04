@@ -17,7 +17,8 @@ README there. ENet vs supervised: wins all five headline metrics (DEM MSE
 0.310 vs 0.318); ratio to supervised 0.47-0.98 from 0.1x to 32x, 1.28 at flare
 cores; flare cores 99% of emission, 94 A fit 0.53 (solver 0.55). Deck rebuilt
 (summary, model slide, slide 19 input bullet, 21-29, lessons card "Input
-encoding"). Remaining todo: move `logs/` to scratch now that no jobs run.
+encoding"). `logs/` moved to `$SCRATCH/dem/logs` (symlink at `~/projects/dem/logs`)
+on 2026-10-04, so job logs no longer count against the /home file limit.
 
 ## 2026-10-04 RESULT: sqrt + Fourier input on ENet 360k (fresh pixels) beats everything
 

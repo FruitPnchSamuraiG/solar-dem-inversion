@@ -4,6 +4,10 @@ Last updated: 2026-10-04 (Claude: FINAL = h336 per track; BP log1p input, ENet s
 
 ## 2026-10-04 FINAL (settled): h336 per track; BP log1p input, ENet sqrt+Fourier input
 
+`results/bright_failure_story_20260929.md` is a historical report (fixed-sample h232
+models, written for the supervised side); it is not updated. The deck is the
+current record of results.
+
 BP sqrt+FF h336 (`19146096`, evals 19146097/98): validation 2.1472 vs log1p
 2.1478, a tie, and mixed on test (median 0.0234 vs 0.0257 better; DEM MSE 4.56
 vs 4.28, flare-core emission 0.35 vs 0.40, 94 A 0.15 vs 0.23 worse). Tie, so the

@@ -1,5 +1,6 @@
-# Samuel's nine curated representative full-disk visualizer dates.
-20150923_180356
+# Samuel's eight curated full-disk visualizer dates (all in the test split).
+# 20150923_180356 was our first single-date render test; it is not on his list,
+# so the viewer leaves it out. Its assets stay on Torch.
 20151022_053428
 20150930_053501
 20151112_060355

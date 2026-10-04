@@ -18,10 +18,16 @@ cp "$REPO_DIR/student_package/visuals_pipeline/webapp/compare.js" "$WEBAPP/compa
 
 entries=()
 RUNS=(bp_solver bp_mlp6_h336 bp_supervised enet_solver enet_mlp6_h336_sqrtff enet_supervised)
+# Only the dates in visualizer_dates.txt are shown, whatever else is rendered.
+mapfile -t DATES < <(grep -v '^#' "$REPO_DIR/experiments/visualizer_dates.txt" | sed '/^$/d')
 for run in "${RUNS[@]}"; do
-  for source in "$VIS_ROOT/assets/$run"/*; do
-    [ -d "$source" ] || continue
-    name="$run/$(basename "$source")"
+  for stamp in "${DATES[@]}"; do
+    source="$VIS_ROOT/assets/$run/$stamp"
+    if [ ! -d "$source" ]; then
+      echo "not rendered, skipped: $run/$stamp" >&2
+      continue
+    fi
+    name="$run/$stamp"
     target="$RESULTS/$name"
     mkdir -p "$(dirname "$target")"
     ln -sfn "$source" "$target"

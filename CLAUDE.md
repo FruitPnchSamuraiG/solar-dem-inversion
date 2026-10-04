@@ -95,7 +95,7 @@ From the paper's "Future Work" section:
 
 Public viewer assets rebuilt for the two final models (Torch job `19173795`,
 37 min, `experiments/job_visuals_final_cpu.sbatch`): runs `bp_mlp6_h336` and
-`enet_mlp6_h336_sqrtff` on the nine dates; Results view numbers now match the
+`enet_mlp6_h336_sqrtff` on Samuel's eight dates; Results view numbers match the
 deck. Preview staged at
 `/scratch/hsr3649/dem/visuals/matched_enet_alpha0p001/preview`; upload to
 Triborough is done by Hriday (steps in `experiments/matched_visuals.md`). Deck:

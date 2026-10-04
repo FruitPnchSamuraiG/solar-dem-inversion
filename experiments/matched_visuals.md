@@ -79,7 +79,7 @@ mkdir -p logs/visuals
 sbatch experiments/job_visuals_final_cpu.sbatch
 ```
 
-One CPU job (about an hour) exports both checkpoints on the nine dates from the
+One CPU job (about 40 min) exports both checkpoints on the viewer dates from the
 same inputs as before (BP raw labels, the alpha=0.001 ENet references), prints a
 per-disk check against the solver, renders `assets/bp_mlp6_h336/DATE` and
 `assets/enet_mlp6_h336_sqrtff/DATE`, and restages the preview. Solver and

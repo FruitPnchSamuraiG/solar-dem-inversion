@@ -65,3 +65,37 @@ when switching solver tracks, when available. Existing URLs remain supported.
 After checking completion, repeat the preview download and public-site upload
 with rsync. The public site does not update automatically when a Torch job
 finishes. Keep symlink dereferencing enabled for the download (`rsync -rLt`).
+
+## Final label-free models (2026-10-04)
+
+The viewer now shows the final label-free models, one 360k MLP per track:
+BP `output/experiments/resample/scaled_mlp6_barrier_h336_resample.pt` (log1p
+input) and ENet
+`output/experiments/input_encoding/scaled_mlp6_enet_h336_sqrt_ff12_resample.pt`
+(square root + 12 Fourier frequencies). From the Torch repository root:
+
+```bash
+mkdir -p logs/visuals
+sbatch experiments/job_visuals_final_cpu.sbatch
+```
+
+One CPU job (about an hour) exports both checkpoints on the nine dates from the
+same inputs as before (BP raw labels, the alpha=0.001 ENet references), prints a
+per-disk check against the solver, renders `assets/bp_mlp6_h336/DATE` and
+`assets/enet_mlp6_h336_sqrtff/DATE`, and restages the preview. Solver and
+supervised images are reused. Staging now lists only the six runs the viewer
+shows; the h232 assets stay on disk but leave the preview.
+
+The Results view's numbers are the final-model numbers from
+`results/plots/19_final_models_20261004/` (DEM metrics from
+`*_bright_failure_final.json`, AIA from `*_aia_fit_final.json`; supervised from
+`13_bright_diagnostic_20260928/*_supervised.json`, same model and test set).
+They match the advisor deck. Medians come from the diagnostic's 0.02-dex
+histogram for both models, so they differ slightly from the earlier site's.
+
+Deploy as before: download the preview with symlinks dereferenced, then upload
+it over the existing site.
+
+```bash
+rsync -rLt --info=progress2 torch:/scratch/hsr3649/dem/visuals/matched_enet_alpha0p001/preview/ ~/dem_preview/
+```

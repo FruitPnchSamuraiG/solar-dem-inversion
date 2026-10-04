@@ -1,6 +1,22 @@
 # DEM project state
 
-Last updated: 2026-10-04 (Claude: FINAL models BP h680 / ENet h336, fresh pixels; deck rebuilt on them; sqrt+FF rerun queued)
+Last updated: 2026-10-04 (Claude: FINAL = one h336 (360k) MLP per track, fresh pixels; deck rebuilt; sqrt+FF on h336 running)
+
+## 2026-10-04 (later) FINAL MODELS REVISED: one h336 (360k) MLP per track
+
+Hriday asked whether 1.43M was worth it for BP. It is not: BP's own validation
+best is h336 (2.148 vs h680 2.155, a tie), and h336 is better on nearly every
+test metric (DEM MSE 4.28 vs 5.10, AIA MSE 83 vs 174, flare-core emission 0.40
+vs 0.20, 94 A 0.23 vs 0.08); h680 only wins the median (0.023 vs 0.026) at 4x
+the size. So both tracks use h336. `results/plots/19_final_models_20261004/`
+now holds BP h336 + ENet h336 (tag `final`, README updated, figures redrawn,
+`bp_self_consistency_h336.json`: 0.97x multimodal, 0.70x unimodal).
+BP h336 vs supervised: DEM MSE 4.28 vs 0.91, EM 19.6% vs 14.3%, W1 0.083 vs
+0.133, AIA MAE 4.34 vs 2.95, AIA MSE 83 vs 157; median 0.026 vs 0.112.
+sqrt + Fourier on the final models: ENet h336 `19141672` (done; evals
+19141673/74), BP h336 `19146096` (evals 19146097/98). The h680 BP sqrt+FF run
+(19141315) finished but its evals were cancelled; not needed.
+The entry below is superseded where it says BP h680.
 
 ## 2026-10-04 FINAL MODELS: BP h680 (1.43M), ENet h336 (360k), fresh pixels
 

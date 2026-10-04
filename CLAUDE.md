@@ -91,6 +91,13 @@ From the paper's "Future Work" section:
 
 ## Progress Log (most recent first)
 
+### 2026-10-04 (later) — Final: one 360k MLP per track
+
+BP switched from 1.43M to 360k: its own validation best (2.148 vs 2.155, a tie)
+and better on nearly every test metric; 1.43M only wins the median. Both tracks
+now use h336 (`scaled_mlp6_{barrier,enet}_h336_resample.pt`). Deck rebuilt;
+slide 19 states the choice. Detail in `STATE.md`.
+
 ### 2026-10-04 — Final models: BP 1.43M, ElasticNet 360k, fresh pixels
 
 Fresh pixels every epoch is the training setup. Fresh-pixel sweep and CNN

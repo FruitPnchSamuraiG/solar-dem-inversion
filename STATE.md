@@ -2,6 +2,20 @@
 
 Last updated: 2026-10-04 (Claude: FINAL = one h336 (360k) MLP per track, fresh pixels; deck rebuilt; sqrt+FF on h336 running)
 
+## 2026-10-04 RESULT: sqrt + Fourier input on ENet 360k (fresh pixels) beats everything
+
+Job `19141672` (h336, `--input_transform sqrt --fourier_freqs 12 --resample_pixels`,
+warmup 3000), evals `19141673/74`; outputs in `results/plots/20_sqrtff_final_20261004/`.
+Validation 0.0533 vs 0.0575 for the final log1p h336, so it is the validation
+choice. Shared test set, vs final log1p / supervised: DEM MSE **0.310** / 0.482 /
+0.318, EM 12.2% / 12.7% / 18.0%, W1 0.103 / 0.111 / 0.121, median 0.85 / 1.07 /
+1.12, p99.9 102 / 155 / 178, AIA MAE 0.56 / 0.60 / 6.32, AIA MSE 161 / 650 / 598,
+flare-core emission 0.99, 94 A fit 0.53 (solver 0.55). Label-free ENet now
+beats the supervised model on every metric. Reverses the 2026-10-02 sqrt+FF
+result, which was BP h232 with the fixed sample.
+BP h336 sqrt+FF (`19146096`, evals 19146097/98) still running; plan: pick each
+track's input by validation, then rebuild the deck once.
+
 ## 2026-10-04 (later) FINAL MODELS REVISED: one h336 (360k) MLP per track
 
 Hriday asked whether 1.43M was worth it for BP. It is not: BP's own validation

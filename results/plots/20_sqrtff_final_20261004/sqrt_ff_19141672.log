@@ -1,0 +1,56 @@
+[dem] venv=/scratch/hsr3649/dem/env/.venv  scratch=/scratch/hsr3649/dem
+### git HEAD: 3e01853
+Couldn't import Gurobi; can't do a QP
+Device: cuda   Variant: mlp6   Loss: enet
+Root: /scratch/hsr3649/dem/data/elasticnet_AIA_hofdeconv_full_DS
+D: (6, 54)   basis: 54   temps: 18
+ENet objective: C=6.0 alpha=0.001 lam=0.5
+[train] 58,688 blocks x 512 px = 30,048,256 samples/epoch (AIA 256, DEM 128, patch 9@stride2)
+[val] 256 blocks x 512 px = 131,072 samples/epoch (AIA 256, DEM 128, patch 9@stride2)
+Model params: 408,630  input=sqrt  fourier_freqs=12  softplus floor=-20.0 (1 replaced)  init bias=-3.0 wscale=0.01
+init check: x med=0.0486 max=0.0487  |Dx| med=5.715e+00 max=1.235e+02  (want |Dx| comparable to obs, not orders above)
+3,668 steps/epoch, 146,720 total, 3,000 warmup
+Epoch   1/40  loss=131688288.8811  val_loss=0.2265  sp_coef=5.98 (hist: BP 1.79)  sp_dem nn/ref=5.17/5.36  mae_aia=2.595  174s
+Epoch   2/40  loss=0.2253  val_loss=0.1326  sp_coef=5.56 (hist: BP 1.79)  sp_dem nn/ref=4.82/5.36  mae_aia=1.968  152s
+Epoch   3/40  loss=0.1424  val_loss=0.1054  sp_coef=4.64 (hist: BP 1.79)  sp_dem nn/ref=4.09/5.36  mae_aia=1.688  157s
+Epoch   4/40  loss=0.1019  val_loss=0.1070  sp_coef=5.39 (hist: BP 1.79)  sp_dem nn/ref=4.42/5.36  mae_aia=2.682  155s
+Epoch   5/40  loss=0.0897  val_loss=0.0757  sp_coef=5.62 (hist: BP 1.79)  sp_dem nn/ref=4.49/5.36  mae_aia=1.460  168s
+Epoch   6/40  loss=0.0832  val_loss=0.0685  sp_coef=5.55 (hist: BP 1.79)  sp_dem nn/ref=4.58/5.36  mae_aia=0.972  163s
+Epoch   7/40  loss=0.0764  val_loss=0.0665  sp_coef=5.48 (hist: BP 1.79)  sp_dem nn/ref=4.50/5.36  mae_aia=1.059  164s
+Epoch   8/40  loss=0.0732  val_loss=0.0680  sp_coef=5.50 (hist: BP 1.79)  sp_dem nn/ref=4.47/5.36  mae_aia=1.361  163s
+Epoch   9/40  loss=0.0713  val_loss=0.0602  sp_coef=5.60 (hist: BP 1.79)  sp_dem nn/ref=4.52/5.36  mae_aia=0.800  157s
+Epoch  10/40  loss=0.0756  val_loss=0.0609  sp_coef=5.57 (hist: BP 1.79)  sp_dem nn/ref=4.47/5.36  mae_aia=1.050  171s
+Epoch  11/40  loss=0.0676  val_loss=0.0585  sp_coef=5.65 (hist: BP 1.79)  sp_dem nn/ref=4.48/5.36  mae_aia=0.903  164s
+Epoch  12/40  loss=0.0663  val_loss=0.0589  sp_coef=5.73 (hist: BP 1.79)  sp_dem nn/ref=4.49/5.36  mae_aia=0.847  162s
+Epoch  13/40  loss=0.0656  val_loss=0.0573  sp_coef=5.75 (hist: BP 1.79)  sp_dem nn/ref=4.49/5.36  mae_aia=0.770  159s
+Epoch  14/40  loss=0.0691  val_loss=0.0576  sp_coef=5.79 (hist: BP 1.79)  sp_dem nn/ref=4.50/5.36  mae_aia=0.817  160s
+Epoch  15/40  loss=0.0635  val_loss=0.0557  sp_coef=5.76 (hist: BP 1.79)  sp_dem nn/ref=4.46/5.36  mae_aia=0.723  162s
+Epoch  16/40  loss=0.0625  val_loss=0.0556  sp_coef=5.74 (hist: BP 1.79)  sp_dem nn/ref=4.46/5.36  mae_aia=0.662  166s
+Epoch  17/40  loss=0.0626  val_loss=0.0573  sp_coef=5.77 (hist: BP 1.79)  sp_dem nn/ref=4.47/5.36  mae_aia=0.919  162s
+Epoch  18/40  loss=0.0619  val_loss=0.0553  sp_coef=5.75 (hist: BP 1.79)  sp_dem nn/ref=4.46/5.36  mae_aia=0.722  160s
+Epoch  19/40  loss=0.0611  val_loss=0.0556  sp_coef=5.71 (hist: BP 1.79)  sp_dem nn/ref=4.45/5.36  mae_aia=0.829  157s
+Epoch  20/40  loss=0.0612  val_loss=0.0545  sp_coef=5.74 (hist: BP 1.79)  sp_dem nn/ref=4.45/5.36  mae_aia=0.584  158s
+Epoch  21/40  loss=0.0603  val_loss=0.0551  sp_coef=5.71 (hist: BP 1.79)  sp_dem nn/ref=4.43/5.36  mae_aia=0.806  155s
+Epoch  22/40  loss=0.0603  val_loss=0.0543  sp_coef=5.73 (hist: BP 1.79)  sp_dem nn/ref=4.43/5.36  mae_aia=0.601  158s
+Epoch  23/40  loss=0.0600  val_loss=0.0539  sp_coef=5.74 (hist: BP 1.79)  sp_dem nn/ref=4.43/5.36  mae_aia=0.557  160s
+Epoch  24/40  loss=0.0597  val_loss=0.0539  sp_coef=5.72 (hist: BP 1.79)  sp_dem nn/ref=4.42/5.36  mae_aia=0.645  162s
+Epoch  25/40  loss=0.0596  val_loss=0.0539  sp_coef=5.72 (hist: BP 1.79)  sp_dem nn/ref=4.42/5.36  mae_aia=0.596  155s
+Epoch  26/40  loss=0.0593  val_loss=0.0538  sp_coef=5.70 (hist: BP 1.79)  sp_dem nn/ref=4.41/5.36  mae_aia=0.553  159s
+Epoch  27/40  loss=0.0592  val_loss=0.0539  sp_coef=5.69 (hist: BP 1.79)  sp_dem nn/ref=4.41/5.36  mae_aia=0.551  163s
+Epoch  28/40  loss=0.0590  val_loss=0.0537  sp_coef=5.70 (hist: BP 1.79)  sp_dem nn/ref=4.42/5.36  mae_aia=0.533  161s
+Epoch  29/40  loss=0.0589  val_loss=0.0536  sp_coef=5.69 (hist: BP 1.79)  sp_dem nn/ref=4.41/5.36  mae_aia=0.539  161s
+Epoch  30/40  loss=0.0588  val_loss=0.0535  sp_coef=5.69 (hist: BP 1.79)  sp_dem nn/ref=4.41/5.36  mae_aia=0.521  155s
+Epoch  31/40  loss=0.0587  val_loss=0.0534  sp_coef=5.68 (hist: BP 1.79)  sp_dem nn/ref=4.41/5.36  mae_aia=0.539  155s
+Epoch  32/40  loss=0.0586  val_loss=0.0534  sp_coef=5.67 (hist: BP 1.79)  sp_dem nn/ref=4.40/5.36  mae_aia=0.539  153s
+Epoch  33/40  loss=0.0585  val_loss=0.0533  sp_coef=5.67 (hist: BP 1.79)  sp_dem nn/ref=4.40/5.36  mae_aia=0.529  159s
+Epoch  34/40  loss=0.0586  val_loss=0.0533  sp_coef=5.66 (hist: BP 1.79)  sp_dem nn/ref=4.40/5.36  mae_aia=0.522  155s
+Epoch  35/40  loss=0.0585  val_loss=0.0534  sp_coef=5.67 (hist: BP 1.79)  sp_dem nn/ref=4.40/5.36  mae_aia=0.509  155s
+Epoch  36/40  loss=0.0584  val_loss=0.0533  sp_coef=5.66 (hist: BP 1.79)  sp_dem nn/ref=4.40/5.36  mae_aia=0.510  153s
+Epoch  37/40  loss=0.0583  val_loss=0.0533  sp_coef=5.66 (hist: BP 1.79)  sp_dem nn/ref=4.40/5.36  mae_aia=0.514  154s
+Epoch  38/40  loss=0.0584  val_loss=0.0532  sp_coef=5.66 (hist: BP 1.79)  sp_dem nn/ref=4.40/5.36  mae_aia=0.507  155s
+Epoch  39/40  loss=0.0584  val_loss=0.0533  sp_coef=5.66 (hist: BP 1.79)  sp_dem nn/ref=4.40/5.36  mae_aia=0.507  162s
+Epoch  40/40  loss=0.0585  val_loss=0.0533  sp_coef=5.66 (hist: BP 1.79)  sp_dem nn/ref=4.40/5.36  mae_aia=0.508  161s
+
+Saved output/experiments/input_encoding/scaled_mlp6_enet_h336_sqrt_ff12_resample.pt
+Final val — tol1: {'n': 130560, 'sp_coef': 5.658615561092601, 'sp_dem': 4.39920534620098, 'sp_ref': 5.35753864961512, 'mae_dem': 0.48911246131448183, 'mae_aia': 0.5083587609085383}
+           relaxed: {'n': 0, 'sp_coef': 0.0, 'sp_dem': 0.0, 'sp_ref': 0.0, 'mae_dem': 0.0, 'mae_aia': 0.0}

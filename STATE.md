@@ -328,6 +328,10 @@ https://triborough.cs.nyu.edu/hsr3649/demdemo/webapp/compare.html
 The live deployment was verified to contain the final full-test Results page on
 2026-09-19.
 
+On 2026-10-04 the viewer was rebuilt for the final 360k models (runs
+`bp_mlp6_h336`, `enet_mlp6_h336_sqrtff`; Results numbers as in the deck). The
+new preview is staged on Torch; see `experiments/matched_visuals.md` for upload.
+
 ## Final comparison
 
 The production label-free model is the 176k-parameter, center-pixel MLP6. It

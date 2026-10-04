@@ -3,48 +3,51 @@ const path = "../results/test/";
 const RUN_LABELS = {
   bp_solver: "BP solver reference",
   enet_solver: "ENet solver reference",
-  bp_mlp6_h232: "Label-free MLP6 (176k)",
-  enet_mlp6_h232: "Label-free MLP6 (176k)",
+  bp_mlp6_h336: "Label-free MLP (360k)",
+  enet_mlp6_h336_sqrtff: "Label-free MLP (360k)",
   bp_supervised: "Supervised model",
   enet_supervised: "Supervised model",
 };
+
+// Final label-free model per track (chosen by validation loss, 2026-10-04).
+const LABEL_FREE_RUN = {bp: "bp_mlp6_h336", enet: "enet_mlp6_h336_sqrtff"};
 
 const RESULTS = {
   bp: {
     title: "BP reference",
     rows: [
-      ["Full", 4.191, 20.16, 0.0845, 0.906, 14.34, 0.1334],
-      ["Bright", 40.901, 19.82, 0.0785, 8.657, 8.92, 0.0546],
-      ["Quiet", 0.0583, 20.53, 0.0853, 0.0335, 20.13, 0.1430],
+      ["Full", 4.2764, 19.62, 0.0835, 0.9060, 14.34, 0.1334],
+      ["Bright", 41.7491, 18.91, 0.0766, 8.6565, 8.92, 0.0546],
+      ["Quiet", 0.0578, 20.38, 0.0843, 0.0335, 20.13, 0.1430],
     ],
     // Approximate p50 of each pixel's SSE across 18 DEM bins: label-free, supervised.
     medianSSE: [
-      [0.02617881596111728, 0.11021735890826038],
-      [2.797370560127155, 1.7621789130782846],
-      [0.016548170999431813, 0.08680605106992277],
+      [0.025703957827688646, 0.11220184543019653],
+      [2.691534803926914, 1.7782794100389228],
+      [0.01621810097358933, 0.08511380382023759],
     ],
     aiaRows: [
-      ["Full", 4.3152880002, 82.5570380168, 2.9461307552, 156.6698630557],
-      ["Bright", 12.4006152650, 527.3480279327, 13.1345345278, 1444.9823134077],
-      ["Quiet", 3.4050557601, 32.4832332227, 1.7991377782, 11.6338627424],
+      ["Full", 4.3371281754, 83.3980976042, 2.9461307552, 156.6698630557],
+      ["Bright", 12.3435709946, 531.4996708455, 13.1345345278, 1444.9823134077],
+      ["Quiet", 3.4357766105, 32.9515930320, 1.7991377782, 11.6338627424],
     ],
   },
   enet: {
     title: "ENet reference (alpha=0.001, L1 ratio=0.5)",
     rows: [
-      ["Full", 0.588, 13.45, 0.1176, 0.318, 18.00, 0.1210],
-      ["Bright", 4.239, 8.44, 0.0717, 1.926, 14.47, 0.0607],
-      ["Quiet", 0.159, 17.23, 0.1230, 0.1296, 20.66, 0.1281],
+      ["Full", 0.3101, 12.17, 0.1029, 0.3181, 18.00, 0.1210],
+      ["Bright", 1.9107, 6.88, 0.0579, 1.9257, 14.47, 0.0607],
+      ["Quiet", 0.1224, 16.16, 0.1082, 0.1296, 20.66, 0.1281],
     ],
     medianSSE: [
-      [1.395886155788756, 1.125252534994235],
-      [8.728708696304247, 7.208584604895795],
-      [1.0976149154120272, 0.8860332094442038],
+      [0.8511380382023759, 1.1220184543019653],
+      [4.897788193684456, 7.079457843841373],
+      [0.6760829753919819, 0.8912509381337477],
     ],
     aiaRows: [
-      ["Full", 0.6692464264, 193.3688050353, 6.3214123554, 597.8457535723],
-      ["Bright", 1.6566951105, 1825.9784179279, 29.1901702298, 5053.2289548371],
-      ["Quiet", 0.5534536766, 1.9215333114, 3.6397171919, 75.3871378502],
+      ["Full", 0.5629774800, 161.3922715208, 6.3214123554, 597.8457535723],
+      ["Bright", 1.1776943323, 1523.1565211090, 29.1901702298, 5053.2289548370],
+      ["Quiet", 0.4908929698, 1.7055661039, 3.6397171919, 75.3871378502],
     ],
   },
 };
@@ -164,7 +167,7 @@ async function initCompare() {
   choose(select1, query.get("solver"), 0);
   const selectedRuns = () => {
     const prefix = select1.value.replace(/_solver$/, "");
-    return [select1.value, `${prefix}_mlp6_h232`, `${prefix}_supervised`];
+    return [select1.value, LABEL_FREE_RUN[prefix], `${prefix}_supervised`];
   };
   const refreshDates = (requested) => {
     const dates = entries
@@ -409,7 +412,7 @@ function makeMedianChart() {
       const values = result.medianSSE[index];
       const max = Math.max(...values);
       [["Supervised", values[1], "supervised"],
-       ["Label-free MLP6", values[0], "label-free"]].forEach(([name, value, kind]) => {
+       ["Label-free MLP", values[0], "label-free"]].forEach(([name, value, kind]) => {
         const line = document.createElement("div");
         line.className = "median-chart-line";
         const nameCell = document.createElement("span");
@@ -441,19 +444,19 @@ function renderResults(models, container) {
     <p class="mb-4">The tables summarize the full shared test set: 153 timestamps and 48,960 blocks, including five solver targets per spatial block. They do not change with the selected viewer date. DEM predictions are compared with the corresponding BP or ENet solver reference, not a directly measured true DEM.</p>
     <dl class="space-y-3 mb-5">
       <div><dt class="font-bold">DEM MSE ↓</dt><dd>Mean squared difference between predicted and reference DEM values, averaged across valid pixels and 18 temperature bins. Large errors receive more weight.</dd></div>
-      <div><dt class="font-bold">Median pixel DEM MSE ↓</dt><dd>Median of each valid pixel's squared error summed over 18 bins and divided by 18. It describes a typical pixel and is approximate because it comes from a fine streaming histogram.</dd></div>
+      <div><dt class="font-bold">Median pixel DEM MSE ↓</dt><dd>Median of each valid pixel's squared error summed over 18 bins and divided by 18. It describes a typical pixel and is approximate because it is read from a histogram with 0.02-dex bins.</dd></div>
       <div><dt class="font-bold">EM relative error (%) ↓</dt><dd>Sum of absolute errors in each pixel’s total emission, divided by the sum of reference emission, multiplied by 100. This is a ratio of totals, not an average of pixel percentages.</dd></div>
       <div><dt class="font-bold">W1 (dex) ↓</dt><dd>Average temperature-distribution distance between DEM curves normalized to unit total emission. Lower values indicate closer thermal shapes. Only pixels with positive emission in both curves are included.</dd></div>
       <div><dt class="font-bold">AIA MAE and MSE ↓</dt><dd>Mean absolute and mean squared differences between reconstructed and observed AIA brightness. MAE is in DN/s and MSE in (DN/s)², pooled across six channels and valid image pixels.</dd></div>
     </dl>
-    <p>Full includes all valid pixels. Bright means at least one AIA channel reaches its fixed brightness threshold; Quiet is the remaining valid population. Lower is better for all metrics. Supervised models learn solver labels; label-free MLP6 models learn physical objectives.</p>
+    <p>Full includes all valid pixels. Bright means at least one AIA channel reaches its fixed brightness threshold; Quiet is the remaining valid population. Lower is better for all metrics. Supervised models learn solver labels; label-free models learn physical objectives. The label-free model is a 360k-parameter per-pixel MLP for each track, trained on fresh pixels every epoch and chosen by validation loss; the BP model takes log1p AIA input and the ENet model takes square-root AIA with 12 Fourier-feature frequencies.</p>
     <p class="mt-3">AIA metrics use one common finite-pixel mask for the two models within each track. The clean AIA input is repeated for five solver targets, so the block count is evaluation weighting rather than 48,960 independent observations.</p>`;
   container.appendChild(intro);
   for (const prefix of ["bp", "enet"]) {
     const result = RESULTS[prefix];
     const rows = result.rows.flatMap((row, index) => [
       ["Supervised", row[0], row[4].toFixed(4), (result.medianSSE[index][1] / 18).toFixed(5), row[5].toFixed(2), row[6].toFixed(4)],
-      ["Label-free MLP6", row[0], row[1].toFixed(4), (result.medianSSE[index][0] / 18).toFixed(5), row[2].toFixed(2), row[3].toFixed(4)],
+      ["Label-free MLP", row[0], row[1].toFixed(4), (result.medianSSE[index][0] / 18).toFixed(5), row[2].toFixed(2), row[3].toFixed(4)],
     ]);
     container.appendChild(makeResultsTable(
       `${result.title} — full shared test set`,
@@ -466,7 +469,7 @@ function renderResults(models, container) {
     const result = RESULTS[prefix];
     const rows = result.aiaRows.flatMap(row => [
       ["Supervised", row[0], row[3].toFixed(4), row[4].toFixed(4)],
-      ["Label-free MLP6", row[0], row[1].toFixed(4), row[2].toFixed(4)],
+      ["Label-free MLP", row[0], row[1].toFixed(4), row[2].toFixed(4)],
     ]);
     container.appendChild(makeResultsTable(
       `${result.title} — AIA reconstruction on full shared test set`,
@@ -477,8 +480,8 @@ function renderResults(models, container) {
   const tailNote = document.createElement("section");
   tailNote.className = "results-section leading-relaxed";
   tailNote.innerHTML = `<h2 class="serif text-2xl mb-3">Interpreting large DEM errors</h2>
-    <p>Squared error is strongly concentrated in a small upper tail, especially among bright pixels. For label-free BP, the worst 1% of pixels contribute about 97.80% of total squared error; for label-free ENet, 66.75%. These errors remain part of the reported means—they are not discarded.</p>
-    <p class="mt-3">A lower full-population median does not remove the importance of large tail errors. Label-free BP has the lower median on the full and Quiet populations, but not Bright. Supervised ENet has the lower median in all three populations. Thus bright-pixel disagreement is not explained solely by a few extreme outliers.</p>
+    <p>Squared error is strongly concentrated in a small upper tail, especially among bright pixels. For label-free BP, the worst 1% of pixels contribute about 97.9% of total squared error (supervised 95.2%); for label-free ENet, 54.9% (supervised 49.4%). On BP, pixels at 32 times the Bright threshold or more (about 1 in 10,000) hold about 90% of the squared error for both models. These errors remain part of the reported means—they are not discarded.</p>
+    <p class="mt-3">A lower full-population median does not remove the importance of large tail errors. Label-free BP has the lower median on the full and Quiet populations, but not Bright, so its bright-pixel disagreement is not explained solely by a few extreme outliers. Label-free ENet has the lower median in all three populations.</p>
     <p class="mt-3">AIA MSE is also sensitive to large residuals: Bright-pixel MSE is much larger than Quiet-pixel MSE, and can disagree with the MAE ranking. We therefore show both MAE and MSE and avoid interpreting MSE alone. AIA error percentiles were not computed.</p>`;
   container.appendChild(tailNote);
 }

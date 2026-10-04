@@ -25,6 +25,8 @@ case "${TRACK:?set TRACK=bp or TRACK=enet}" in
   bp)   INPUT="$SCRATCH/dem/data/lp_AIA_hofdeconv_full/${TIMESTAMP}.npz"
         MODEL=output/experiments/sweep/scaled_mlp6_barrier_h232.pt
         LABEL=bp ;;
+  # The alpha=1 ElasticNet raw labels were deleted on 2026-10-03 (superseded by
+  # alpha=0.001); ENet website visuals come from job_visuals_matched_cpu.sbatch.
   enet) INPUT="$SCRATCH/dem/data/elasticnet_AIA_hofdeconv_full/${TIMESTAMP}.npz"
         MODEL=output/experiments/sweep/scaled_mlp6_enet_h232.pt
         LABEL=enet ;;

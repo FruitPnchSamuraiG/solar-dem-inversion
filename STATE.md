@@ -2,6 +2,22 @@
 
 Last updated: 2026-10-03 (Claude: fresh-pixel sweep mostly in; h232 no longer the clear choice; CNN runs + ENet h72/h48 pending)
 
+## 2026-10-03 night: Torch cleanup (DEM only)
+
+- `/home` was at 95% of its 30k-file limit. `logs/inv_hof/` (4,894 label-generation
+  logs) is now one archive, `logs/inv_hof_20260731.tar.gz`; `/home` dropped to
+  ~20.2k files. `logs/visuals/matched_cpu_17559157.err` (136 MB of ENet
+  convergence warnings) is gzipped. The stray `$SCRATCH/dem/runs/dem_loo_13320865.out`
+  moved to `logs/loo/`; empty `$SCRATCH/dem/{runs,checkpoints}` removed.
+- Deleted `$SCRATCH/dem/data/bp_smoke_test/` (3.6 GB, July smoke tests) and
+  `$SCRATCH/dem/data/elasticnet_AIA_hofdeconv_full/` (886 GB of alpha=1 raw ENet
+  labels, superseded by alpha=0.001; training uses the `_DS` zarr). Kept: BP raw
+  labels (the website export reads them), both `_DS` zarrs, `visuals/`, the four
+  small-data images, the Hofmeister PSFs.
+- Still to do once no jobs are running: move `logs/` to `$SCRATCH/dem/logs` with
+  a symlink, so job logs stop counting against the `/home` file limit.
+- Not DEM, untouched: `$SCRATCH/outputs.zip`, `$SCRATCH/checkpoints/`, other projects.
+
 ## 2026-10-03 evening: fresh-pixel sweep results (BP complete, ENet partial)
 
 **Plan agreed with Hriday (2026-10-03):** wait for the CNN runs (19108189_14/15)

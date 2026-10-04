@@ -4,6 +4,16 @@ Last updated: 2026-10-03 (Claude: fresh-pixel sweep mostly in; h232 no longer th
 
 ## 2026-10-03 evening: fresh-pixel sweep results (BP complete, ENet partial)
 
+**Plan agreed with Hriday (2026-10-03):** wait for the CNN runs (19108189_14/15)
+and the CNN-vs-MLP test comparison (19108218); report it; Hriday picks the
+final model (h232, h336, or the CNN if it clearly wins, beyond the 0.2-0.4%
+run-to-run spread). Then, on that model: diagnostic + AIA fit (exist for every
+mlp6 width), failure figures (`plot_bright_failures.py --plain`),
+self-consistency, **and rerun sqrt + Fourier-feature input with fresh pixels**
+(`job_train_input_encoding.sbatch` plus `--resample_pixels` and the final width).
+Then update slides 17, 18, Parts 6-7 and the summary slide in one pass, and
+STATE/CLAUDE. Optionally refresh `results/bright_failure_story_20260929.md`.
+
 `results/plots/17_sweep_resample_20261003/sweep_table.txt` (diagnostic + AIA fit
 per width on the full shared test set; val loss/sparsity from training).
 

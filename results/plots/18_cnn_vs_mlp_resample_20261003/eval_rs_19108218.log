@@ -1,0 +1,68 @@
+[dem] venv=/scratch/hsr3649/dem/env/.venv  scratch=/scratch/hsr3649/dem
+Couldn't import Gurobi; can't do a QP
+Device: cuda
+[check] 4 blocks: BP and ENet stagings share AIA exactly (max deviation 0.000e+00)
+D: (6, 54)   basis: 54   temps: 18
+  loaded  mlp6 / barrier epoch 40  input=log1p   <- scaled_mlp6_barrier_resample.pt
+  loaded   cnn / barrier epoch 40  input=log1p   <- scaled_cnn_barrier_resample.pt
+  loaded  mlp6 / enet    epoch 40  input=log1p   <- scaled_mlp6_enet_resample.pt
+  loaded   cnn / enet    epoch 40  input=log1p   <- scaled_cnn_enet_resample.pt
+
+==============================================================================
+TEST SPLIT -- 153 timestamps, never used for training or model selection
+==============================================================================
+[test] 9,792 blocks x 512 px = 5,013,504 samples/epoch (AIA 256, DEM 128, patch 9@stride2)
+ mlp6 / barrier  test_loss=2.0696  sp_coef=1.90 (hist: BP 1.79)  sp_dem nn/ref=5.12/5.33  mae_aia=4.926  n(tol=1)=4,643,049
+[test] 9,792 blocks x 512 px = 5,013,504 samples/epoch (AIA 256, DEM 128, patch 9@stride2)
+  cnn / barrier  test_loss=2.2414  sp_coef=2.03 (hist: BP 1.79)  sp_dem nn/ref=5.16/5.33  mae_aia=4.732  n(tol=1)=4,643,049
+[test] 9,792 blocks x 512 px = 5,013,504 samples/epoch (AIA 256, DEM 128, patch 9@stride2)
+ mlp6 / enet     test_loss=0.0573  sp_coef=5.53 (hist: BP 1.79)  sp_dem nn/ref=4.36/5.21  mae_aia=0.535  n(tol=1)=4,938,752
+[test] 9,792 blocks x 512 px = 5,013,504 samples/epoch (AIA 256, DEM 128, patch 9@stride2)
+  cnn / enet     test_loss=0.2450  sp_coef=5.17 (hist: BP 1.79)  sp_dem nn/ref=4.27/5.21  mae_aia=0.821  n(tol=1)=4,938,752
+
+==============================================================================
+BARRIER LOSS TAIL -- per-pixel decomposition
+==============================================================================
+[test] 9,792 blocks x 512 px = 5,013,504 samples/epoch (AIA 256, DEM 128, patch 9@stride2)
+
+mlp6 / barrier   mean=2.070
+  median=0.982  p90=4.617  p99=17.922  p99.9=51.20  p99.99=165.23  max=7622
+  share of total loss from the worst 1%: 17.2%   worst 0.1%: 5.6%
+  mean by term:  l1=1.837  below-lb=0.181  above-ub=0.051
+  mean loss by brightness decile:
+    d 1 [        0,     9.36]: mean=    0.033  p99=     0.480
+    d 2 [     9.36,     21.6]: mean=    0.134  p99=     1.295
+    d 3 [     21.6,     61.5]: mean=    0.311  p99=     1.570
+    d 4 [     61.5,      153]: mean=    0.742  p99=     3.083
+    d 5 [      153,      232]: mean=    1.029  p99=     3.322
+    d 6 [      232,      307]: mean=    1.287  p99=     3.919
+    d 7 [      307,      398]: mean=    1.628  p99=     4.705
+    d 8 [      398,      538]: mean=    2.183  p99=     6.177
+    d 9 [      538,      847]: mean=    3.366  p99=     9.466
+    d10 [      847, 1.13e+05]: mean=    9.983  p99=    50.864
+[test] 9,792 blocks x 512 px = 5,013,504 samples/epoch (AIA 256, DEM 128, patch 9@stride2)
+
+cnn / barrier   mean=2.241
+  median=1.008  p90=4.743  p99=18.799  p99.9=56.99  p99.99=197.69  max=4.213e+05
+  share of total loss from the worst 1%: 21.2%   worst 0.1%: 9.7%
+  mean by term:  l1=1.792  below-lb=0.292  above-ub=0.157
+  mean loss by brightness decile:
+    d 1 [        0,     9.36]: mean=    0.036  p99=     0.487
+    d 2 [     9.36,     21.6]: mean=    0.143  p99=     1.305
+    d 3 [     21.6,     61.5]: mean=    0.311  p99=     1.598
+    d 4 [     61.5,      153]: mean=    0.767  p99=     3.199
+    d 5 [      153,      232]: mean=    1.062  p99=     3.455
+    d 6 [      232,      307]: mean=    1.323  p99=     4.095
+    d 7 [      307,      398]: mean=    1.671  p99=     4.944
+    d 8 [      398,      538]: mean=    2.244  p99=     6.520
+    d 9 [      538,      847]: mean=    3.462  p99=    10.072
+    d10 [      847, 1.13e+05]: mean=   11.394  p99=    56.600
+
+==============================================================================
+PER-PIXEL DEM CURVES
+==============================================================================
+  wrote output/experiments/eval_scaled_resample/dem_curves_block06236.png
+  wrote output/experiments/eval_scaled_resample/dem_curves_block05005.png
+  wrote output/experiments/eval_scaled_resample/dem_curves_block08327.png
+
+Summary -> output/experiments/eval_scaled_resample/eval_scaled_summary.json

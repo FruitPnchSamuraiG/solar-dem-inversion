@@ -1,6 +1,35 @@
 # DEM project state
 
-Last updated: 2026-10-03 (Claude: fresh-pixel sweep mostly in; h232 no longer the clear choice; CNN runs + ENet h72/h48 pending)
+Last updated: 2026-10-04 (Claude: FINAL models BP h680 / ENet h336, fresh pixels; deck rebuilt on them; sqrt+FF rerun queued)
+
+## 2026-10-04 FINAL MODELS: BP h680 (1.43M), ENet h336 (360k), fresh pixels
+
+Chosen with Hriday by validation, not test. Results and figures:
+`results/plots/19_final_models_20261004/` (files tagged `final`; README there).
+
+- **CNN vs MLP (fresh pixels, eval 19108218):** MLP wins. Test objective BP
+  2.07 vs 2.24 (better at every percentile and brightness decile), ENet 0.057 vs
+  0.245; CNN only better on BP AIA MAE (4.73 vs 4.93). Validation agrees (BP
+  2.155 vs 2.248, ENet 0.0528 vs 0.0683). `results/plots/18_cnn_vs_mlp_resample_20261003/`.
+- **BP h680:** validation 2.155 (tied with h336 2.148 within noise); best median
+  (0.023 vs supervised 0.112). DEM MSE 5.10, EM 20.2%, W1 0.084, AIA MAE 4.43,
+  AIA MSE 174 (supervised 0.91 / 14.3% / 0.133 / 2.95 / 157). Flare cores: 20%
+  of emission, 94 A fit 0.08, 88% multi-peaked; spurious peaks 74% of error.
+  Self-consistency 0.96x (multimodal), 0.68x (unimodal).
+- **ENet h336:** the largest stable width. ENet h480/h680 blow up on a handful
+  of bright pixels (AIA MSE 41,849 / 908,611; relative error up to 48x at
+  10-32x) that the sampled validation never contained. h336: DEM MSE 0.48, EM
+  12.7%, W1 0.111, AIA MAE 0.60, AIA MSE 650 (supervised 0.32 / 18.0% / 0.121 /
+  6.32 / 598); error ratio to supervised 1.0-1.07 below 3x; flare cores 88% of
+  emission, 20% multi-peaked (solver 21%).
+- **Sweep message:** with fresh pixels, bigger helps the typical pixel (BP
+  median 0.068 at 20k to 0.023 at 1.43M); the fixed-sample conclusion
+  "176k is enough" was a property of the fixed sample.
+- **Deck:** rebuilt on these (slides 2, 5, 18-32); outline synced.
+- **Queued:** sqrt + Fourier input on the final models with fresh pixels: BP h680
+  `19141315` (evals 19141316/17), ENet h336 `19141672` (19141673/74), TAG
+  `sqrtff12_resample_h680` / `_h336`. Compare against the `final` files.
+- After those finish: move `logs/` to `$SCRATCH/dem/logs` with a symlink.
 
 ## 2026-10-03 night: Torch cleanup (DEM only)
 

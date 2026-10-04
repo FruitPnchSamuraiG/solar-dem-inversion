@@ -91,6 +91,18 @@ From the paper's "Future Work" section:
 
 ## Progress Log (most recent first)
 
+### 2026-10-04 — Final models: BP 1.43M, ElasticNet 360k, fresh pixels
+
+Fresh pixels every epoch is the training setup. Fresh-pixel sweep and CNN
+rerun: the centre-pixel MLP beats the patch CNN at scale; bigger helps the
+typical pixel; ElasticNet models of 722k+ blow up on a few bright pixels that
+sampled validation missed. Final: BP h680 (median pixel error 0.023 vs
+supervised 0.112; flare cores still the failure) and ENet h336 (within 7% of
+supervised on 90% of pixels, 10x lower AIA MAE). Deck rebuilt on these;
+sqrt + Fourier rerun on the final models queued. Detail in `STATE.md`;
+`results/plots/17_sweep_resample_20261003/`, `18_cnn_vs_mlp_resample_20261003/`,
+`19_final_models_20261004/`.
+
 ### 2026-10-03 — Fresh-pixel retrains came out worse; June noisy MLP did not reproduce
 
 Both retrains with `--resample_pixels` are worse than production beyond seed

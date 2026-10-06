@@ -65,7 +65,8 @@ class ZarrPatchBlockDataset(Dataset):
 
     def __init__(self, root, phase, patch_size=9, stride=2, tolfac=1.4,
                  pixels_per_block=512, n_bins=N_AIA_BINS, with_labels=False,
-                 tol_levels=(1, 3, 5), min_obs=MIN_OBS, max_blocks=None, seed=0):
+                 tol_levels=(1, 3, 5), min_obs=MIN_OBS, max_blocks=None, seed=0,
+                 bright_gamma=0.0, thresholds=None, bright_cap=1000.0):
         import zarr
 
         self.root = root
@@ -79,6 +80,19 @@ class ZarrPatchBlockDataset(Dataset):
         self.tol_levels = tuple(tol_levels)
         self.min_obs = min_obs
         self.seed = seed
+        # Brightness-weighted pixel draw (0 = uniform, the default). Flare cores
+        # (>= 32x the Bright cutoff) are ~1 in 10,000 pixels, so a uniform draw
+        # shows the network almost none of them. With gamma > 0 a pixel is drawn
+        # with probability proportional to clip(I, 1, cap)**gamma, where I is the
+        # max over channels of observed / Bright threshold: Quiet pixels keep
+        # weight 1 and a 100x flare core gets 100x the chance (gamma = 1).
+        self.bright_gamma = float(bright_gamma)
+        self.bright_cap = float(bright_cap)
+        self.thresholds = None
+        if self.bright_gamma > 0:
+            if thresholds is None:
+                raise ValueError("bright_gamma > 0 needs the six Bright thresholds")
+            self.thresholds = np.asarray(thresholds, dtype=np.float32).reshape(6, 1)
 
         def _open(suffix):
             path = os.path.join(root, f'{phase}_{suffix}.zarr')
@@ -154,7 +168,12 @@ class ZarrPatchBlockDataset(Dataset):
                 out = out + (torch.zeros(P, self.n_bins), torch.zeros(P, dtype=torch.uint8))
             return out
 
-        pick = rng.choice(len(rows), size=P, replace=len(rows) < P)
+        if self.bright_gamma > 0:
+            intensity = (obs_c[:, rows, cols] / self.thresholds).max(axis=0)
+            w = np.clip(intensity, 1.0, self.bright_cap).astype(np.float64) ** self.bright_gamma
+            pick = rng.choice(len(rows), size=P, replace=True, p=w / w.sum())
+        else:
+            pick = rng.choice(len(rows), size=P, replace=len(rows) < P)
         i = rows[pick].astype(np.int64)
         j = cols[pick].astype(np.int64)
 

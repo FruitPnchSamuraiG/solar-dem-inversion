@@ -331,12 +331,15 @@ def load_predictor(path, threads):
     """
     import torch
     torch.set_num_threads(threads)
-    device = torch.device("cpu")
+    # DEM_EVAL_DEVICE=cuda runs label-free checkpoints on the GPU (needed for the
+    # ~10M-parameter models, ~25x the CPU cost of the 360k ones); supervised
+    # checkpoints always run on the CPU exactly as the published script does.
+    device = torch.device(os.environ.get("DEM_EVAL_DEVICE", "cpu"))
     raw = torch.load(path, map_location="cpu", weights_only=False)
     if isinstance(raw, dict) and "model_name" in raw:
         from student_package.table1_dem_metrics.compute_paper_table_metrics import (
             load_model, predict_regression_only)
-        model, meta = load_model(path, device)
+        model, meta = load_model(path, torch.device("cpu"))
 
         def predict(obs, pixel_batch):
             C, H, W = obs.shape
@@ -374,8 +377,8 @@ def predict_dem(model, basis_t, obs, patch_size, pixel_batch):
             e = min(s + pixel_batch, H * W)
             patch = np.zeros((e - s, C, k, k), dtype=np.float32)
             patch[:, :, c, c] = flat[s:e]
-            coeff = model(torch.from_numpy(patch))
-            out[s:e] = (coeff @ basis_t.T)[:, :N_BINS].numpy()
+            coeff = model(torch.from_numpy(patch).to(basis_t.device))
+            out[s:e] = (coeff @ basis_t.T)[:, :N_BINS].cpu().numpy()
     return out.reshape(H, W, N_BINS).transpose(2, 0, 1)
 
 

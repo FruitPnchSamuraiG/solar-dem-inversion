@@ -121,5 +121,36 @@ def check_resampling(root):
           "default loader unchanged")
 
 
+def check_bright_sampling():
+    """bright_gamma > 0 draws pixels in proportion to clip(I, 1, cap)**gamma,
+    where I is the max over channels of observed / threshold."""
+    with tempfile.TemporaryDirectory() as root:
+        obs = np.ones((6, A, A, 1), np.float32)
+        hot = [(0, 2), (4, 6), (10, 20), (30, 30)]          # DEM-grid pixels
+        for i, j in hot:
+            obs[:, STRIDE * i, STRIDE * j, 0] = 1000.0
+        err = np.full_like(obs, 0.1)
+        tol = np.ones((D, D, 1), np.uint8)
+        for name, arr in (('x', obs), ('e', err), ('m', tol)):
+            z = zarr.open(os.path.join(root, f'train_{name}.zarr'), mode='w',
+                          shape=arr.shape, dtype=arr.dtype)
+            z[:] = arr
+        P = 20000
+        uniform = ZarrPatchBlockDataset(root, 'train', pixels_per_block=P, seed=0)
+        weighted = ZarrPatchBlockDataset(root, 'train', pixels_per_block=P, seed=0,
+                                         bright_gamma=1.0, thresholds=[1.0] * 6)
+        share = {}
+        for name, ds in (("uniform", uniform), ("weighted", weighted)):
+            centre = ds[0][1][:, 0].numpy()
+            share[name] = float(np.mean(centre == 1000.0))
+        n = D * D
+        expect = len(hot) * 1000 / (n - len(hot) + len(hot) * 1000)
+        assert abs(share["uniform"] - len(hot) / n) < 0.01, share
+        assert abs(share["weighted"] - expect) < 0.02, (share, expect)
+        print(f"bright sampling checks passed: hot-pixel share {share['uniform']:.4f} "
+              f"uniform, {share['weighted']:.3f} weighted (expected {expect:.3f})")
+
+
 if __name__ == '__main__':
     main()
+    check_bright_sampling()

@@ -33,7 +33,7 @@ import torch.nn.functional as F
 
 from fullBP import getBasis
 from src.losses import barrier_loss_batch, enet_loss_batch
-from src.zarr_data import make_loader, flatten_blocks, N_AIA_BINS, MIN_OBS
+from src.zarr_data import make_loader, flatten_blocks, EpochResampler, N_AIA_BINS, MIN_OBS
 from experiments.train_neural_field import effective_sparsity, pick_device
 from experiments.train_ablations import build_model, VARIANTS
 
@@ -229,6 +229,14 @@ def evaluate(model, loader, D_t, B_t, loss_fn, device, n_bins):
 def train(args):
     device = pick_device()
     print(f"Device: {device}   Variant: {args.variant}   Loss: {args.loss}")
+    if args.tf32 and device.type == "cuda":
+        torch.backends.cuda.matmul.allow_tf32 = True
+        torch.backends.cudnn.allow_tf32 = True
+    with open(args.thresholds) as f:
+        payload = json.load(f)
+    thresholds = np.asarray(payload.get("test", payload) if isinstance(payload, dict) else payload,
+                            dtype=np.float32)
+    thr_t = torch.tensor(thresholds, device=device)
     print(f"Root: {args.root}")
 
     D_t, B_t, n_basis, logT = load_operators(device)
@@ -253,7 +261,9 @@ def train(args):
                                   num_workers=args.num_workers, shuffle=True,
                                   resample=args.resample_pixels,
                                   max_blocks=args.max_train_blocks,
-                                  with_labels=False, seed=args.seed, **data_kw)
+                                  with_labels=False, seed=args.seed,
+                                  bright_gamma=args.bright_gamma, thresholds=thresholds,
+                                  bright_cap=args.bright_cap, **data_kw)
     _, val_loader = make_loader(args.root, 'val', batch_blocks=args.batch_blocks,
                                 num_workers=args.num_workers, shuffle=False,
                                 max_blocks=args.max_val_blocks,
@@ -304,14 +314,37 @@ def train(args):
         tag += f"_ff{args.fourier_freqs}"
     if args.resample_pixels:
         tag += "_resample"
+    if args.bright_gamma > 0:
+        tag += f"_bg{args.bright_gamma:g}"
+    tag += args.tag_suffix
     out_dir = args.out_dir
     os.makedirs(out_dir, exist_ok=True)
     history = []
 
-    for epoch in range(args.epochs):
+    # Resumable across jobs: GPU jobs past 2 h with low utilisation get cancelled,
+    # so long runs are split into segments that each stop before --max_hours and
+    # continue from the saved optimizer, schedule and sampler position.
+    state_path = os.path.join(out_dir, f"{tag}_state.pt")
+    start_epoch = 0
+    if args.resume and os.path.exists(state_path):
+        st = torch.load(state_path, map_location=device, weights_only=False)
+        core.load_state_dict(st["model"])
+        optimizer.load_state_dict(st["optimizer"])
+        scheduler.load_state_dict(st["scheduler"])
+        history, start_epoch = st["history"], st["epoch"]
+        print(f"resumed {state_path} at epoch {start_epoch}")
+    if start_epoch >= args.epochs:
+        print(f"already trained to epoch {start_epoch}; nothing to do")
+        return
+    if isinstance(train_loader.sampler, EpochResampler):
+        train_loader.sampler.epoch = start_epoch       # fresh pixels continue, not restart
+    t_start = time.time()
+
+    for epoch in range(start_epoch, args.epochs):
         model.train()
         t0 = time.time()
         ep_loss, ep_sp, n = 0.0, 0.0, 0
+        ep_gn, ep_clipped, ep_core, ep_bright = 0.0, 0.0, 0.0, 0.0
 
         for batch in train_loader:
             patch, obs, lb, ub = (t.to(device, non_blocking=True)
@@ -320,24 +353,35 @@ def train(args):
             x = model(patch)
             loss = loss_fn(x, D_t, obs, lb, ub)
             loss.backward()
-            torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
+            gn = float(torch.nn.utils.clip_grad_norm_(model.parameters(), args.clip))
             optimizer.step()
             scheduler.step()
             ep_loss += loss.item()
+            ep_gn += gn
+            ep_clipped += float(gn > args.clip)
             with torch.no_grad():
                 ep_sp += effective_sparsity(x).mean().item()
+                # what the sampler actually delivers: Bright (>=1x) and flare-core
+                # (>=32x) shares of this batch's pixels
+                inten = (obs / thr_t).amax(dim=1)
+                ep_bright += float((inten >= 1).float().mean())
+                ep_core += float((inten >= 32).float().mean())
             n += 1
 
         val = evaluate(model, val_loader, D_t, B_t, loss_fn, device, args.n_bins)
         rec = {"epoch": epoch + 1, "train_loss": ep_loss / n,
-               "train_sparsity": ep_sp / n, "val": val, "secs": time.time() - t0}
+               "train_sparsity": ep_sp / n, "val": val, "secs": time.time() - t0,
+               "grad_norm_mean": ep_gn / n, "frac_clipped": ep_clipped / n,
+               "frac_bright": ep_bright / n, "frac_core": ep_core / n,
+               "lr": scheduler.get_last_lr()[0]}
         history.append(rec)
         tight = val["1"]
         print(f"Epoch {epoch+1:3d}/{args.epochs}  loss={rec['train_loss']:.4f}  "
               f"val_loss={val['loss']:.4f}  "
               f"sp_coef={tight['sp_coef']:.2f} (hist: BP 1.79)  "
               f"sp_dem nn/ref={tight['sp_dem']:.2f}/{tight['sp_ref']:.2f}  "
-              f"mae_aia={tight['mae_aia']:.3f}  {rec['secs']:.0f}s")
+              f"mae_aia={tight['mae_aia']:.3f}  clipped={rec['frac_clipped']:.2f}  "
+              f"core={rec['frac_core']:.2e}  {rec['secs']:.0f}s", flush=True)
 
         # Save the bare variant's weights (not the NormalizedInput wrapper) so
         # existing eval code loads them unchanged; input_transform records the
@@ -354,6 +398,10 @@ def train(args):
                    os.path.join(out_dir, f"{tag}.pt"))
         with open(os.path.join(out_dir, f"{tag}_history.json"), "w") as f:
             json.dump(history, f, indent=2)
+        torch.save({"model": core.state_dict(), "optimizer": optimizer.state_dict(),
+                    "scheduler": scheduler.state_dict(), "history": history,
+                    "epoch": epoch + 1}, state_path + ".tmp")
+        os.replace(state_path + ".tmp", state_path)
 
         # Fail loudly on the 15088220 failure mode rather than logging eleven
         # more identical epochs: an all-zero prediction has zero Hoyer sparsity,
@@ -377,6 +425,14 @@ def train(args):
             raise RuntimeError(
                 f"collapsed at epoch {epoch+1}: train loss is bit-identical to "
                 f"the previous epoch, so gradients are exactly zero.")
+
+        if args.max_hours and epoch + 1 < args.epochs:
+            elapsed = time.time() - t_start
+            per_epoch = elapsed / (epoch + 1 - start_epoch)
+            if elapsed + 1.15 * per_epoch > args.max_hours * 3600:
+                print(f"stopping after epoch {epoch+1} to stay under {args.max_hours} h; "
+                      f"rerun with --resume to continue", flush=True)
+                return
 
     print(f"\nSaved {os.path.join(out_dir, tag)}.pt")
     final = history[-1]["val"]
@@ -420,6 +476,19 @@ def parse_args():
                         "(the supervised model uses 12 on sqrt input); 0 = off")
     p.add_argument("--warmup_steps", type=int, default=500,
                    help="linear LR warmup; 0 disables")
+    p.add_argument("--clip", type=float, default=1.0, help="global gradient-norm clip")
+    p.add_argument("--bright_gamma", type=float, default=0.0,
+                   help="draw training pixels with probability ~ clip(I,1,cap)**gamma, "
+                        "I = max over channels of observed / Bright threshold; 0 = uniform")
+    p.add_argument("--bright_cap", type=float, default=1000.0)
+    p.add_argument("--thresholds", default="eval_and_enet_specs/aia_thresholds.json",
+                   help="the six Bright cutoffs (DN/s), also used to log the sampled mix")
+    p.add_argument("--tag_suffix", default="", help="appended to the checkpoint tag")
+    p.add_argument("--resume", action="store_true",
+                   help="continue from <tag>_state.pt if it exists")
+    p.add_argument("--max_hours", type=float, default=0.0,
+                   help="stop (resumably) before this wall time; 0 = no limit")
+    p.add_argument("--tf32", action="store_true", help="TF32 matmuls (large models)")
     p.add_argument("--softplus_floor", type=float, default=-20.0,
                    help="clamp on the output pre-activation, guards against dead units")
     p.add_argument("--init_bias", type=float, default=-3.0,

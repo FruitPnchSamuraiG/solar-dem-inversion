@@ -131,16 +131,21 @@ def init_worker(cfg):
 
 
 def parse_variant(v):
-    """-> (a multiplier, mu multiplier, brightness power)."""
+    """-> (a multiplier, mu multiplier, brightness power). Terms combine with
+    '_', e.g. mu30_ibr1 = barrier weight x30 and L1 weight / max(1, I)."""
+    a_mult, mu_mult, power = 1.0, 1.0, 0.0
     if v == "base":
-        return 1.0, 1.0, 0.0
-    if v.startswith("mu"):
-        return 1.0, float(v[2:]), 0.0
-    if v.startswith("ibr"):
-        return 1.0, 1.0, float(v[3:])
-    if v.startswith("a"):
-        return float(v[1:]), 1.0, 0.0
-    raise ValueError(f"unknown variant {v}")
+        return a_mult, mu_mult, power
+    for term in v.split("_"):
+        if term.startswith("mu"):
+            mu_mult = float(term[2:])
+        elif term.startswith("ibr"):
+            power = float(term[3:])
+        elif term.startswith("a"):
+            a_mult = float(term[1:])
+        else:
+            raise ValueError(f"unknown variant term {term!r} in {v!r}")
+    return a_mult, mu_mult, power
 
 
 def parts(x, obs, err, cfg, a_mult=1.0, mu_mult=1.0, power=0.0, inten=None):

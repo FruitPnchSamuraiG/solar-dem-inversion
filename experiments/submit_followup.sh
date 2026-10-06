@@ -56,4 +56,5 @@ pick enet_10m   && run enet_10m   enet 4 gpu "${E}_h1800_sqrt_ff12_resample"    
 # objective's optimum and that optimum under-fits bright pixels: a stiffer band.
 pick bp_mu10    && run bp_mu10    bp   2 cpu "${B}_h336_sqrt_ff12_resample_mu10"  MU=10 TAG_SUFFIX=_mu10
 pick bp_mu100   && run bp_mu100   bp   2 cpu "${B}_h336_sqrt_ff12_resample_mu100" MU=100 TAG_SUFFIX=_mu100
+pick bp_mu30_ibr1 && run bp_mu30_ibr1 bp 2 cpu "${B}_h336_sqrt_ff12_resample_mu30_ibr1" MU=30 L1_BRIGHT_POWER=1 TAG_SUFFIX=_mu30_ibr1
 true

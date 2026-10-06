@@ -158,8 +158,19 @@ def make_scheduler(optimizer, total_steps, warmup_steps, base_lr):
     return torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda)
 
 
-def make_loss_fn(args):
+def make_loss_fn(args, thr_t=None):
     if args.loss == "barrier":
+        if args.l1_bright_power:
+            # L1 weight / max(1, I)**p, I = max over channels of observed / Bright
+            # cutoff. Quiet pixels keep the base weight; at a 100x flare core the
+            # sparsity pull is 100x weaker (p = 1), which experiments/objective_gap.py
+            # showed lets the per-pixel optimum reach the solver's emission there.
+            def fn(x, D, obs, lb, ub):
+                inten = (obs / thr_t).amax(dim=1).clamp(min=1.0)
+                return barrier_loss_batch(x, D, obs, lb, ub,
+                                          a_l1=args.alpha_l1 / inten ** args.l1_bright_power,
+                                          a_l2=args.alpha_l2, mu=args.mu)
+            return fn
         return lambda x, D, obs, lb, ub: barrier_loss_batch(
             x, D, obs, lb, ub, a_l1=args.alpha_l1, a_l2=args.alpha_l2, mu=args.mu)
     if args.loss == "enet":
@@ -294,7 +305,7 @@ def train(args):
           f"|Dx| med={Dx0.abs().median():.3e} max={Dx0.abs().max():.3e}  "
           f"(want |Dx| comparable to obs, not orders above)")
 
-    loss_fn = make_loss_fn(args)
+    loss_fn = make_loss_fn(args, thr_t)
     optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
     total_steps = args.epochs * len(train_loader)
     scheduler = make_scheduler(optimizer, total_steps, args.warmup_steps, args.lr)
@@ -498,7 +509,10 @@ def parse_args():
     # barrier
     p.add_argument("--alpha_l1", type=float, default=1.0)
     p.add_argument("--alpha_l2", type=float, default=0.0)
-    p.add_argument("--mu", type=float, default=1.0)
+    p.add_argument("--mu", type=float, default=1.0,
+                   help="barrier weight; larger = stiffer band, closer to the solver's hard constraint")
+    p.add_argument("--l1_bright_power", type=float, default=0.0,
+                   help="barrier only: L1 weight divided by max(1, I)**p; 0 = off")
     # ENet defaults mirror Samuel's confirmed solver settings, so the network
     # minimises the same objective it is scored against. fullBP's solveElasticNet is
     #   1/(2N)||Dx-y||^2 + a*l*||x||_1 + a(1-l)*0.5*||x||^2,

@@ -18,6 +18,7 @@
 #   TRACK=bp|enet  HIDDEN=336  EPOCHS=40  BRIGHT_GAMMA=0  TAG_SUFFIX=  TF32=0
 #   MU=1 (barrier weight; >1 makes the band stiffer, closer to the solver's
 #   hard constraint; give it a TAG_SUFFIX such as _mu10)
+#   L1_BRIGHT_POWER=0 (barrier L1 weight / max(1, I)**p; tag it too, e.g. _ibr1)
 # A segment stops before MAX_HOURS (default 1.7; GPU jobs past 2 h with low
 # utilisation get cancelled) and the next segment resumes from <tag>_state.pt.
 # Extra segments exit at once when training is already complete.
@@ -50,6 +51,7 @@ python3 -u experiments/train_scaled.py \
   --resample_pixels \
   --bright_gamma "${BRIGHT_GAMMA:-0}" \
   --mu "${MU:-1.0}" \
+  --l1_bright_power "${L1_BRIGHT_POWER:-0}" \
   --tag_suffix "${TAG_SUFFIX:-}" \
   --resume \
   --max_hours "${MAX_HOURS:-1.7}" \

@@ -1,0 +1,11 @@
+{
+ "bp": [
+  {"label": "supervised", "diag": "results/plots/13_bright_diagnostic_20260928/bp_bright_failure_supervised.json", "aia": "results/plots/19_final_models_20261004/bp_aia_fit_final.json", "supervised": true},
+  {"label": "final (log1p)", "diag": "results/plots/19_final_models_20261004/bp_bright_failure_final.json", "aia": "results/plots/19_final_models_20261004/bp_aia_fit_final.json"},
+  {"label": "base (sqrt+FF)", "diag": "results/plots/20_sqrtff_final_20261004/bp_bright_failure_sqrtff12_resample_h336.json", "aia": "results/plots/20_sqrtff_final_20261004/bp_aia_fit_sqrtff12_resample_h336.json"}
+ ],
+ "enet": [
+  {"label": "supervised", "diag": "results/plots/13_bright_diagnostic_20260928/enet_bright_failure_supervised.json", "aia": "results/plots/19_final_models_20261004/enet_aia_fit_final.json", "supervised": true},
+  {"label": "final = base (sqrt+FF)", "diag": "results/plots/19_final_models_20261004/enet_bright_failure_final.json", "aia": "results/plots/19_final_models_20261004/enet_aia_fit_final.json"}
+ ]
+}

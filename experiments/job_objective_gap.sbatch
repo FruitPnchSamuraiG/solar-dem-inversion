@@ -12,7 +12,8 @@
 
 # experiments/objective_gap.py on our staged test split (it needs the per-pixel
 # errors): network vs per-pixel optimum vs solver under the training objective,
-# plus per-pixel optima of alternative objectives. TRACK=bp|enet.
+# plus per-pixel optima of alternative objectives. TRACK=bp|enet, PHASE=test|val.
+# Choose objective settings on PHASE=val; the test split only confirms.
 set -euo pipefail
 cd "${SLURM_SUBMIT_DIR:-$HOME/projects/dem}"
 source env.sh
@@ -30,7 +31,7 @@ case "${TRACK:?set TRACK=bp or TRACK=enet}" in
       VARIANTS=${VARIANTS:-mu10} ;;
   *) echo "TRACK must be bp or enet" >&2; exit 2 ;;
 esac
-python3 -u experiments/objective_gap.py --loss "$LOSS" --root "$ROOT" \
+python3 -u experiments/objective_gap.py --loss "$LOSS" --root "$ROOT" --phase "${PHASE:-test}" \
   --models "${MODELS[@]}" --supervised "$SUP" --variants "$VARIANTS" \
   --per-group "${PER_GROUP:-1000}" --core-cap "${CORE_CAP:-6000}" --workers 16 \
   --output "output/experiments/diagnostics/${TRACK}_objective_gap${TAG:+_$TAG}.json"

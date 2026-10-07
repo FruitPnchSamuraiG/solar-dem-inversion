@@ -1,0 +1,323 @@
+<title>Flare-Core Follow-up</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;600&family=IBM+Plex+Serif:wght@500&display=swap">
+<style>
+  :root {
+    --ground: #f3f5f7;
+    --surface: #ffffff;
+    --ink: #17212b;
+    --muted: #586472;
+    --rule: #d9dfe6;
+    --accent: #9a6a0c;
+    --accent-soft: #f7eed9;
+    --run: #275d9c;
+    --run-soft: #e2ebf6;
+    --done: #2b7449;
+    --done-soft: #e1f0e7;
+    --wait: #66707e;
+    --wait-soft: #eceff3;
+    --sans: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+    --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+    --serif: "IBM Plex Serif", Georgia, "Times New Roman", serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --ground: #0f141a;
+      --surface: #161d26;
+      --ink: #e4e9ef;
+      --muted: #9aa5b3;
+      --rule: #283342;
+      --accent: #e2b24b;
+      --accent-soft: #2c2414;
+      --run: #7eaee8;
+      --run-soft: #1a293b;
+      --done: #6fc293;
+      --done-soft: #16281e;
+      --wait: #9ca6b4;
+      --wait-soft: #1f2731;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --ground: #0f141a;
+    --surface: #161d26;
+    --ink: #e4e9ef;
+    --muted: #9aa5b3;
+    --rule: #283342;
+    --accent: #e2b24b;
+    --accent-soft: #2c2414;
+    --run: #7eaee8;
+    --run-soft: #1a293b;
+    --done: #6fc293;
+    --done-soft: #16281e;
+    --wait: #9ca6b4;
+    --wait-soft: #1f2731;
+  }
+  body {
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 15.5px;
+    line-height: 1.6;
+  }
+  .page {
+    max-width: 940px;
+    margin: 0 auto;
+    padding-inline: 20px;
+    padding-block: 36px 72px;
+    display: grid;
+    gap: 40px;
+  }
+  header { display: grid; gap: 10px; }
+  .eyebrow {
+    font-size: 12.5px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  h1 {
+    font-family: var(--serif);
+    font-weight: 500;
+    font-size: clamp(30px, 5vw, 42px);
+    line-height: 1.15;
+    margin: 0;
+    text-wrap: balance;
+  }
+  h2 {
+    font-size: 19px;
+    font-weight: 600;
+    margin: 0;
+    text-wrap: balance;
+  }
+  h3 { font-size: 15.5px; font-weight: 600; margin: 0; }
+  p { margin: 0; max-width: 68ch; }
+  section { display: grid; gap: 14px; }
+  .lede { font-size: 17px; max-width: 64ch; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12.5px;
+    font-weight: 600;
+    padding: 2px 10px;
+    border-radius: 999px;
+    white-space: nowrap;
+  }
+  .pill::before {
+    content: "";
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: currentColor;
+  }
+  .run { color: var(--run); background: var(--run-soft); }
+  .done { color: var(--done); background: var(--done-soft); }
+  .wait { color: var(--wait); background: var(--wait-soft); }
+  .finding {
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: 10px;
+    padding: 22px 22px 20px;
+    display: grid;
+    gap: 14px;
+  }
+  .finding .claim {
+    font-family: var(--serif);
+    font-weight: 500;
+    font-size: clamp(20px, 3vw, 24px);
+    line-height: 1.3;
+    text-wrap: balance;
+    max-width: 40ch;
+  }
+  ul.points { margin: 0; padding-left: 20px; display: grid; gap: 8px; max-width: 70ch; }
+  .table-wrap { overflow-x: auto; border: 1px solid var(--rule); border-radius: 8px; background: var(--surface); }
+  table { border-collapse: collapse; width: 100%; font-size: 14px; }
+  th, td { padding: 9px 12px; text-align: left; vertical-align: top; }
+  thead th {
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--muted);
+    border-bottom: 1px solid var(--rule);
+    white-space: nowrap;
+  }
+  tbody tr + tr td { border-top: 1px solid var(--rule); }
+  td.num, th.num { text-align: right; font-family: var(--mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  tr.ref td { color: var(--muted); }
+  tr.best td { background: var(--accent-soft); }
+  tr.best td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
+  .group-row td {
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--muted);
+    background: var(--ground);
+  }
+  .note { font-size: 13.5px; color: var(--muted); max-width: 72ch; }
+  .runs td:nth-child(2) { color: var(--muted); }
+  .runs td:first-child { font-weight: 600; white-space: nowrap; }
+  .twocol { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }
+  .panel { background: var(--surface); border: 1px solid var(--rule); border-radius: 8px; padding: 16px 18px; display: grid; gap: 8px; }
+  .mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+  footer { font-size: 13px; color: var(--muted); border-top: 1px solid var(--rule); padding-top: 16px; display: grid; gap: 6px; }
+  code { font-family: var(--mono); font-size: 0.92em; }
+</style>
+
+<main class="page">
+  <header>
+    <div class="eyebrow">Label-free DEM · follow-up to the 6 October meeting</div>
+    <h1>Flare-Core Follow-up</h1>
+    <p class="lede">The meeting suggested three ways to fix BP's flare cores: oversample them in training, train longer, and use a much bigger model. A direct check of the BP loss showed the limit is the loss itself, so the plan became: fix the loss, then test every training-side suggestion on both the old and the fixed loss.</p>
+    <div class="chips" aria-label="Status">
+      <span class="pill done">Loss check and mechanism done</span>
+      <span class="pill done">Early validation results in</span>
+      <span class="pill run">13 runs finishing or queued</span>
+    </div>
+    <p class="note">Updated 6 Oct 2026, 23:30 EDT. Remaining runs finish overnight.</p>
+  </header>
+
+  <section aria-labelledby="finding">
+    <h2 id="finding">First result: on BP, the loss is the limit, not the training</h2>
+    <div class="finding">
+      <p class="claim">At flare cores, the BP network is already within a few percent of the best value its loss allows. That best answer is the one that under-fits.</p>
+      <ul class="points">
+        <li>The BP loss is convex in the 54 basis weights, so every pixel has one best answer. I solved it directly for 12,000 pixels of each split, 6,000 of them flare cores.</li>
+        <li>Under the current loss, the best possible answer at flare cores reproduces 26% of the observed 94 Å and holds 30% of the solver's emission (validation; test 32% and 45%). The network gets 28% and 38%.</li>
+        <li>The solver's own DEM scores 2.4 times as badly under our loss as that best answer. The loss prefers the smaller DEM: its sparsity term grows with emission, and the band penalty is too soft to stop it.</li>
+        <li>So oversampling, longer training and a bigger model can only close the network's last few percent. On validation the network's flare-core error already equals the best possible; on test it is 20% above it.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section aria-labelledby="why">
+    <h2 id="why">Why the loss leaves the hot plasma out</h2>
+    <p>At a flare core, the hot plasma (about 8 MK, logT 6.9) shows up almost only in 94 Å, and 94 Å responds to it weakly: 0.27 DN/s per 10<sup>26</sup> cm<sup>−5</sup>, against 95 for 171 Å at 1 MK. A typical flare core's 94 Å signal (164 DN/s) needs an emission measure of about 600 units to explain. The sparsity term charges about 600 for that; leaving the hot plasma out costs only about 85 in band penalty, because the 94 Å noise there is 11.5 DN/s. So the loss's best answer drops it. BP's hard band does not allow that.</p>
+    <p>The noise follows photon counting at every brightness (94 Å noise over signal falls from 1.1 at 0.3–1× to 0.07 at flare cores), so this is not a calibration floor. The failure grows with brightness because brighter pixels get more of their 94 Å from hot plasma. A one-channel version of the trade-off gives 0%, 61% and 87% of 94 Å explained at band stiffness 1, 10 and 100; the full per-pixel optimum gives 26%, 81% and 93%.</p>
+  </section>
+
+  <section aria-labelledby="screen">
+    <h2 id="screen">What a perfect network could reach under each loss</h2>
+    <p>Per-pixel best answers, no training. DEM error is squared error against the BP solver, weighted by how many pixels fall in each brightness band. Settings were chosen on the validation split; the test split agrees.</p>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>BP loss</th>
+            <th class="num">DEM error, val</th>
+            <th class="num">DEM error, test</th>
+            <th class="num">Quiet, val</th>
+            <th class="num">Flare-core 94 Å</th>
+            <th class="num">Flare-core emission</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="group-row"><td colspan="6">Today</td></tr>
+          <tr><td>Trained network (final model)</td><td class="num">37.0</td><td class="num">18.1</td><td class="num">0.076</td><td class="num">28%</td><td class="num">38%</td></tr>
+          <tr><td>Best possible, current loss</td><td class="num">36.9</td><td class="num">14.8</td><td class="num">0.076</td><td class="num">26%</td><td class="num">30%</td></tr>
+          <tr class="group-row"><td colspan="6">Stiffer loss (best possible)</td></tr>
+          <tr><td>Band penalty ×10</td><td class="num">10.8</td><td class="num">4.95</td><td class="num">0.037</td><td class="num">81%</td><td class="num">90%</td></tr>
+          <tr><td>Band penalty ×30</td><td class="num">5.10</td><td class="num">2.00</td><td class="num">0.032</td><td class="num">89%</td><td class="num">97%</td></tr>
+          <tr class="best"><td>Band penalty ×100 <span class="pill wait">training next</span></td><td class="num">2.32</td><td class="num">0.75</td><td class="num">0.041</td><td class="num">93%</td><td class="num">100%</td></tr>
+          <tr><td>Band penalty ×300</td><td class="num">1.80</td><td class="num">0.62</td><td class="num">0.048</td><td class="num">94%</td><td class="num">101%</td></tr>
+          <tr><td>Sparsity weight ÷ brightness</td><td class="num">1.82</td><td class="num">0.59</td><td class="num">0.076</td><td class="num">94%</td><td class="num">100%</td></tr>
+          <tr class="best"><td>Band ×30, sparsity ÷ √brightness <span class="pill wait">training next</span></td><td class="num">1.95</td><td class="num">0.49</td><td class="num">0.032</td><td class="num">95%</td><td class="num">101%</td></tr>
+          <tr><td>Band ×30, sparsity ÷ brightness</td><td class="num">2.37</td><td class="num">0.50</td><td class="num">0.032</td><td class="num">95%</td><td class="num">102%</td></tr>
+          <tr class="group-row"><td colspan="6">Reference</td></tr>
+          <tr class="ref"><td>Supervised model</td><td class="num">6.10</td><td class="num">4.80</td><td class="num">0.054</td><td class="num">91%</td><td class="num">95%</td></tr>
+          <tr class="ref"><td>BP solver</td><td class="num">0</td><td class="num">0</td><td class="num">0</td><td class="num">94%</td><td class="num">100%</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="note">Flare-core columns are on the validation split. Sparsity ÷ brightness divides the sparsity weight by max(1, I), where I is the pixel's brightest channel over its Bright cutoff, so Quiet pixels are unchanged. Errors are on our own staged splits, which have more flare cores than the shared test set (1.6 and 1.9 per 10,000 pixels against 1.0), so absolute values run higher than the deck's (our network: 18.1 on our test split, 4.28 on the shared test). Compare rows with each other, not with the deck. Choosing the band setting uses the solver's DEMs on validation, the way one would tune any loss weight; training never sees them. Every training run is scored on the shared test set.</p>
+  </section>
+
+  <section aria-labelledby="early">
+    <h2 id="early">Shared-test results so far (BP)</h2>
+    <p>The full shared test set, the same protocol as the deck. Bold is best in each column.</p>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>BP model</th><th class="num">DEM MSE</th><th class="num">DEM MAE</th><th class="num">Median</th><th class="num">EM error</th><th class="num">W1</th><th class="num">AIA MAE</th><th class="num">AIA MSE</th><th class="num">Quiet MSE</th><th class="num">Flare-core emission</th><th class="num">Flare-core 94 Å</th></tr>
+        </thead>
+        <tbody>
+          <tr class="ref"><td>Supervised model</td><td class="num"><b>0.91</b></td><td class="num">0.100</td><td class="num">0.112</td><td class="num">14.3%</td><td class="num">0.133</td><td class="num"><b>2.95</b></td><td class="num">157</td><td class="num">0.034</td><td class="num"><b>92%</b></td><td class="num"><b>85%</b></td></tr>
+          <tr class="ref"><td>Final model (log1p, today's loss)</td><td class="num">4.28</td><td class="num">0.106</td><td class="num"><b>0.026</b></td><td class="num">19.6%</td><td class="num">0.083</td><td class="num">4.34</td><td class="num">83</td><td class="num">0.058</td><td class="num">40%</td><td class="num">23%</td></tr>
+          <tr><td>√ + Fourier, today's loss</td><td class="num">4.56</td><td class="num">0.106</td><td class="num">0.023</td><td class="num">19.8%</td><td class="num">0.083</td><td class="num">4.36</td><td class="num">83</td><td class="num">0.057</td><td class="num">35%</td><td class="num">15%</td></tr>
+          <tr><td>Oversample bright, today's loss</td><td class="num">5.05</td><td class="num">0.106</td><td class="num">0.025</td><td class="num">19.9%</td><td class="num">0.084</td><td class="num">4.35</td><td class="num">87</td><td class="num">0.058</td><td class="num">24%</td><td class="num">9%</td></tr>
+          <tr class="best"><td>Band ×100</td><td class="num">2.37</td><td class="num">0.087</td><td class="num">0.062</td><td class="num">12.7%</td><td class="num">0.079</td><td class="num">3.16</td><td class="num"><b>44</b></td><td class="num">0.035</td><td class="num">89%</td><td class="num">68%</td></tr>
+          <tr class="best"><td>Band ×30, sparsity ÷ √brightness</td><td class="num">2.70</td><td class="num"><b>0.081</b></td><td class="num">0.041</td><td class="num"><b>11.9%</b></td><td class="num"><b>0.072</b></td><td class="num">3.34</td><td class="num">49</td><td class="num"><b>0.033</b></td><td class="num">85%</td><td class="num">61%</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <ul class="points">
+      <li>Both stiff-band models beat the supervised model on DEM MAE, emission error, W1, AIA MSE and Quiet pixels. The old final model beat it only on W1 and AIA MSE.</li>
+      <li>DEM MSE drops from 4.3 to 2.4, but the supervised model's 0.91 is still ahead: its error is set by flare cores, where the stiff networks reach 85–89% of the solver's emission but only 61–68% of the 94 Å.</li>
+      <li>Oversampling on today's loss makes flare cores worse (emission 35% → 24%, 94 Å 15% → 9%), as the loss check predicts.</li>
+      <li>Under their own stiff losses the networks sit far from the best answer at flare cores (9× its loss value for band ×100). That training gap is what the remaining band ×100 runs (oversampling, 120 epochs, 10M, no clip) test.</li>
+    </ul>
+  </section>
+
+  <section aria-labelledby="enet">
+    <h2 id="enet">ElasticNet is different: there the training does have room</h2>
+    <p>The ElasticNet network sits 6% to 18% above its loss's best value on Bright pixels and about 16% above it at flare cores. That is a real training gap, so oversampling, longer training or a bigger model could help there. The check can't compare against the ElasticNet solver: our staged ElasticNet labels come from the old α = 1 setting.</p>
+  </section>
+
+  <section aria-labelledby="runs">
+    <h2 id="runs">Runs</h2>
+    <p>Each changes one thing from the base recipe: the 336-wide MLP with the square root and 12 Fourier frequency input on both tracks (one encoding, as suggested), fresh pixels every epoch, 40 epochs. Each is scored on the full shared test set.</p>
+    <div class="table-wrap">
+      <table class="runs">
+        <thead>
+          <tr><th>Run</th><th>What changes</th><th>Status</th><th>Result</th></tr>
+        </thead>
+        <tbody>
+          <tr class="group-row"><td colspan="4">BP, today's loss (the meeting's suggestions)</td></tr>
+          <tr><td>Oversample bright</td><td>Flare cores drawn 9× as often (0.09% of training pixels instead of 0.011%), Bright pixels 2×</td><td><span class="pill done">done</span></td><td>flare cores worse: emission 35% → 24%</td></tr>
+          <tr><td>120 epochs</td><td>Three times longer</td><td><span class="pill run">29 of 120</span></td><td>pending</td></tr>
+          <tr><td>10M parameters</td><td>1800 wide instead of 336</td><td><span class="pill run">39 of 40</span></td><td>pending</td></tr>
+          <tr class="group-row"><td colspan="4">BP, stiffer loss</td></tr>
+          <tr><td>Band ×100</td><td>Barrier weight 100</td><td><span class="pill done">done</span></td><td>DEM MSE 4.56 → 2.37; beats supervised on 5 metrics</td></tr>
+          <tr><td>Band ×30, sparsity ÷ √brightness</td><td>The validation choice</td><td><span class="pill done">done</span></td><td>DEM MSE 2.70; best MAE, W1 and Quiet</td></tr>
+          <tr><td>Band ×100 + oversample bright</td><td>Do more flare cores help once the loss is right?</td><td><span class="pill run">training</span></td><td>pending</td></tr>
+          <tr><td>Band ×100, 120 epochs</td><td>Longer on the fixed loss</td><td><span class="pill run">training</span></td><td>pending</td></tr>
+          <tr><td>Band ×100, 10M parameters</td><td>Bigger on the fixed loss</td><td><span class="pill wait">queued</span></td><td>pending</td></tr>
+          <tr><td>Band ×100, no gradient clip</td><td>The clip (norm 1) fires on every step; gradients run 20 to 500</td><td><span class="pill wait">queued</span></td><td>pending</td></tr>
+          <tr><td>Band ×100, log1p input</td><td>Is one encoding (√ + Fourier) still right on the fixed loss?</td><td><span class="pill wait">queued</span></td><td>pending</td></tr>
+          <tr class="group-row"><td colspan="4">ElasticNet (training gap of 6–18% on Bright pixels)</td></tr>
+          <tr><td>Oversample bright</td><td>Same sampling</td><td><span class="pill done">done</span></td><td>mixed: DEM MSE 0.310 → 0.379, AIA MSE 161 → 141</td></tr>
+          <tr><td>120 epochs</td><td>Three times longer</td><td><span class="pill wait">queued</span></td><td>pending</td></tr>
+          <tr><td>10M parameters</td><td>1800 wide</td><td><span class="pill wait">queued</span></td><td>pending</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section aria-labelledby="predict">
+    <h2 id="predict">Predictions, written before the results</h2>
+    <div class="twocol">
+      <div class="panel">
+        <h3>Meeting suggestions on BP</h3>
+        <p>Oversampling, longer training and the 10M model should barely move flare cores: at most the network's remaining gap to its loss's optimum, between 0 and 20% of the flare-core error.</p>
+      </div>
+      <div class="panel">
+        <h3>Stiffer loss on BP</h3>
+        <p>If the network follows the stiffer loss as closely as it follows today's, flare cores should reach about 90% of the observed 94 Å, and BP's DEM error should fall several-fold, likely below the supervised model's.</p>
+      </div>
+    </div>
+  </section>
+
+  <section aria-labelledby="noticed">
+    <h2 id="noticed">Also noticed</h2>
+    <p>The gradient clip (norm 1) triggers on every training step: mean gradient norm is about 75 on BP and 11 on ElasticNet. The earlier runs had the same setting, so it is not new. It evens out the size of each batch's update but does not down-weight flare cores within a batch. With the oversampled run moving away from its loss's optimum at flare cores, it is worth testing, so a band ×100 run without clipping is queued.</p>
+  </section>
+
+  <footer>
+    <div>Code: <code>experiments/objective_gap.py</code> (loss check), <code>experiments/submit_followup.sh</code> (runs). Results: <code>results/plots/21_followup_20261006/</code>.</div>
+    <div>This page updates as runs finish.</div>
+  </footer>
+</main>

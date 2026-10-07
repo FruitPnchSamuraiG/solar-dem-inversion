@@ -33,6 +33,12 @@
    "diag": "results/plots/21_followup_20261006/bp_bright_failure_fu_bp_mu30_ibr05.json",
    "aia": "results/plots/21_followup_20261006/bp_aia_fit_fu_bp_mu30_ibr05.json",
    "followup": true
+  },
+  {
+   "label": "band x100 + oversample",
+   "diag": "results/plots/21_followup_20261006/bp_bright_failure_fu_bp_mu100_bg1.json",
+   "aia": "results/plots/21_followup_20261006/bp_aia_fit_fu_bp_mu100_bg1.json",
+   "followup": true
   }
  ],
  "enet": [

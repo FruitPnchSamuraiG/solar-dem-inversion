@@ -178,7 +178,7 @@
       <span class="pill done">Early validation results in</span>
       <span class="pill run">13 runs finishing or queued</span>
     </div>
-    <p class="note">Updated 6 Oct 2026, 23:30 EDT. Remaining runs finish overnight.</p>
+    <p class="note">Updated 7 Oct 2026, 02:30 EDT. Remaining runs are waiting for GPUs on Torch and finish through the morning.</p>
   </header>
 
   <section aria-labelledby="finding">
@@ -249,8 +249,9 @@
           <tr class="ref"><td>Final model (log1p, today's loss)</td><td class="num">4.28</td><td class="num">0.106</td><td class="num"><b>0.026</b></td><td class="num">19.6%</td><td class="num">0.083</td><td class="num">4.34</td><td class="num">83</td><td class="num">0.058</td><td class="num">40%</td><td class="num">23%</td></tr>
           <tr><td>√ + Fourier, today's loss</td><td class="num">4.56</td><td class="num">0.106</td><td class="num">0.023</td><td class="num">19.8%</td><td class="num">0.083</td><td class="num">4.36</td><td class="num">83</td><td class="num">0.057</td><td class="num">35%</td><td class="num">15%</td></tr>
           <tr><td>Oversample bright, today's loss</td><td class="num">5.05</td><td class="num">0.106</td><td class="num">0.025</td><td class="num">19.9%</td><td class="num">0.084</td><td class="num">4.35</td><td class="num">87</td><td class="num">0.058</td><td class="num">24%</td><td class="num">9%</td></tr>
-          <tr class="best"><td>Band ×100</td><td class="num">2.37</td><td class="num">0.087</td><td class="num">0.062</td><td class="num">12.7%</td><td class="num">0.079</td><td class="num">3.16</td><td class="num"><b>44</b></td><td class="num">0.035</td><td class="num">89%</td><td class="num">68%</td></tr>
+          <tr class="best"><td>Band ×100</td><td class="num">2.37</td><td class="num">0.087</td><td class="num">0.062</td><td class="num">12.7%</td><td class="num">0.079</td><td class="num">3.16</td><td class="num">44</td><td class="num">0.035</td><td class="num">89%</td><td class="num">68%</td></tr>
           <tr class="best"><td>Band ×30, sparsity ÷ √brightness</td><td class="num">2.70</td><td class="num"><b>0.081</b></td><td class="num">0.041</td><td class="num"><b>11.9%</b></td><td class="num"><b>0.072</b></td><td class="num">3.34</td><td class="num">49</td><td class="num"><b>0.033</b></td><td class="num">85%</td><td class="num">61%</td></tr>
+          <tr><td>Band ×100 + oversample bright</td><td class="num">2.50</td><td class="num">0.091</td><td class="num">0.071</td><td class="num">13.0%</td><td class="num">0.081</td><td class="num">3.10</td><td class="num"><b>39</b></td><td class="num">0.038</td><td class="num">88%</td><td class="num">63%</td></tr>
         </tbody>
       </table>
     </div>
@@ -258,7 +259,7 @@
       <li>Both stiff-band models beat the supervised model on DEM MAE, emission error, W1, AIA MSE and Quiet pixels. The old final model beat it only on W1 and AIA MSE.</li>
       <li>DEM MSE drops from 4.3 to 2.4, but the supervised model's 0.91 is still ahead: its error is set by flare cores, where the stiff networks reach 85–89% of the solver's emission but only 61–68% of the 94 Å.</li>
       <li>Oversampling on today's loss makes flare cores worse (emission 35% → 24%, 94 Å 15% → 9%), as the loss check predicts.</li>
-      <li>Under their own stiff losses the networks sit far from the best answer at flare cores (9× its loss value for band ×100). That training gap is what the remaining band ×100 runs (oversampling, 120 epochs, 10M, no clip) test.</li>
+      <li>Under their own stiff losses the networks sit far from the best answer at flare cores (9× its loss value for band ×100). Oversampling does not close that gap: on band ×100 it slightly worsens the DEM error and flare-core 94 Å, and only improves the AIA fit. The 120-epoch, 10M and no-clip runs test the rest.</li>
     </ul>
   </section>
 
@@ -283,7 +284,7 @@
           <tr class="group-row"><td colspan="4">BP, stiffer loss</td></tr>
           <tr><td>Band ×100</td><td>Barrier weight 100</td><td><span class="pill done">done</span></td><td>DEM MSE 4.56 → 2.37; beats supervised on 5 metrics</td></tr>
           <tr><td>Band ×30, sparsity ÷ √brightness</td><td>The validation choice</td><td><span class="pill done">done</span></td><td>DEM MSE 2.70; best MAE, W1 and Quiet</td></tr>
-          <tr><td>Band ×100 + oversample bright</td><td>Do more flare cores help once the loss is right?</td><td><span class="pill run">training</span></td><td>pending</td></tr>
+          <tr><td>Band ×100 + oversample bright</td><td>Do more flare cores help once the loss is right?</td><td><span class="pill done">done</span></td><td>no gain: DEM MSE 2.37 → 2.50, flare-core 94 Å 68% → 63%</td></tr>
           <tr><td>Band ×100, 120 epochs</td><td>Longer on the fixed loss</td><td><span class="pill run">training</span></td><td>pending</td></tr>
           <tr><td>Band ×100, 10M parameters</td><td>Bigger on the fixed loss</td><td><span class="pill wait">queued</span></td><td>pending</td></tr>
           <tr><td>Band ×100, no gradient clip</td><td>The clip (norm 1) fires on every step; gradients run 20 to 500</td><td><span class="pill wait">queued</span></td><td>pending</td></tr>

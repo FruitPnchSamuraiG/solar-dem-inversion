@@ -9,8 +9,7 @@
 # bright-failure diagnostic and AIA fit (on the GPU for the 10M models).
 # Baselines for comparison: input_encoding/scaled_mlp6_{barrier,enet}_h336_sqrt_ff12_resample.pt.
 #
-#   bash experiments/submit_followup.sh            # all runs
-#   bash experiments/submit_followup.sh bp_bg1     # selected runs
+#   bash experiments/submit_followup.sh bp_bg1 enet_bg1   # the named runs, in order
 set -euo pipefail
 mkdir -p logs/scaled logs/eval
 OUT=output/experiments/followup
@@ -42,7 +41,8 @@ run() {  # name track segments eval(cpu|gpu) checkpoint-tag env...
 }
 
 sel=("$@")
-pick() { local n=$1; [ ${#sel[@]} -eq 0 ] && return 0; for s in "${sel[@]}"; do [ "$s" = "$n" ] && return 0; done; return 1; }
+if [ ${#sel[@]} -eq 0 ]; then echo "name the runs to submit (see the pick lines below)" >&2; exit 2; fi
+pick() { local n=$1; for s in "${sel[@]}"; do [ "$s" = "$n" ] && return 0; done; return 1; }
 
 echo "### $(date -Iseconds) git $(git rev-parse --short HEAD)" >> "$JOBS"
 B=scaled_mlp6_barrier; E=scaled_mlp6_enet
@@ -59,4 +59,12 @@ pick bp_mu100   && run bp_mu100   bp   2 cpu "${B}_h336_sqrt_ff12_resample_mu100
 # Chosen on the validation split (objective_gap.py --phase val): mu30 with the
 # L1 weight / sqrt(brightness) gives the lowest Quiet error and near-best overall.
 pick bp_mu30_ibr05 && run bp_mu30_ibr05 bp 2 cpu "${B}_h336_sqrt_ff12_resample_mu30_ibr0.5" MU=30 L1_BRIGHT_POWER=0.5 TAG_SUFFIX=_mu30_ibr0.5
+# The meeting's training-side suggestions repeated on the stiff band (mu 100):
+# on the original loss the per-pixel optimum already bounds them, so the open
+# question is whether the network can follow the stiffer loss at flare cores.
+pick bp_mu100_bg1   && run bp_mu100_bg1   bp 2 cpu "${B}_h336_sqrt_ff12_resample_bg1_mu100" MU=100 BRIGHT_GAMMA=1 TAG_SUFFIX=_mu100
+pick bp_mu100_ep120 && run bp_mu100_ep120 bp 5 cpu "${B}_h336_sqrt_ff12_resample_mu100_ep120" MU=100 EPOCHS=120 TAG_SUFFIX=_mu100_ep120
+pick bp_mu100_10m   && run bp_mu100_10m   bp 4 gpu "${B}_h1800_sqrt_ff12_resample_mu100" MU=100 HIDDEN=1800 TF32=1 TAG_SUFFIX=_mu100
+# One encoding for both tracks: does log1p still tie sqrt + Fourier on the stiff band?
+pick bp_log1p_mu100 && run bp_log1p_mu100 bp 2 cpu "${B}_h336_resample_mu100" MU=100 INPUT=log1p FOURIER=0 TAG_SUFFIX=_mu100
 true

@@ -19,6 +19,7 @@
 #   MU=1 (barrier weight; >1 makes the band stiffer, closer to the solver's
 #   hard constraint; give it a TAG_SUFFIX such as _mu10)
 #   L1_BRIGHT_POWER=0 (barrier L1 weight / max(1, I)**p; tag it too, e.g. _ibr1)
+#   INPUT=sqrt FOURIER=12 (INPUT=log1p FOURIER=0 for the log1p input)  CLIP=1
 # A segment stops before MAX_HOURS (default 1.7; GPU jobs past 2 h with low
 # utilisation get cancelled) and the next segment resumes from <tag>_state.pt.
 # Extra segments exit at once when training is already complete.
@@ -46,8 +47,9 @@ python3 -u experiments/train_scaled.py \
   --batch_blocks 16 \
   --num_workers 10 \
   --warmup_steps "${WARMUP:-$WU}" \
-  --input_transform sqrt \
-  --fourier_freqs 12 \
+  --input_transform "${INPUT:-sqrt}" \
+  --fourier_freqs "${FOURIER:-12}" \
+  --clip "${CLIP:-1.0}" \
   --resample_pixels \
   --bright_gamma "${BRIGHT_GAMMA:-0}" \
   --mu "${MU:-1.0}" \

@@ -31,7 +31,11 @@ case "${TRACK:?set TRACK=bp or TRACK=enet}" in
       VARIANTS=${VARIANTS:-mu10} ;;
   *) echo "TRACK must be bp or enet" >&2; exit 2 ;;
 esac
+# MODELS_OVERRIDE="label=ckpt label=ckpt" scores other checkpoints; MU and
+# L1_POWER set the base objective (e.g. to score stiff-band models under their own loss).
+if [ -n "${MODELS_OVERRIDE:-}" ]; then read -r -a MODELS <<< "$MODELS_OVERRIDE"; fi
 python3 -u experiments/objective_gap.py --loss "$LOSS" --root "$ROOT" --phase "${PHASE:-test}" \
+  --mu "${MU:-1}" --l1-bright-power "${L1_POWER:-0}" \
   --models "${MODELS[@]}" --supervised "$SUP" --variants "$VARIANTS" \
   --per-group "${PER_GROUP:-1000}" --core-cap "${CORE_CAP:-6000}" --workers 16 \
   --output "output/experiments/diagnostics/${TRACK}_objective_gap${TAG:+_$TAG}.json"

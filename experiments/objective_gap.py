@@ -71,6 +71,8 @@ def parse_args():
     p.add_argument("--tolfac", type=float, default=1.4)
     p.add_argument("--alpha-l1", type=float, default=1.0)
     p.add_argument("--mu", type=float, default=1.0)
+    p.add_argument("--l1-bright-power", type=float, default=0.0,
+                   help="base barrier objective's L1 weight / max(1, I)**p (as train_scaled.py)")
     p.add_argument("--enet-alpha", type=float, default=0.001)
     p.add_argument("--enet-lam", type=float, default=0.5)
     p.add_argument("--seed", type=int, default=0)
@@ -157,6 +159,7 @@ def parts(x, obs, err, cfg, a_mult=1.0, mu_mult=1.0, power=0.0, inten=None):
     if cfg["loss"] == "barrier":
         lb, ub = obs - s, obs + s
         a = cfg["alpha_l1"] * a_mult
+        power = power or cfg.get("l1_power", 0.0)
         if power and inten is not None:
             a = a / np.maximum(inten, 1.0) ** power
         reg = a * x.sum(1)
@@ -197,7 +200,8 @@ def solve_chunk(job):
 
             if cfg["loss"] == "barrier":
                 lb, ub = o - s, o + s
-                a = cfg["alpha_l1"] * a_mult / (max(inten[i], 1.0) ** power if power else 1.0)
+                pw = power or cfg.get("l1_power", 0.0)
+                a = cfg["alpha_l1"] * a_mult / (max(inten[i], 1.0) ** pw if pw else 1.0)
                 m = cfg["mu"] * mu_mult
 
                 def f(x):
@@ -269,7 +273,7 @@ def min_l1_x(dems):
 def describe(x, obs, err, inten, cfg, variant="base"):
     """Per-pixel quantities for one answer x under the base objective (and,
     for a variant optimum, under its own objective too)."""
-    reg, fit = parts(x, obs, err, cfg)
+    reg, fit = parts(x, obs, err, cfg, inten=inten)
     d = {"total": reg + fit, "reg": reg, "fit": fit}
     if variant != "base":
         a_mult, mu_mult, power = parse_variant(variant)
@@ -317,7 +321,7 @@ def main():
     cfg = {"root": os.path.abspath(args.root), "phase": args.phase, "loss": args.loss,
            "thresholds": thresholds.tolist(), "seed": args.seed, "tolfac": args.tolfac,
            "alpha_l1": args.alpha_l1, "mu": args.mu, "enet_alpha": args.enet_alpha,
-           "enet_lam": args.enet_lam}
+           "enet_lam": args.enet_lam, "l1_power": args.l1_bright_power}
     t0 = time.time()
 
     # Keep probabilities aim at --per-group pixels per band (population shares
@@ -401,7 +405,7 @@ def main():
               "loss": args.loss, "root": cfg["root"], "phase": args.phase,
               "models": dict(s.split("=", 1) for s in args.models),
               "supervised": args.supervised, "variants": variants,
-              "settings": {k: cfg[k] for k in ("tolfac", "alpha_l1", "mu", "enet_alpha", "enet_lam")},
+              "settings": {k: cfg[k] for k in ("tolfac", "alpha_l1", "mu", "enet_alpha", "enet_lam", "l1_power")},
               "population_per_band": dict(zip(INTENSITY_LABELS, pop.tolist())),
               "not_converged": nonconv, "below_optimum": worse,
               "runtime_s": round(time.time() - t0, 1),
@@ -409,6 +413,13 @@ def main():
     for g, lab in enumerate(INTENSITY_LABELS):
         idx = np.flatnonzero(group == g)
         band = {name: group_summary(d, sol_dem, obs, err, cfg, idx) for name, d in desc.items()}
+        if idx.size:
+            # Noise level relative to the signal: shot noise alone would make
+            # sigma/obs fall as 1/sqrt(brightness); a floor means calibration
+            # error dominates and the band penalty stops growing with brightness.
+            band["_pixels"] = {"sigma_over_obs_median": {
+                c: float(np.median(err[idx, j] / obs[idx, j])) for j, c in enumerate(CHANNELS)},
+                "obs_median": {c: float(np.median(obs[idx, j])) for j, c in enumerate(CHANNELS)}}
         for label, rel in gap.items():
             if idx.size:
                 band[f"net_{label}"]["gap_vs_optimum_median"] = float(np.median(rel[idx]))
@@ -426,9 +437,10 @@ def main():
 
 def render(r):
     L = [f"{r['loss']} objective; answers scored under the training objective "
-         f"(tolfac {r['settings']['tolfac']}, a {r['settings']['alpha_l1']}, mu {r['settings']['mu']})",
+         f"(tolfac {r['settings']['tolfac']}, a {r['settings']['alpha_l1']}, mu {r['settings']['mu']}, "
+         f"L1 / I^{r['settings'].get('l1_power', 0)})",
          f"not converged: {r['not_converged']}"]
-    names = list(next(b for b in r["bands"].values() if b.get("optimum")).keys())
+    names = [n for n in next(b for b in r["bands"].values() if b.get("optimum")) if not n.startswith("_")]
     for lab, band in r["bands"].items():
         if not band.get("optimum"):
             continue

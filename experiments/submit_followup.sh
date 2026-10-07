@@ -67,4 +67,7 @@ pick bp_mu100_ep120 && run bp_mu100_ep120 bp 5 cpu "${B}_h336_sqrt_ff12_resample
 pick bp_mu100_10m   && run bp_mu100_10m   bp 4 gpu "${B}_h1800_sqrt_ff12_resample_mu100" MU=100 HIDDEN=1800 TF32=1 TAG_SUFFIX=_mu100
 # One encoding for both tracks: does log1p still tie sqrt + Fourier on the stiff band?
 pick bp_log1p_mu100 && run bp_log1p_mu100 bp 2 cpu "${B}_h336_resample_mu100" MU=100 INPUT=log1p FOURIER=0 TAG_SUFFIX=_mu100
+# Gradient clipping (norm 1) fires on every step (norms 20-500 on mu 100): does it
+# blunt the rare flare-core gradients?
+pick bp_mu100_noclip && run bp_mu100_noclip bp 2 cpu "${B}_h336_sqrt_ff12_resample_mu100_noclip" MU=100 CLIP=1e12 TAG_SUFFIX=_mu100_noclip
 true

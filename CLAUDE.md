@@ -91,6 +91,23 @@ From the paper's "Future Work" section:
 
 ## Progress Log (most recent first)
 
+### 2026-10-10 — Flare-core follow-up done: the BP loss was the limit; stiff band x100 + 120 epochs
+
+Meeting suggestions (oversample flare cores, train longer, 10M model) tested on
+both tracks; all on sqrt + Fourier input. `experiments/objective_gap.py` showed
+the BP network already sat within a few percent of its loss's per-pixel optimum,
+and that optimum drops the hot plasma at flare cores (94 A sees it weakly:
+including it costs ~600 in L1, leaving it out ~85 in band penalty). So on the
+original loss none of the suggestions helps (oversampling and 10M worse, 120
+epochs -8% DEM MSE, flare cores unchanged). A stiffer band (barrier weight
+mu=100) fixes it; on that loss 120 epochs helps: shared-test DEM MSE 4.28 ->
+2.00, MAE 0.077, EM 11.3%, W1 0.071, AIA MSE 44, Quiet 0.032, flare-core
+emission 92%; beats supervised on 6 of 10 measures, still 2.2x on DEM MSE.
+Chosen on validation. 10M models blow up on a few pixels; log1p and no-clip
+worse. ENet: keep current final. Not yet adopted (user decides). Page:
+`results/followup_flare_cores_20261006.html` (claude.ai/artifact/V2Mb4itFvtydeQKtoxdipv);
+results `results/plots/21_followup_20261006/`.
+
 ### 2026-10-04 (evening) — Viewer updated to the final models; deck merged
 
 Public viewer assets rebuilt for the two final models (Torch job `19173795`,

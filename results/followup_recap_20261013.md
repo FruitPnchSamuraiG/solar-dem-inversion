@@ -124,9 +124,13 @@ Hot flare plasma shows up almost only in 94 Å, and 94 Å sees it weakly. Adding
 
 **The loss.** Two terms: loss = sparsity + μ × band penalty. Sparsity is the sum of the 54 weights, roughly the total plasma; less is better. The band penalty is zero while a predicted channel stays inside its band, and grows as the square of the distance outside it, measured in half band widths (1.4 noise widths). The band weight μ is 1 in the original loss. It multiplies the penalty of all six channels alike; each channel's penalty is already scaled by its own noise, so the channels are comparable.
 
-```latex
-\text{loss} = \sum_k x_k + \mu \sum_c \frac{\max(0,\, \ell_c - (Dx)_c)^2 + \max(0,\, (Dx)_c - u_c)^2}{(1.4\,\sigma_c)^2}
+```text
+loss = (sum of the 54 weights)
+     + mu * sum over the six channels of
+           [ max(0, band_low - predicted)^2 + max(0, predicted - band_high)^2 ] / (1.4 * noise)^2
 ```
+
+Here predicted is the channel value the DEM reproduces, band_low and band_high are the observation minus and plus 1.4 noise widths, and the second line is the band penalty: zero inside the band, growing as the square of the distance outside it.
 
 **What each channel sees.** The response matrix says how bright each channel gets per unit of plasma (one unit is 10^26 cm^-5 of emission measure; the 54 weights, the DEM and the sparsity term all count in this unit). Two temperature ranges matter here, in DN/s per unit:
 

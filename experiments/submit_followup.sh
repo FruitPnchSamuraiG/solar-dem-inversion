@@ -21,7 +21,9 @@ run() {  # name track segments eval(cpu|gpu) checkpoint-tag env...
   for kv in "$@"; do env+=",$kv"; done
   local prev="" ids=()
   for _ in $(seq 1 "$segs"); do
+    # ACCOUNT spreads chains over the accounts we hold (each has its own GPU quota).
     prev=$(sbatch --parsable ${prev:+--dependency=afterany:$prev} --job-name="fu_$name" \
+           ${ACCOUNT:+--account="$ACCOUNT"} \
            --export="$env" experiments/job_train_followup.sbatch)
     ids+=("$prev")
   done
@@ -70,4 +72,18 @@ pick bp_log1p_mu100 && run bp_log1p_mu100 bp 2 cpu "${B}_h336_resample_mu100" MU
 # Gradient clipping (norm 1) fires on every step (norms 20-500 on mu 100): does it
 # blunt the rare flare-core gradients?
 pick bp_mu100_noclip && run bp_mu100_noclip bp 2 cpu "${B}_h336_sqrt_ff12_resample_mu100_noclip" MU=100 CLIP=1e12 TAG_SUFFIX=_mu100_noclip
+# 2026-10-13, overnight before the meeting. Band x100 trained 120 epochs was
+# still improving at flare cores (network 47% above its loss's best answer
+# there), so: train longer two ways, and the two untested knobs on this loss.
+# Segments of 1.85 h hold ~42 epochs (158 s each): 120 epochs = 3 segments,
+# 240 = 6; one spare each, which exits at once when training is complete.
+# Queue waits dominate, so each chain goes to a different account.
+#   ep120_cont  120 more epochs from the 120-epoch checkpoint (fresh schedule)
+#   ep240       240 epochs from scratch, one cosine schedule
+#   h680        1.43M parameters (between 409k and the 10M that blew up)
+#   mu300       the next band weight up (best answer 1.80 vs 2.32 overall)
+pick bp_mu100_ep120_cont && ACCOUNT=torch_pr_41_tandon_advanced run bp_mu100_ep120_cont bp 4 cpu "${B}_h336_sqrt_ff12_resample_mu100_ep120_cont" MU=100 EPOCHS=120 MAX_HOURS=1.85 TAG_SUFFIX=_mu100_ep120_cont "INIT_FROM=$OUT/${B}_h336_sqrt_ff12_resample_mu100_ep120.pt"
+pick bp_mu100_ep240      && ACCOUNT=torch_pr_718_cilvr run bp_mu100_ep240 bp 7 cpu "${B}_h336_sqrt_ff12_resample_mu100_ep240" MU=100 EPOCHS=240 MAX_HOURS=1.85 TAG_SUFFIX=_mu100_ep240
+pick bp_mu100_h680_ep120 && ACCOUNT=torch_pr_718_cds run bp_mu100_h680_ep120 bp 4 cpu "${B}_h680_sqrt_ff12_resample_mu100_ep120" MU=100 HIDDEN=680 EPOCHS=120 MAX_HOURS=1.85 TAG_SUFFIX=_mu100_ep120
+pick bp_mu300_ep120      && ACCOUNT=torch_pr_41_tandon_advanced run bp_mu300_ep120 bp 4 cpu "${B}_h336_sqrt_ff12_resample_mu300_ep120" MU=300 EPOCHS=120 MAX_HOURS=1.85 TAG_SUFFIX=_mu300_ep120
 true

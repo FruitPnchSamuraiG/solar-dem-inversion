@@ -38,6 +38,8 @@ case "${TRACK:?set TRACK=bp or TRACK=enet}" in
 esac
 EXTRA=()
 if [ "${TF32:-0}" = 1 ]; then EXTRA+=(--tf32); fi
+# INIT_FROM=<checkpoint>: warm start from its weights (a continuation run)
+if [ -n "${INIT_FROM:-}" ]; then EXTRA+=(--init_from "$INIT_FROM"); fi
 python3 -u experiments/train_scaled.py \
   --root "$ROOT" \
   --variant mlp6 \

@@ -288,6 +288,12 @@ def train(args):
     n_sp = harden_softplus(core, args.softplus_floor)
     init_output_head(core, args.init_bias, args.init_weight_scale)
     model = NormalizedInput(core, args.input_transform).to(device)
+    if args.init_from:
+        # Warm start: weights only, with a fresh optimizer and schedule. A
+        # segment's own <tag>_state.pt still takes precedence below.
+        ck = torch.load(args.init_from, map_location=device, weights_only=False)
+        core.load_state_dict(ck["model"])
+        print(f"initialised weights from {args.init_from} (epoch {ck.get('epoch')})")
     print(f"Model params: {sum(p.numel() for p in model.parameters()):,}  "
           f"input={args.input_transform}  fourier_freqs={args.fourier_freqs}  "
           f"softplus floor={args.softplus_floor} "
@@ -497,6 +503,8 @@ def parse_args():
     p.add_argument("--tag_suffix", default="", help="appended to the checkpoint tag")
     p.add_argument("--resume", action="store_true",
                    help="continue from <tag>_state.pt if it exists")
+    p.add_argument("--init_from", default="",
+                   help="checkpoint whose weights start the run (new optimizer and schedule)")
     p.add_argument("--max_hours", type=float, default=0.0,
                    help="stop (resumably) before this wall time; 0 = no limit")
     p.add_argument("--tf32", action="store_true", help="TF32 matmuls (large models)")

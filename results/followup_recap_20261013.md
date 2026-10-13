@@ -1,8 +1,6 @@
 # Flare-Core Follow-up: Recap
 
-13 October 2026. Markdown copy of the recap doc; shared-test numbers for every run are in results/plots/21_followup_20261006/.
-
-BP's failure at flare cores comes from its training loss, not from training. A stiffer band in the loss (a heavier penalty when the DEM misses an observation by more than its noise), trained six times longer (120 epochs, then 120 more from that checkpoint), cuts BP's DEM error on the shared test set from 4.28 to 1.75 and beats the supervised model on seven of ten measures. On the original loss, none of the training-side suggestions from the 6 October meeting (oversampling flare cores, longer training, a 10M model) helps. ElasticNet keeps its current model.
+BP's failure at flare cores comes from its training loss, not from training. A stiffer band in the loss (a heavier penalty when the DEM misses an observation by more than its noise), trained six times longer (120 epochs, then 120 more from that checkpoint), cuts BP's DEM error on the shared test set from 4.28 to 1.75 and beats the supervised model on seven of ten measures. On the original loss, none of the training-side suggestions from the last meeting (oversampling flare cores, longer training, a 10M model) helps. ElasticNet keeps its current model.
 
 **Contents**
 
@@ -28,7 +26,7 @@ Before this work, each track had one final label-free model, and BP failed at fl
 
 **The fixed-pixel bug.** Training originally drew the same 512 pixels from each block in every epoch. The network saw one fixed sample of 30M pixels, about 0.8% of the training pixels, 40 times over. Training now draws fresh pixels every epoch.
 
-**The final models (4 October).** Both are MLPs on the centre pixel with four hidden layers 336 wide, trained 40 epochs on fresh pixels.
+**The final models.** Both are MLPs on the centre pixel with four hidden layers 336 wide, trained 40 epochs on fresh pixels.
 
 | Track | Input | Parameters |
 | --- | --- | --- |
@@ -40,11 +38,11 @@ Before this work, each track had one final label-free model, and BP failed at fl
 - **Flare-core emission:** total emission in our DEM as a share of the solver's.
 - **Flare-core 94 Å:** share of the observed 94 Å signal our DEM reproduces.
 
-**The known failure.** The 28 September diagnostic found that pixels at 10 times the Bright level or more are 0.09% of pixels but hold 94% of BP's squared DEM error. At flare cores the old BP model held 40% of the solver's emission and reproduced 23% of 94 Å (supervised model: 92% and 85%). Its overall DEM MSE was 4.28 against the supervised model's 0.91. In that diagnostic the network fit 171, 193 and 211 Å to within 2% at the same pixels, so we read the failure as a training problem.
+**The known failure.** The earlier diagnostic found that pixels at 10 times the Bright level or more are 0.09% of pixels but hold 94% of BP's squared DEM error. At flare cores the old BP model held 40% of the solver's emission and reproduced 23% of 94 Å (supervised model: 92% and 85%). Its overall DEM MSE was 4.28 against the supervised model's 0.91. In that diagnostic the network fit 171, 193 and 211 Å to within 2% at the same pixels, so we read the failure as a training problem.
 
 ## 2. The meeting's questions
 
-The 6 October meeting raised five points. Three of them assume the loss asks for the right answer and the network fails to reach it.
+The last meeting raised five points. Three of them assume the loss asks for the right answer and the network fails to reach it.
 
 | Suggestion | What it assumes |
 | --- | --- |
@@ -70,7 +68,7 @@ We added five pieces to the training and evaluation code, then ran 13 models: 10
 | Loss weights | A weight on the band penalty (1 in the original loss), and an option to shrink the sparsity term on bright pixels. | The fix (Part 7) |
 | Objective-gap check | Solves each pixel's best possible answer under the loss directly, with no network, on 12,000 validation pixels (6,000 of them flare cores). It scores the network, that best answer and the solver's DEM under the same loss. | The cause (Part 5) |
 
-Every run also logs, per epoch, the gradient size, how often gradient clipping fires, and the share of Bright and flare-core pixels it trained on. Every finished model goes through the same shared-test evaluation as the deck.
+Every run also logs, per epoch, the gradient size, how often gradient clipping fires, and the share of Bright and flare-core pixels it trained on. Every finished model goes through the same shared-test evaluation as the earlier final models.
 
 ## 4. The suggestions on the original loss
 
@@ -188,7 +186,7 @@ A band weight of 100 brings the loss's best answer to the solver's level at flar
 - **μ = 100** gives most of the gain while Quiet error stays below the supervised model's. Going to 300 lowers overall error only from 2.32 to 1.80 and raises Quiet error to 0.048.
 - **The second candidate,** μ = 30 with the sparsity term divided by the square root of brightness on bright pixels, keeps the best Quiet error and nearly the best overall error.
 
-We trained networks on both candidates (Part 8). The validation sample holds more flare cores than the shared test set, so its absolute values run higher than the deck's; compare rows with each other.
+We trained networks on both candidates (Part 8). The validation sample holds more flare cores than the shared test set, so its absolute values run higher than the shared-test values; compare rows with each other.
 
 ## 8. The suggestions on the stiff band
 
@@ -213,7 +211,7 @@ On the stiff band, training becomes the limit, and longer training is the one su
 - **Training is now the limit.** At flare cores the network's loss sits 118% above its best answer after 40 epochs (median), against 8% to 14% on the original loss. After 120 epochs the gap is 47%.
 - **120 epochs** therefore helps: DEM MSE 2.37 to 2.00, flare-core 94 Å 68% to 75%, validation error 20.1 to 17.8.
 - **240 epochs from scratch** keeps improving the DEM but starts to misfit rare pixels. DEM MSE 2.00 to 1.74, median 0.041 to 0.036, W1 0.071 to 0.068, spurious multi-peaks 16% to 13.5% (the solver's own rate), validation error 17.8 to 14.0. But AIA MSE rises from 44 to 591 and Quiet MSE from 0.032 to 0.035: a few pixels break the band badly (on the validation flare cores its band penalty is 130 times the 120-epoch model's), the mild form of what the 680-wide and 10M models did.
-- **120 + 120 epochs, continued from the 120-epoch model** with a fresh schedule, gets the same DEM gains (MSE 1.75, median 0.036, W1 0.068) while keeping the AIA fit and the quiet pixels: AIA MSE 103 (still below the supervised model's 157), Quiet MSE 0.032, flare-core emission 93%, flare-core 94 Å 77%, validation error 15.8. Its band penalty at the validation flare cores is 13 times the 120-epoch model's, against 130 times for 240 from scratch. It improves on the 120-epoch model in every measure except AIA MAE and AIA MSE, which both stay ahead of the supervised model. Recommended as the new BP model.
+- **120 + 120 epochs, continued from the 120-epoch model** with a fresh schedule, gets the same DEM gains (MSE 1.75, median 0.036, W1 0.068) while keeping the AIA fit and the quiet pixels: AIA MSE 103 (still below the supervised model's 157), Quiet MSE 0.032, flare-core emission 93%, flare-core 94 Å 77%, validation error 15.8. Its band penalty at the validation flare cores is 13 times the 120-epoch model's, against 130 times for 240 from scratch. It improves on the 120-epoch model in every measure except AIA MAE and AIA MSE, which both stay ahead of the supervised model. This is the new BP model.
 - **Oversampling** still does not help: DEM MSE rises to 2.50 and the median pixel error to 0.071.
 - **The 10M model** fits 98% of pixels as well as 336 wide (MSE 0.037 against 0.036), but its worst 0.1% of pixels carry 14 times the error of the 336-wide model's worst 0.1%. Earlier ElasticNet models of 722k and above failed the same way.
 - **680 wide (1.43M parameters)** fails the same way, and worse. The typical pixel improves (median 0.034 against 0.041, W1 0.068 against 0.071), but a few flare-core pixels blow up: DEM MSE 897, AIA MSE 21.7 million, Quiet MSE 12.5, and the worst 1% of pixels carry 99.996% of the error. At flare cores it over-predicts 171 Å by 3 times. Both sizes tried above 409k parameters (1.43M and 10M) blew up on rare pixels, so 336 wide stays.
@@ -237,7 +235,7 @@ Band ×100 trained 120 epochs and continued for 120 more beats the supervised mo
 - **Against the old final** it improves every measure except the median pixel error, which rises from 0.026 to 0.036 (still well below the supervised model's 0.112). Its DEMs are also less sparse (training sparsity score 2.6 against 1.8 on the original loss; higher means more basis weights in use).
 - **What is left** is flare cores: they set the DEM MSE gap (1.75 against 0.91). Longer training keeps closing it, but 240 epochs from scratch starts to misfit a few pixels' AIA (MSE 591); continuing from the 120-epoch checkpoint instead keeps that in check (103).
 
-**The recipe.** The old final's network (MLP with four hidden layers 336 wide, fresh pixels, gradient clip at 1) with square root + 12 Fourier frequencies as input, band weight 100, 120 epochs, then 120 more with a fresh schedule started from that checkpoint. Checkpoint on Torch: `output/experiments/followup/scaled_mlp6_barrier_h336_sqrt_ff12_resample_mu100_ep120_cont.pt`.
+**The recipe.** The old final's network (MLP with four hidden layers 336 wide, fresh pixels, gradient clip at 1) with square root + 12 Fourier frequencies as input, band weight 100, 120 epochs, then 120 more with a fresh schedule started from that checkpoint.
 
 ## 10. ElasticNet
 
@@ -282,7 +280,6 @@ The current ElasticNet model stays: no suggestion beats its DEM MSE, and its los
 
 **Decisions**
 
-- [x] Adopt band ×100, 120 + 120 epochs (continued) as the BP final model (decided 13 October; website images rerunning). This changes the deck's BP numbers and the website images; the website rerun takes about an hour of compute.
-- [ ] Or keep the 120-epoch model: a cleaner AIA fit (MSE 44 against 103) at the cost of DEM MSE 2.00 against 1.75 and one fewer win against the supervised model. The 240-epoch run from scratch is not recommended (AIA MSE 591, Quiet MSE 0.035).
-- [x] Keep the current ElasticNet model (decided 13 October).
-- [ ] Report to the next meeting: on the original loss, oversampling, longer training and a bigger model cannot fix flare cores, because the loss itself drops the hot plasma; a stiffer band fixes it, and on the stiff band longer training helps.
+- BP: band ×100, 120 epochs, then 120 more continued from that checkpoint.
+- ElasticNet: the current model, unchanged.
+- Not chosen: 120 epochs alone (a cleaner AIA fit, MSE 44 against 103, but DEM MSE 2.00 against 1.75) and 240 epochs from scratch (AIA MSE 591, Quiet MSE 0.035).

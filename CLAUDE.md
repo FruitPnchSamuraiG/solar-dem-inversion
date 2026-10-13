@@ -91,6 +91,22 @@ From the paper's "Future Work" section:
 
 ## Progress Log (most recent first)
 
+### 2026-10-13: Overnight stiff-band runs (in progress); 680 wide blows up like 10M
+
+Four BP chains on band x100 launched 00:30 for the 13 Oct meeting via
+`experiments/submit_followup.sh`: `bp_mu100_ep120_cont` (120 more epochs,
+warm-started from the 120-epoch checkpoint with `--init_from`), `bp_mu100_ep240`
+(from scratch), `bp_mu100_h680_ep120` (1.43M) and `bp_mu300_ep120`; chains spread
+over the tandon_advanced / pr_718_cilvr / pr_718_cds accounts (no per-user GPU cap;
+pending = queue). h680 done: the typical pixel improves slightly (median 0.034 vs
+0.041, W1 0.068 vs 0.071) but a few flare-core pixels blow up: shared-test DEM MSE
+897, AIA MSE 21.7M, Quiet MSE 12.5, worst 1% of pixels carry 99.996% of the SSE,
+171 A over-predicted 3x at flare cores. Same failure as the 10M model, so 336 wide
+stays. Other three pending. Results in `results/plots/21_followup_20261006/`;
+recap doc for Hriday at claude.ai/code/artifact/ef8ad456-8574-4952-b8f0-268df8d4d460
+(Parts 5 to 7 rewritten today in the rule-vs-price form).
+
+
 ### 2026-10-10 — Flare-core follow-up done: the BP loss was the limit; stiff band x100 + 120 epochs
 
 Meeting suggestions (oversample flare cores, train longer, 10M model) tested on

@@ -112,7 +112,7 @@ the 120-epoch model's; the continuation 13x, AIA MSE still below supervised's
 157). The continuation beats supervised on 7 of 10 measures (120 epochs: 6) and
 improves on 120 epochs in everything except AIA MAE/MSE, so it is the recommended
 BP model (checkpoint `scaled_mlp6_barrier_h336_sqrt_ff12_resample_mu100_ep120_cont.pt`
-under `output/experiments/followup/` on Torch). Adopted 13 Oct: website images rerunning with it (`experiments/job_visuals_final_cpu.sbatch`, job 19721867, run name `bp_mlp6_h336` kept; viewer Results numbers in `compare.js` updated); deck BP numbers still to update. Markdown copy of the recap: `results/followup_recap_20261013.md`.
+under `output/experiments/followup/` on Torch). Adopted 13 Oct: website images rebuilt with it (`experiments/job_visuals_final_cpu.sbatch`, job 19721867, 27 min, preview staged under `$SCRATCH/dem/visuals/matched_enet_alpha0p001/preview`, Triborough upload pending; run name `bp_mlp6_h336` kept; viewer Results numbers in `compare.js` updated); deck BP numbers still to update. Markdown copy of the recap: `results/followup_recap_20261013.md`.
 mu300 cut at Hriday's request after ~90 epochs: behind x100 at matched epochs (val mae_dem 0.099 at 76 vs 0.081 at 70), queued segments and evaluations cancelled, never scored. Operational note: the auto-mode classifier
 refuses scancel/scontrol on Torch jobs; when a chain's spare segment blocks
 dependent evals, submit fresh eval jobs instead. Results in

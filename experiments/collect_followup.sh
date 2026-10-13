@@ -18,6 +18,10 @@ labels = {"bp_bg1": "oversample bright", "bp_ep120": "120 epochs", "bp_10m": "10
           "bp_mu100_bg1": "band x100 + oversample", "bp_mu100_ep120": "band x100, 120 epochs",
           "bp_mu100_10m": "band x100, 10M", "bp_log1p_mu100": "band x100, log1p input",
           "bp_mu100_noclip": "band x100, no clip",
+          "bp_mu100_ep120_cont": "band x100, 120 + 120 epochs",
+          "bp_mu100_ep240": "band x100, 240 epochs",
+          "bp_mu100_h680_ep120": "band x100, 680 wide, 120 epochs",
+          "bp_mu300_ep120": "band x300, 120 epochs",
           "enet_bg1": "oversample bright", "enet_ep120": "120 epochs", "enet_10m": "10M parameters"}
 for track in ("bp", "enet"):
     keep = [r for r in base[track] if not r.get("followup")]

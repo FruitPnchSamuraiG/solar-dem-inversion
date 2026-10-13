@@ -1,0 +1,74 @@
+barrier objective; answers scored under the training objective (tolfac 1.4, a 1.0, mu 100.0, L1 / I^0.0)
+not converged: {'base': 639, 'mu300': 4486}
+
+== <0.03x  (n=50, population 195,273)
+answer                       objective    L1/reg       fit  94A rec 131A rec  EM/sol    DEM MSE  gap med
+net_mu100ep240                 0.03985   0.03985         0    0.410    0.238   1.045  1.177e-05    0.109
+optimum                        0.03608   0.03607 1.141e-05    0.404    0.231   1.001   5.76e-07      nan
+solver                         0.03747   0.03747 1.343e-07    0.405    0.236   1.000          0      nan
+supervised                       38.26      0.18     38.08    0.709    1.302   2.671  0.0003053      nan
+optimum_mu300                  0.03658   0.03658 2.614e-09    0.404    0.230   1.004  8.368e-07      nan
+
+== 0.03-0.1x  (n=296, population 2,673,852)
+answer                       objective    L1/reg       fit  94A rec 131A rec  EM/sol    DEM MSE  gap med
+net_mu100ep240                  0.2241    0.2062   0.01784    0.443    0.317   1.016    0.00129    0.075
+optimum                         0.2047    0.1884   0.01627    0.447    0.320   1.003   0.001093      nan
+solver                           4.339    0.1896     4.149    0.447    0.324   1.000          0      nan
+supervised                       105.9    0.3916     105.5    0.590    0.768   1.493   0.003595      nan
+optimum_mu300                   0.2079    0.1932   0.01475    0.446    0.320   1.011    0.00106      nan
+
+== 0.1-0.3x  (n=608, population 19,425,863)
+answer                       objective    L1/reg       fit  94A rec 131A rec  EM/sol    DEM MSE  gap med
+net_mu100ep240                   1.059    0.6499    0.4089    0.649    0.571   1.101    0.01057    0.054
+optimum                         0.9747    0.5771    0.3976    0.627    0.534   1.009    0.00727      nan
+solver                           10.27    0.5688     9.705    0.628    0.534   1.000          0      nan
+supervised                       92.38    0.9507     91.43    0.755    0.765   1.338    0.01361      nan
+optimum_mu300                   0.9832    0.5884    0.3948    0.628    0.536   1.017   0.007171      nan
+
+== 0.3-1x  (n=1000, population 51,209,294)
+answer                       objective    L1/reg       fit  94A rec 131A rec  EM/sol    DEM MSE  gap med
+net_mu100ep240                   5.639     2.527     3.112    0.912    0.777   1.098    0.08982    0.070
+optimum                          5.189     2.189     3.001    0.873    0.740   1.011    0.06365      nan
+solver                           58.41     2.063     56.35    0.869    0.731   1.000          0      nan
+supervised                       67.64      2.85     64.79    0.958    0.828   1.174    0.07209      nan
+optimum_mu300                    5.297     2.358     2.939    0.872    0.747   1.021     0.0772      nan
+
+== 1-1.8x  (n=1000, population 11,694,773)
+answer                       objective    L1/reg       fit  94A rec 131A rec  EM/sol    DEM MSE  gap med
+net_mu100ep240                   13.59     7.582      6.01    1.021    0.852   1.077     0.5923    0.091
+optimum                           12.6     6.739      5.86    0.994    0.821   1.021     0.5035      nan
+solver                           137.7     6.009     131.7    0.996    0.778   1.000          0      nan
+supervised                         130     7.243     122.7    1.031    0.844   1.082     0.3408      nan
+optimum_mu300                    13.07     7.462     5.604    0.992    0.834   1.036     0.6381      nan
+
+== 1.8-3.2x  (n=1000, population 4,025,259)
+answer                       objective    L1/reg       fit  94A rec 131A rec  EM/sol    DEM MSE  gap med
+net_mu100ep240                    24.5     13.41     11.08    1.020    0.858   1.052      1.305    0.061
+optimum                          22.89     12.35     10.54    1.002    0.819   1.012      1.144      nan
+solver                           143.6     11.32     132.2    1.012    0.787   1.000          0      nan
+supervised                         453     12.57     440.5    0.996    0.821   1.024     0.7386      nan
+optimum_mu300                    23.49     13.27     10.21    1.004    0.827   1.023      1.501      nan
+
+== 3.2-10x  (n=1000, population 1,559,444)
+answer                       objective    L1/reg       fit  94A rec 131A rec  EM/sol    DEM MSE  gap med
+net_mu100ep240                   35.84     28.32     7.518    0.956    0.895   1.024      2.114    0.050
+optimum                          32.63     26.56      6.07    0.940    0.869   0.996      1.811      nan
+solver                           88.56     26.96      61.6    0.951    0.863   1.000          0      nan
+supervised                        1240     26.31      1213    0.899    0.826   0.957      2.074      nan
+optimum_mu300                    33.68     28.08     5.604    0.943    0.876   1.005      2.143      nan
+
+== 10-32x  (n=1000, population 105,607)
+answer                       objective    L1/reg       fit  94A rec 131A rec  EM/sol    DEM MSE  gap med
+net_mu100ep240                   105.1     91.76     13.31    0.885    0.939   1.020      16.51    0.053
+optimum                          88.83      86.5     2.327    0.871    0.907   0.988      5.257      nan
+solver                           101.7     89.44     12.24    0.883    0.911   1.000          0      nan
+supervised                        5729     84.26      5645    0.813    0.838   0.922      30.84      nan
+optimum_mu300                    91.05     89.41     1.639    0.881    0.913   1.000      11.62      nan
+
+== >=32x  (n=6000, population 14,072)
+answer                       objective    L1/reg       fit  94A rec 131A rec  EM/sol    DEM MSE  gap med
+net_mu100ep240               8.818e+05     887.6 8.809e+05    0.784    0.969   0.949  8.911e+04    0.473
+optimum                           1278      1056     221.4    0.931    0.925   0.999  1.245e+04      nan
+solver                            1688      1119     568.8    0.941    0.919   1.000          0      nan
+supervised                   7.817e+04      1107 7.706e+04    0.908    0.896   0.949  3.814e+04      nan
+optimum_mu300                     1438      1299     139.2    0.950    0.938   1.018  1.378e+04      nan

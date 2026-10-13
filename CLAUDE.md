@@ -103,14 +103,20 @@ W1 0.068 vs 0.071) but a few flare-core pixels blow up: shared-test DEM MSE 897,
 AIA MSE 21.7M, Quiet MSE 12.5, worst 1% of pixels carry 99.996% of the SSE,
 validation error 4,170 vs 17.8 (`bp_objective_gap_val_overnight_h680`), 171 A
 over-predicted 3x at flare cores. Same failure as the 10M model, so 336 wide stays.
-Longer training helps and is still improving: 240 epochs from scratch scores
-validation error 14.0 (120 epochs 17.8; best answer 2.1; supervised 6.1), flare-core
-94 A 0.78 (0.76) and emission 0.95 (0.91); its watch-only val loss falls 5.573 at
-epoch 120 to 5.488 at 240 (mae_dem 0.0754 to 0.0699). The 120 + 120 continuation
-ends at val loss 5.444 / mae_dem 0.0700, slightly better than 240 from scratch on
-the watch loss; its shared-test and validation scoring were resubmitted without the
-stale dependency (jobs 19712760/61, 19712813) because the chain's spare segment
-is stuck in the tandon queue. mu300 at 45/120 epochs, next segment queued.
+Longer training keeps improving the DEM but starts to misfit rare pixels: 240
+epochs from scratch scores shared-test DEM MSE 1.74 (120 epochs 2.00), MAE 0.074,
+median 0.036, W1 0.068, spurious multi-peaks 13.5% (solver 13.5%, 120 epochs 16.3%),
+validation error 14.0 (17.8; best answer 2.1; supervised 6.1), but AIA MSE 591
+(44), Quiet MSE 0.035 (0.032), flare-core 94 A 0.73 (0.75): a few pixels break
+the band (validation flare-core band penalty 130x the 120-epoch model's), the mild
+form of the h680/10M failure. Beats supervised on 4 of 10 measures where 120 epochs
+beats it on 6, so 120 epochs stays the recommendation unless DEM MSE alone counts.
+Watch-only val loss still falling at epoch 240 (5.573 at 120 to 5.488). The 120 + 120
+continuation ends at val loss 5.444 / mae_dem 0.0700, slightly better than 240 from
+scratch; its shared-test and validation scoring were resubmitted without the stale
+dependency (jobs 19712760/61, 19712813) because the chain's spare segment is stuck
+in the tandon queue (the auto-mode classifier refuses scancel/scontrol on Torch
+jobs; submit fresh jobs instead). mu300 at 45/120 epochs, next segment queued.
 Results in `results/plots/21_followup_20261006/`; recap doc for Hriday at
 claude.ai/code/artifact/ef8ad456-8574-4952-b8f0-268df8d4d460 (Parts 5 to 7
 rewritten today in the rule-vs-price form).

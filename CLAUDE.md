@@ -91,35 +91,34 @@ From the paper's "Future Work" section:
 
 ## Progress Log (most recent first)
 
-### 2026-10-13: Overnight stiff-band runs; longer training helps, 680 wide blows up like 10M
+### 2026-10-13: Overnight stiff-band runs; 120 + 120 continued is the new best; 680 wide blows up like 10M
 
 Four BP chains on band x100 launched 00:30 for the 13 Oct meeting via
 `experiments/submit_followup.sh`: `bp_mu100_ep120_cont` (120 more epochs,
-warm-started from the 120-epoch checkpoint with `--init_from`), `bp_mu100_ep240`
-(from scratch), `bp_mu100_h680_ep120` (1.43M) and `bp_mu300_ep120`; chains spread
-over the tandon_advanced / pr_718_cilvr / pr_718_cds accounts (no per-user GPU cap;
-pending = queue). h680: the typical pixel improves slightly (median 0.034 vs 0.041,
-W1 0.068 vs 0.071) but a few flare-core pixels blow up: shared-test DEM MSE 897,
-AIA MSE 21.7M, Quiet MSE 12.5, worst 1% of pixels carry 99.996% of the SSE,
-validation error 4,170 vs 17.8 (`bp_objective_gap_val_overnight_h680`), 171 A
-over-predicted 3x at flare cores. Same failure as the 10M model, so 336 wide stays.
-Longer training keeps improving the DEM but starts to misfit rare pixels: 240
-epochs from scratch scores shared-test DEM MSE 1.74 (120 epochs 2.00), MAE 0.074,
-median 0.036, W1 0.068, spurious multi-peaks 13.5% (solver 13.5%, 120 epochs 16.3%),
-validation error 14.0 (17.8; best answer 2.1; supervised 6.1), but AIA MSE 591
-(44), Quiet MSE 0.035 (0.032), flare-core 94 A 0.73 (0.75): a few pixels break
-the band (validation flare-core band penalty 130x the 120-epoch model's), the mild
-form of the h680/10M failure. Beats supervised on 4 of 10 measures where 120 epochs
-beats it on 6, so 120 epochs stays the recommendation unless DEM MSE alone counts.
-Watch-only val loss still falling at epoch 240 (5.573 at 120 to 5.488). The 120 + 120
-continuation ends at val loss 5.444 / mae_dem 0.0700, slightly better than 240 from
-scratch; its shared-test and validation scoring were resubmitted without the stale
-dependency (jobs 19712760/61, 19712813) because the chain's spare segment is stuck
-in the tandon queue (the auto-mode classifier refuses scancel/scontrol on Torch
-jobs; submit fresh jobs instead). mu300 at 45/120 epochs, next segment queued.
-Results in `results/plots/21_followup_20261006/`; recap doc for Hriday at
+warm-started from the 120-epoch checkpoint with `--init_from`, fresh cosine
+schedule), `bp_mu100_ep240` (from scratch), `bp_mu100_h680_ep120` (1.43M) and
+`bp_mu300_ep120`; chains spread over the tandon_advanced / pr_718_cilvr /
+pr_718_cds accounts (no per-user GPU cap; pending = queue). Shared test
+(DEM MSE / median / AIA MSE / Quiet MSE / core EM / core 94 A / validation error):
+120 epochs 2.00 / 0.041 / 44 / 0.032 / 0.92 / 0.75 / 17.8;
+240 from scratch 1.74 / 0.036 / 591 / 0.035 / 0.91 / 0.73 / 14.0;
+120 + 120 continued 1.75 / 0.036 / 103 / 0.032 / 0.93 / 0.77 / 15.8;
+h680 897 / 0.034 / 21.7M / 12.5 / 1.15 / 0.78 / 4,170 (a few flare-core pixels
+blow up, 171 A over-predicted 3x, worst 1% carry 99.996% of the SSE: the 10M
+failure again, 336 wide stays). Longer training keeps closing the flare-core gap
+(spurious multi-peaks 16% -> 13.5%, the solver's rate) but 240 from scratch
+starts breaking the band on rare pixels (validation flare-core band penalty 130x
+the 120-epoch model's; the continuation 13x, AIA MSE still below supervised's
+157). The continuation beats supervised on 7 of 10 measures (120 epochs: 6) and
+improves on 120 epochs in everything except AIA MAE/MSE, so it is the recommended
+BP model (checkpoint `scaled_mlp6_barrier_h336_sqrt_ff12_resample_mu100_ep120_cont.pt`
+under `output/experiments/followup/` on Torch); adoption is Hriday's call.
+mu300 still training (segment 2 of 3). Operational note: the auto-mode classifier
+refuses scancel/scontrol on Torch jobs; when a chain's spare segment blocks
+dependent evals, submit fresh eval jobs instead. Results in
+`results/plots/21_followup_20261006/`; recap doc for Hriday at
 claude.ai/code/artifact/ef8ad456-8574-4952-b8f0-268df8d4d460 (Parts 5 to 7
-rewritten today in the rule-vs-price form).
+rewritten today in the rule-vs-price form; Parts 8, 9, 11 carry the new rows).
 
 
 ### 2026-10-10 — Flare-core follow-up done: the BP loss was the limit; stiff band x100 + 120 epochs

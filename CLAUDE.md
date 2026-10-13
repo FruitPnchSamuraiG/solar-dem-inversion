@@ -101,6 +101,7 @@ over the tandon_advanced / pr_718_cilvr / pr_718_cds accounts (no per-user GPU c
 pending = queue). h680 done: the typical pixel improves slightly (median 0.034 vs
 0.041, W1 0.068 vs 0.071) but a few flare-core pixels blow up: shared-test DEM MSE
 897, AIA MSE 21.7M, Quiet MSE 12.5, worst 1% of pixels carry 99.996% of the SSE,
+validation error 4,170 vs 17.8 (`bp_objective_gap_val_overnight_h680`),
 171 A over-predicted 3x at flare cores. Same failure as the 10M model, so 336 wide
 stays. Other three pending. Results in `results/plots/21_followup_20261006/`;
 recap doc for Hriday at claude.ai/code/artifact/ef8ad456-8574-4952-b8f0-268df8d4d460

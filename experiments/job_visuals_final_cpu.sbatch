@@ -11,10 +11,12 @@
 #SBATCH --account=torch_pr_41_general
 #SBATCH --mail-type=FAIL
 
-# Final label-free models (2026-10-04) for the public viewer: one 360k MLP per
-# track, BP with log1p input, ENet with the square-root + 12 Fourier frequency
-# input. Inputs are the same full-disk solver files the earlier viewer exports
-# used, so the solver and supervised images are reused unchanged.
+# Final label-free models for the public viewer: one 360k MLP per track, both
+# with the square-root + 12 Fourier frequency input. BP (2026-10-13) is the
+# stiff-band model (barrier weight 100) trained 120 epochs and continued for 120
+# more; ENet (2026-10-04) is unchanged. Inputs are the same full-disk solver
+# files the earlier viewer exports used, so the solver and supervised images are
+# reused unchanged. The run name bp_mlp6_h336 is kept so the viewer needs no change.
 #   mkdir -p logs/visuals
 #   sbatch experiments/job_visuals_final_cpu.sbatch
 set -euo pipefail
@@ -30,7 +32,7 @@ test "${#DATES[@]}" -gt 0
 
 setup_track() {
   if [ "$1" = bp ]; then
-    MODEL=output/experiments/resample/scaled_mlp6_barrier_h336_resample.pt
+    MODEL=output/experiments/followup/scaled_mlp6_barrier_h336_sqrt_ff12_resample_mu100_ep120_cont.pt
     INPUT_DIR="$SCRATCH/dem/data/lp_AIA_hofdeconv_full"
     RUN=bp_mlp6_h336
   else

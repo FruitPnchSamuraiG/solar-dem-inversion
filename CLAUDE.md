@@ -113,7 +113,7 @@ the 120-epoch model's; the continuation 13x, AIA MSE still below supervised's
 improves on 120 epochs in everything except AIA MAE/MSE, so it is the recommended
 BP model (checkpoint `scaled_mlp6_barrier_h336_sqrt_ff12_resample_mu100_ep120_cont.pt`
 under `output/experiments/followup/` on Torch); adoption is Hriday's call.
-mu300 still training (segment 2 of 3). Operational note: the auto-mode classifier
+mu300 cut at Hriday's request after ~90 epochs: behind x100 at matched epochs (val mae_dem 0.099 at 76 vs 0.081 at 70), queued segments and evaluations cancelled, never scored. Operational note: the auto-mode classifier
 refuses scancel/scontrol on Torch jobs; when a chain's spare segment blocks
 dependent evals, submit fresh eval jobs instead. Results in
 `results/plots/21_followup_20261006/`; recap doc for Hriday at

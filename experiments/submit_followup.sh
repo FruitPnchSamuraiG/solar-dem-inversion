@@ -19,7 +19,9 @@ run() {  # name track segments eval(cpu|gpu) checkpoint-tag env...
   local name=$1 track=$2 segs=$3 ev=$4 tag=$5; shift 5
   local env="ALL,TRACK=$track"
   for kv in "$@"; do env+=",$kv"; done
-  local prev="" ids=()
+  # AFTER=<job id>: the first segment waits for that job (orders chains when
+  # the per-user GPU cap, 2 at once across accounts, serialises them anyway).
+  local prev="${AFTER:-}" ids=()
   for _ in $(seq 1 "$segs"); do
     # ACCOUNT spreads chains over the accounts we hold (each has its own GPU quota).
     prev=$(sbatch --parsable ${prev:+--dependency=afterany:$prev} --job-name="fu_$name" \

@@ -26,11 +26,11 @@ before the next rebuild, or the rebuild would discard them.
 - **Title:** In one slide
 - **On slide (four cards):**
   - No labels needed: a network trained on the solver's own objective reproduces its DEMs; solver DEMs are only used to evaluate.
-  - Small is enough: a 360k-parameter MLP on one pixel's 6 intensities, one forward pass per pixel, no neighbourhood.
-  - Beats the supervised model on ElasticNet: better on every metric, DEM error included; BP typical-pixel error 4× lower (median 0.026 vs 0.112).
-  - Flare cores are the open problem: 0.01% of pixels, ~90% of the BP error; there our BP model misses the hot channels, a training problem.
+  - Small is enough: a 400k-parameter MLP on one pixel's 6 intensities, one forward pass per pixel, no neighbourhood. Bigger models fail on rare pixels.
+  - Ahead of supervised on most measures: ElasticNet better on every metric; BP 4 of 6, median pixel error 3× lower (0.036 vs 0.112), DEM MSE still 1.9× higher.
+  - Flare cores: found and fixed in the loss. 0.01% of pixels, ~90% of the BP error; the BP loss priced hot plasma out; a stiffer band puts it back (emission 40% → 93%).
 - **Visual:** 2×2 cards.
-- **Notes:** Final models: one 360k MLP (h336) per track, fresh pixels, chosen 2026-10-04 (Part 5); BP with log1p input, ElasticNet with the supervised model's square-root + Fourier-feature input.
+- **Notes:** Final models: one MLP of width 336 (409k parameters with the √ + Fourier input) per track, fresh pixels; BP on the stiff band (band weight 100, 120 + 120 epochs, Part 7, adopted 2026-10-13), ElasticNet unchanged since 2026-10-04.
 - **Status:** draft.
 
 ### Slide 2 · Divider
@@ -53,11 +53,11 @@ before the next rebuild, or the rebuild would discard them.
 
 - **Title:** The model: a small MLP feeding a fixed forward model
 - **On slide:**
-  - 6 intensities in (log1p for BP; √ + Fourier features for ElasticNet); 4 hidden layers of 336, SiLU; 54 non-negative basis weights out.
+  - 6 intensities in, encoded as √ then 12 Fourier frequencies (150 inputs; both tracks); 4 hidden layers of 336, SiLU; 54 non-negative basis weights out.
   - BP and ElasticNet solve for the same 54 weights (at each of 18 bins, a spike and Gaussians 0.1 and 0.2 dex wide), and their L1 term acts on those weights.
   - DEM = B·w over 18 bins, logT 5.5 to 7.2; predicted AIA = R·DEM. B and R are fixed; only the MLP is learned.
-  - 360k parameters (size chosen in Part 5); one forward pass per pixel.
-- **Visual:** pipeline diagram: observed AIA, MLP ("360k params"), basis weights ("54, same as solver"), DEM, predicted AIA, with the loss closing the loop.
+  - 409k parameters (width chosen in Part 5); one forward pass per pixel.
+- **Visual:** pipeline diagram: observed AIA, MLP ("409k params"), basis weights ("54, same as solver"), DEM, predicted AIA, with the loss closing the loop.
 - **Notes:** Not everyone knows the solvers' internals: they never solve for the 18 bins directly. Both solve for weights on a fixed basis B (`fullBP.py` `getBasis`, widths 0, 0.1, 0.2), with D = R·B, and report DEM = B·x. Predicting the same weights means the network searches the same space of DEMs the solver does, and BP's sparsity criterion means the same thing for both.
 - **Status:** settled.
 
@@ -65,13 +65,13 @@ before the next rebuild, or the rebuild would discard them.
 
 - **Title:** The loss is the solver's own objective
 - **On slide:**
-  - BP track: L = Σ_c [ max(0, |ŷ_c − o_c| − tσ_c) / tσ_c ]² + Σ_k w_k
-    - Zero anywhere inside the noise band (t = 1.4), quadratic outside.
-    - Then the L1 term picks the sparsest DEM that fits: BP's own criterion.
+  - BP track: L = Σ_k w_k + μ Σ_c [ max(0, |ŷ_c − o_c| − tσ_c) / tσ_c ]²
+    - Zero anywhere inside the noise band (t = 1.4), quadratic outside; μ prices leaving it.
+    - L1 picks the sparsest DEM that fits: BP's own criterion. Final model: μ = 100 (Part 7).
   - ElasticNet track: L = (1/2C) Σ_c [ (ŷ_c − o_c) / tσ_c ]² + αλ Σ_k w_k + ½α(1−λ) Σ_k w_k², with the solver's α = 0.001, λ = 0.5, C = 6.
   - In both, ŷ = R·B·w and w ≥ 0.
 - **Visual:** the BP band penalty against prediction error: flat at zero inside the noise band, quadratic outside.
-- **Notes:** There is no fit term inside the band. Any DEM within noise is equally good, and sparsity breaks the tie, exactly as in BP.
+- **Notes:** There is no fit term inside the band. Any DEM within noise is equally good, and sparsity breaks the tie, exactly as in BP. One difference from the solver: BP treats the band as a rule that cannot be broken; our loss treats it as a price, set by the band weight μ (1 in the original loss, 100 in the final BP model, chosen in Part 7, where that difference turns out to matter).
 - **Status:** settled.
 
 ### Slide 6 · Data
@@ -80,7 +80,7 @@ before the next rebuild, or the rebuild would discard them.
 - **On slide:**
   - SDO/AIA, 6 EUV channels, about two images a day in 2014–2015: 1,223 full-disk images.
   - PSF-deconvolved (Hofmeister); a noise σ per pixel and channel from the AIA error model; DEMs on a 2048² grid.
-  - Our model trains on AIA and σ only: each training image is cut into 64 blocks of 256×256 per image. Each epoch draws 512 fresh random pixels from each of the 58,688 blocks(917*64), for 40 epochs.
+  - Our model trains on AIA and σ only: each training image is cut into 64 blocks of 256×256 per image. Each epoch draws 512 fresh random pixels from each of the 58,688 blocks (917 × 64); 40 epochs (the final BP model: 240, Part 7).
   - Earlier runs reused one fixed ~30M-pixel sample (a sampler bug); at the old 176k size it scored better on validation (BP 4%, ElasticNet 18%).
   - Solver DEMs (BP, ElasticNet) for every image: labels for the supervised model, evaluation only for ours.
   - Test: ~700M pixel DEMs per solver, the clean solve plus 4 noise re-solves.
@@ -168,7 +168,7 @@ The crops start at AIA pixel (1800, 1800), so they need not contain the flare co
 - **On slide:**
   - Full-disk intensities span ~7 decades (10⁻³ off-limb to 10⁴ in flare cores); the small crops spanned about one.
   - Fed raw, the untrained network predicted AIA ~7× outside the noise band: loss 5×10¹³ at step 0. The output softplus underflowed, its gradient became exactly zero, and every pixel predicted zero.
-  - Fix: log1p on the input only (loss and metrics stay in physical units), learning-rate warmup, a clamped softplus whose gradient cannot vanish, and a guard that stops a run whose loss freezes.
+  - Fix: a bounded input (log1p then, √ + Fourier now; loss and metrics stay in physical units), learning-rate warmup, a clamped softplus whose gradient cannot vanish, and a guard that stops a run whose loss freezes.
   - Bold: a 64-block smoke test could not catch it: it never drew a flare pixel.
 - **Visual:** a small strip: raw input range 10⁻³ … 10⁴ → log1p → 0 … 9.2.
 - **Notes:** Three submissions died the same way before the fix; the cause was visible at step 0, before any weight update. Gradient clipping does not help (Adam normalises the step).
@@ -181,7 +181,7 @@ The crops start at AIA pixel (1800, 1800), so they need not contain the flare co
   - 153 test days, never seen in training; each scored on random quarters of the image against 5 solver targets (the clean solve and 4 noisy re-solves).
   - Bright = any channel above its top-5% cutoff (~10% of pixels); the rest is Quiet.
   - DEM against the solver: MSE, total-emission error, W1 (temperature-shape distance). AIA reconstruction against the observation: MAE, MSE.
-  - We also report medians and percentiles: the error is extremely heavy-tailed. For our final BP model, the worst 1% of pixels hold 98% of the DEM error, and the flare cores (0.01% of pixels, 1 in 10,000) alone hold 90%.
+  - We also report medians and percentiles: the error is extremely heavy-tailed. For our final BP model, the worst 1% of pixels hold 98% of the DEM error, and the flare cores (0.01% of pixels, 1 in 10,000) alone hold 94%.
 - **Visual:** diagram of one test day: the 2048² DEM image as a 16×16 grid of 128² blocks, 64 of them highlighted (one target's random quarter), with "× 5 targets: the clean solve + 4 noisy re-solves, each with its own 64 blocks".
 - **Notes:** The Bright cutoffs and the test set come from the supervised side's protocol, so both models are scored on identical pixels. W1 treats each DEM as a distribution over logT.
 - **Status:** draft.
@@ -205,15 +205,15 @@ The crops start at AIA pixel (1800, 1800), so they need not contain the flare co
 
 ### Slide 18 · Choosing the model
 
-- **Title:** Choosing the model: 360k parameters, for both tracks
+- **Title:** Choosing the model: width 336, for both tracks
 - **On slide:**
   - We choose by validation loss.
-  - BP: validation is best at 360k; 1.43M ties, but only nudges the typical pixel (0.026 → 0.023) at 4× the size and with worse tails.
-  - ElasticNet: from 722k up, a few bright pixels blow up by orders of magnitude; 360k is the largest stable size.
-  - Input, also by validation: log1p for BP (√ + Fourier ties); √ + Fourier features for ElasticNet (7% better).
-  - Bold: Final: one 360k MLP per track; ElasticNet with the √ + Fourier input.
-- **Visual:** line chart: BP median pixel error by size (20k 0.068 … 360k 0.026 … 1.43M 0.023), 360k highlighted; 10k collapsed, left off.
-- **Notes:** BP validation 2.148 at 360k, 2.155 at 1.43M (tie), 2.167 at 722k, 2.237 at 176k. ElasticNet validation best at 1.43M (0.0528) but 722k and 1.43M blow up on a few bright pixels (AIA MSE 41,849 and 908,611 vs 650 at 360k); validation scores a fixed 512 pixels per block and missed them. Multi-peak recall 22–26% from 42k up. With the old fixed sample nothing above 176k helped. Input: BP 2.1472 (√ + Fourier) vs 2.1478 (log1p), a tie, so log1p stays; ElasticNet 0.0533 vs 0.0575. Sources: `results/plots/17_sweep_resample_20261003/sweep_table.txt`, `20_sqrtff_final_20261004/`.
+  - BP: validation is best at width 336 (360k); 1.43M ties, but only nudges the typical pixel (0.026 → 0.023) at 4× the size, and on the stiff band (Part 7) it blows up on a few flare-core pixels.
+  - ElasticNet: from 722k up, a few bright pixels blow up by orders of magnitude; 336 is the largest stable width.
+  - Input, also by validation: √ + Fourier for ElasticNet (7% better) and, on the stiff band, for BP (DEM MSE 2.37 vs 3.23).
+  - Bold: Final: one MLP of width 336 (409k parameters) per track, √ + Fourier input; BP on the stiff band (Part 7).
+- **Visual:** line chart: BP median pixel error by size, log1p sweep (20k 0.068 … 360k 0.026 … 1.43M 0.023), 360k highlighted; 10k collapsed, left off.
+- **Notes:** Sweep with the log1p input. BP validation 2.148 at width 336 (360k), 2.155 at 1.43M (tie), 2.167 at 722k, 2.237 at 176k. ElasticNet validation best at 1.43M (0.0528) but 722k and 1.43M blow up on a few bright pixels (AIA MSE 41,849 and 908,611 vs 650 at 360k); validation scores a fixed 512 pixels per block and missed them. Multi-peak recall 22–26% from 42k up. With the old fixed sample nothing above 176k helped. Input: on the original BP loss √ + Fourier tied log1p on validation (2.1472 vs 2.1478); ElasticNet 0.0533 vs 0.0575. On the stiff BP band the tie breaks (DEM MSE 2.37 vs 3.23), so both tracks use √ + Fourier, and the same width is 409k parameters with the 150 encoded inputs. Width 680 (1.43M) on the stiff band blew up on a few flare-core pixels, as the 10M models did on both tracks. Sources: `results/plots/17_sweep_resample_20261003/sweep_table.txt`, `20_sqrtff_final_20261004/`, `21_followup_20261006/`.
 - **Status:** draft.
 
 ## Section 6: Results (draft)
@@ -225,93 +225,117 @@ The crops start at AIA pixel (1800, 1800), so they need not contain the flare co
 
 ### Slide 20 · Against the supervised model
 
-- **Title:** Against supervised: better on ElasticNet, behind on BP's DEM error
-- **On slide:** table, final label-free vs supervised (winner in bold):
-  - BP: DEM MAE 0.106 vs **0.100**; DEM MSE 4.28 vs **0.91**; EM error 19.6% vs **14.3%**; W1 **0.083** vs 0.133; AIA MAE 4.34 vs **2.95**; AIA MSE **83** vs 157.
+- **Title:** Against supervised: all six on ElasticNet, four of six on BP
+- **On slide:** table, final label-free vs supervised (winner in bold); BP label-free is the stiff-band model of Part 7:
+  - BP: DEM MAE **0.074** vs 0.100; DEM MSE 1.75 vs **0.91**; EM error **11.0%** vs 14.3%; W1 **0.068** vs 0.133; AIA MAE 3.48 vs **2.95**; AIA MSE **103** vs 157.
   - ENet (√ + Fourier input): DEM MAE **0.151** vs 0.188; DEM MSE **0.31** vs 0.32; EM error **12.2%** vs 18.0%; W1 **0.103** vs 0.121; AIA MAE **0.56** vs 6.32; AIA MSE **161** vs 598.
-  - Point: ElasticNet: we win all six, DEM MAE and MSE included. BP: we win W1 and AIA MSE; the DEM error is set by flare cores (Part 7).
+  - Point: ElasticNet: we win all six, DEM MAE and MSE included. BP: we win DEM MAE, EM error, W1 and AIA MSE; supervised keeps DEM MSE (set by flare cores, Part 7) and AIA MAE.
+  - Muted line: the old BP final, for reference: DEM MSE 4.28, EM error 19.6%, W1 0.083, AIA MSE 83.
 - **Status:** draft.
 
 ### Slide 21 · Mean vs median
 
 - **Title:** The typical pixel and the average tell different stories
 - **On slide:**
-  - On the typical BP pixel we are ~4× closer to the solver than the supervised model (median 0.026 vs 0.112).
-  - From the 90th percentile up, supervised is better on BP (p99: 27 vs 71).
+  - On the typical BP pixel we are ~3× closer to the solver than the supervised model (median 0.036 vs 0.112).
+  - Up to the 99th percentile we are level or ahead on BP (p90 1.9 vs 1.9, p99 25 vs 27); the gap opens in the last 0.1%: flare cores.
   - ElasticNet: ours is better at the median (0.85 vs 1.12), p99 (30 vs 35) and p99.9 (102 vs 178).
   - The BP average is set by the worst 1% of pixels (98% of our error, 95% of supervised's).
-- **Visual:** two stat callouts (0.026 vs 0.112; 98%).
+- **Visual:** two stat callouts (0.036 vs 0.112; 98%).
+- **Notes:** p99.9 170 vs 162. The old BP final: median 0.026, p90 3.5, p99 71.
 - **Status:** draft.
 
-## Section 7: Failures: bright pixels (draft)
+## Section 7: Flare cores, the failure and the fix (draft)
+
+Rewritten 2026-10-14 around the follow-up (`results/followup_recap_20261013.md`): one slide on the failure, one on the suggestions that did not help, two on the cause, two on the fix, two on the result. Old-model figures from `results/plots/19_final_models_20261004/`, new-model figures from `results/plots/22_adopted_bp_20261014/`.
 
 ### Slide 22 · Divider
 
-- **Part 7:** Failures: bright pixels
-- **Subtitle:** Where the error is, and why
+- **Part 7:** Flare cores: the failure and the fix
+- **Subtitle:** Why BP missed them, and what fixed it
 
-### Slide 23 · Where the error is
+### Slide 23 · The failure
 
-- **Title:** Flare cores, 1 pixel in 10,000, hold ~90% of the BP error
-- **On slide:** ≥32×: 0.01% of pixels, 90% of our BP error, 90% of supervised's; the metric itself is set by flare cores; ordinary Bright (1–10×): 10% of pixels, 4% of our error (supervised 5.5%).
-- **Visual:** `results/plots/19_final_models_20261004/fig1_error_share_by_brightness.png`.
+- **Title:** Flare cores, 1 pixel in 10,000, held 90% of the BP error
+- **On slide:** old BP model: 0.01% of pixels, 90% of the DEM error (supervised 90% too); there it held 40% of the solver's emission, peaked 23% as high, 0.2 dex too cool, 83% of its curves had extra peaks (solver 18%); it fit 171, 193 and 211 Å to a few percent but reproduced only 23% of 94 Å: the hot plasma was missing. Bold: read as a training problem: oversample, train longer, go bigger.
+- **Visual:** `19_final_models_20261004/fig4_example_curves_bp.png` (old model at random flare cores).
+- **Notes:** solver noise (0.4% of the Bright error) and missed second peaks (1.2%) were ruled out; the last meeting's suggestions followed from the training-problem reading.
 - **Status:** draft.
 
-### Slide 24 · Gap by brightness
+### Slide 24 · The suggestions on the original loss
 
-- **Title:** On BP, our gap grows with brightness; on ElasticNet we are ahead
-- **On slide:** BP ratio 0.64 faintest, 1.8 at 0.3–1×, 5 at 3–10×, 18 at 10–32×; ElasticNet: ours ahead from 0.1× to 32× (ratio 0.5–1.0), level on the faintest, 1.3 at flare cores.
-- **Visual:** `fig2_relative_error_by_brightness.png` (final models).
+- **Title:** On the original loss, none of the suggestions helped
+- **On slide:** table (base √ + Fourier 40 epochs / oversample flare cores 8.5× / 120 epochs / 10M): DEM MSE 4.56 / 5.05 / 4.21 / 5.10; median 0.023 / 0.025 / 0.022 / 0.022; AIA MSE 83 / 87 / 108 / 125; flare-core emission 35% / 24% / 37% / 20%; flare-core 94 Å 15% / 9% / 16% / 8%. Bullets: away from flare cores all four score the same; at flare cores oversampling and 10M make it worse; bold: training harder does not help, the loss itself needs checking.
 - **Status:** draft.
 
-### Slide 25 · At flare cores
+### Slide 25 · The cause
 
-- **Title:** At BP flare cores, the model under-predicts and runs too cool
-- **On slide:** BP flare cores: 40% of the solver's emission, peak 23% as high, 0.2 dex too cool; 83% have extra peaks (solver 18%), 42% of our BP error; tracks the solver's peak up to ~100, then falls away.
-- **Visual:** `fig4_example_curves_bp.png` (final models).
-- **Notes:** ElasticNet flare cores match the solver: 99% of emission, peak 101%, 18% multi-peaked vs 21%.
+- **Title:** The cause: the network already sits at its loss's best answer
+- **On slide:** per pixel, solve the loss directly (convex): the best answer no network can beat; 12,000 validation pixels, 6,000 flare cores; the network sits 1 to 4% above it (8% at flare cores). Table (flare cores, validation, original loss): old BP network loss 565 = 294 + 270, 94 Å 28%, emission 38%; best answer 463 = 220 + 243, 26%, 30%; solver's DEM 1,125 = 1,119 + 6, 94%, 100%; supervised model's DEM 1,878 = 1,107 + 771, 91%, 95%. Bullets: a perfect network lands on the best answer, which still drops the hot plasma; our loss rates the solver's DEM 2.4× worse than one without it; bold: the loss, not training, was the limit.
+- **Notes:** also explains the 15% emission shortfall at ordinary pixels (best answer holds 82 to 86% of the solver's emission there).
 - **Status:** draft.
 
-### Slide 26 · Its own objective
+### Slide 26 · Why the loss drops hot plasma
 
-- **Title:** At BP flare cores, the model fails its own objective
-- **On slide:** the solver reproduces 92% of observed 94 Å, ours 23% (131 Å: 76%); cool channels within a few percent; bold: better DEMs exist in our basis, a training problem.
-- **Visual:** `fig5_aia_fit_flare_cores.png` (final models).
-- **Notes:** On ElasticNet our flare-core reconstruction matches the solver's (94 Å 0.53 vs 0.55) and beats supervised's on the cool channels. On BP the √ + Fourier input does not fix flare cores either (94 Å 0.15 vs 0.23).
+- **Title:** Why: hot plasma is expensive to include and cheap to leave out
+- **On slide:** rule vs price; loss = sparsity + μ × band penalty, μ = 1 originally. Response table (DN/s per unit of plasma): warm 1 to 1.3 MK: 94 Å 0.2, 131 Å 0.5–1.2, 171 Å 36–95, 193 Å 29–55, 211 Å 5–7, 335 Å 0.4; hot 8 MK: 0.27, 0.40, 0.05, 0.34, 0.08, 0.05. Worked example (94 Å = 164 ± 11.5): hot plasma in, 616 units, sparsity 616, penalty 0, total 616; out, 94 Å ≈ 0, 148 below the band, penalty (148 ÷ 16.1)² = 85, total 85. Right bullets: warm plasma has to be in the DEM and its 94 Å comes free; hot plasma needs hundreds of units paid by the sparsity term; the best answer leaves it out; bold: at μ = 100 the penalty is 8,500: the plasma goes back in. Muted: the best answer reproduces 91% of 94 Å at 1 to 1.8× the Bright level, 44% at 10 to 32×, 26% at flare cores (solver 100, 88, 94%).
 - **Status:** draft.
 
-### Slide 27 · Ruled out
+### Slide 27 · The fix
 
-- **Title:** Not solver noise, not missed double peaks
-- **On slide:** solver spread is 0.4% of our BP Bright error (ENet 8%); missing BP's second peak is 1.2% of our BP error; what remains is the BP flare-core shortfall and spurious peaks.
+- **Title:** The fix: a stiffer band, chosen on validation
+- **On slide:** screen table (best answer under the loss, validation): μ = 1: DEM error 36.9, Quiet MSE 0.076, flare-core 94 Å 26%, emission 30%; μ = 10: 10.8, 0.037, 81%, 90%; μ = 30: 5.10, 0.032, 89%, 97%; μ = 100: 2.32, 0.041, 93%, 100%; μ = 300: 1.80, 0.048, 94%, 101%; supervised model (a trained network): 6.10, 0.054, 91%, 95%. Bullets: if a network learned the loss perfectly, how close would it get; stiffer helps bright pixels and costs faint ones; bold: μ = 100, most of the gain, Quiet error still below the supervised model's.
+- **Notes:** the second candidate (μ = 30, sparsity ÷ √brightness) screened well (1.95, Quiet 0.032) but trained worse (validation 22.4 vs 20.1). The band weight is a hyperparameter chosen with solver DEMs on validation; training never sees them. Validation holds more flare cores than the shared test set, so values run higher.
+- **Status:** draft.
+
+### Slide 28 · Trained on the stiff band
+
+- **Title:** On the stiff band, longer training is what helps
+- **On slide:** table (BP runs, band ×100; DEM MSE / median / AIA MSE / Quiet MSE / flare-core EM / flare-core 94 Å / validation): original loss base 4.56 / 0.023 / 83 / 0.057 / 35% / 15% / 39.7; 40 epochs 2.37 / 0.062 / 44 / 0.035 / 89% / 68% / 20.1; 120 epochs 2.00 / 0.041 / 44 / 0.032 / 92% / 75% / 17.8; 240 from scratch 1.74 / 0.036 / 591 / 0.035 / 91% / 73% / 14.0; **120 + 120 continued 1.75 / 0.036 / 103 / 0.032 / 93% / 77% / 15.8**; + oversample 2.50 / 0.071 / 39 / 0.038 / 88% / 63% / 21.1; 10M 35.7 / 0.041 / 1.7M / 0.070 / 92% / 74%; 680 wide 897 / 0.034 / 21.7M / 12.5 / 115% / 78% / 4,170; supervised 0.91 / 0.112 / 157 / 0.034 / 92% / 85% / 6.10. Bullets: the band alone halves DEM MSE; the network then sits far above its best answer (118% at flare cores), so training is the limit; 240 from scratch misfits rare pixels; bigger models blow up. Bold: final BP model: band ×100, 120 epochs, then 120 more continued from that checkpoint.
+- **Notes:** gap after 120 epochs 47%; 240 from scratch has a band penalty at the validation flare cores 130× the 120-epoch model's (continuation 13×); log1p worse here (3.23); no gradient clip fits AIA better but worsens every DEM measure.
+- **Status:** draft.
+
+### Slide 29 · Flare cores now
+
+- **Title:** Flare cores now: 93% of the solver's emission, 77% of its 94 Å
+- **On slide:** table (old BP / new BP / supervised / solver): emission 40% / 93% / 92% / 100%; 94 Å reproduced 23% / 77% / 85% / 92%; 131 Å reproduced 76% / 101% / 90% / 101%; peak height 23% / 66% / 91% / 100%; temperature shift −0.18 / −0.01 / 0.00 / 0 dex; curves with extra peaks 83% / 25% / 13% / 18%. Bullets: spurious extra peaks were 42% of the old error, 3.5% now; it tracks the solver's peak height to ~100, above 3,000 it reaches 40%.
+- **Visual:** `22_adopted_bp_20261014/fig4_example_curves_bp.png` (same draw as slide 23).
+- **Status:** draft.
+
+### Slide 30 · What remains
+
+- **Title:** What remains: flare cores still set the BP DEM MSE
+- **On slide:** error vs supervised by brightness 0.55 faintest, 1.0 at 0.3–1×, 0.9 to 1.3 at 1–10×, 1.9 at 10–32×, 2.0 at flare cores (old model 0.64, 1.8, 2 to 5, 18, 4.7); flare cores 94% of our BP error and the DEM MSE gap (1.75 vs 0.91); 94 Å at 77% vs the solver's 92%, every other channel at 100%; longer training keeps closing it, 240 from scratch starts to misfit a few pixels' AIA, a third 120-epoch continuation is untested. Bold: the BP loss was the limit; training is now the limit, and it still has room.
+- **Visual:** `22_adopted_bp_20261014/fig5_aia_fit_flare_cores_bp.png`.
+- **Notes:** why the median pixel error rose (0.026 → 0.036) while Quiet MSE fell (0.058 → 0.032) is open.
 - **Status:** draft.
 
 ## Section 8: Next steps (draft)
 
-### Slide 28 · Divider
+### Slide 31 · Divider
 
 - **Part 8:** Next steps
 - **Subtitle:** What we learned, and what to decide
 
-### Slide 29 · Lessons
+### Slide 32 · Lessons
 
 - **Title:** What we learned
-- **Visual:** six cards: Train on the objective / Simple scales / Size needs data (fixed sample: nothing above 176k helped; fresh pixels: size pays off up to 360k) / Heavy tails (a handful of pixels can own the mean, or blow up) / The open failure (BP flare cores, training problem) / Input encoding (√ + Fourier input lifts ElasticNet past supervised; neutral on BP).
+- **Visual:** six cards: Train on the objective / Check the loss first (the BP network sat at its loss's optimum, which dropped the hot plasma; no training change could fix that, a stiffer band did) / Simple scales / Size has a ceiling (fresh pixels pay off up to width 336; 1.43M and 10M blow up on rare pixels, both tracks) / Heavy tails / Input encoding (√ + Fourier for both tracks; lifts ElasticNet past supervised and beats log1p on the stiff BP band).
 - **Status:** draft.
 
-### Slide 30 · Next
+### Slide 33 · Next
 
 - **Title:** Next
-- **Visual:** four cards: Flare cores (BP up-weight brightest; ENet keep big models stable) / Validate on every pixel (sampled validation missed the blow-ups) / Direct DEM output (deferred) / Uncertainty, AIA + XRT.
+- **Visual:** four cards: Keep training BP (a third 120-epoch continuation untested; watch the AIA fit on rare pixels) / Validate on every pixel / Direct DEM output (deferred) / Uncertainty, AIA + XRT.
 - **Status:** draft.
 
-### Slide 31 · For discussion
+### Slide 34 · For discussion
 
 - **Title:** For discussion
 - **On slide:**
-  - Which metric should lead the paper? DEM MSE is set by 0.01% of pixels; the median, W1 and AIA reconstruction tell a different story.
-  - Is fixing flare cores worth changing the training objective, or do we report it as the known limitation?
-  - Next model change: up-weight flare cores, or predict the 18 bins directly?
+  - Which metric should lead the paper? DEM MSE is set by 0.01% of pixels; up to the 99th percentile we are level with or ahead of the supervised model on BP.
+  - The band weight is chosen on validation with solver DEMs, as any loss weight would be. Does that sit well with the label-free claim?
+  - Train the BP model longer (a third continuation), or freeze here at 1.9× the supervised DEM MSE?
   - Is AIA + XRT in scope for this paper?
 - **Visual:** none (numbered questions).
 - **Status:** draft.

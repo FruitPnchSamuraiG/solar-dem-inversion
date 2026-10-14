@@ -1,6 +1,23 @@
 # DEM project state
 
-Last updated: 2026-10-04 (Claude: FINAL = h336 per track; BP log1p input, ENet sqrt+Fourier input; deck rebuilt)
+Last updated: 2026-10-14 (Claude: BP final = stiff band x100, sqrt+Fourier, 120 + 120 epochs; deck rebuilt)
+
+## 2026-10-14 BP FINAL REVISED: stiff band (mu = 100), sqrt + Fourier, 120 + 120 epochs
+
+Adopted 2026-10-13 after the flare-core follow-up (`results/followup_recap_20261013.md`,
+figures and diagnostics in `results/plots/21_followup_20261006/`, new-model figures in
+`results/plots/22_adopted_bp_20261014/`). BP checkpoint on Torch:
+`output/experiments/followup/scaled_mlp6_barrier_h336_sqrt_ff12_resample_mu100_ep120_cont.pt`
+(width 336, 409k parameters with the 150 encoded inputs). ENet unchanged. Shared test, BP vs
+supervised: DEM MAE 0.074 / 0.100, DEM MSE 1.75 / 0.91, EM 11.0% / 14.3%, W1 0.068 / 0.133,
+AIA MAE 3.48 / 2.95, AIA MSE 103 / 157, median 0.036 / 0.112, p90 1.9 / 1.9, p99 25 / 27,
+Quiet MSE 0.032 / 0.034; flare cores: emission 93% / 92%, 94 A 77% / 85% (solver 92%).
+Deck (`slides/DEM_deck_v2.pptx`, 35 slides, outline synced) rebuilt on it; Part 7 is now the
+failure and the fix. Website images rebuilt (job 19721867, preview staged under
+`$SCRATCH/dem/visuals/matched_enet_alpha0p001/preview`, `compare.js` Results updated);
+Triborough upload pending (Hriday). Torch queue empty. The entries below describe the
+2026-10-04 BP final (log1p, original loss), now superseded for BP.
+
 
 ## 2026-10-04 FINAL (settled): h336 per track; BP log1p input, ENet sqrt+Fourier input
 

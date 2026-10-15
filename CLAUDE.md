@@ -91,6 +91,27 @@ From the paper's "Future Work" section:
 
 ## Progress Log (most recent first)
 
+### 2026-10-15: Deck cut to a 30-minute talk for the 21 Oct advisor meeting; prep sheet
+
+`slides/DEM_deck_v2.pptx` restructured (35 slides, same numbers as 14 Oct): a main line
+of 20 content slides (summary; Part 1 setup with the data and scoring slides merged;
+Part 2 CNN vs MLP and the width choice; Part 3 results; Part 4 flare cores, the failure
+and the fix, 8 slides; Part 5 lessons, next, three discussion questions) and an appendix
+from slide 27 (which loss, first MLP vs patch CNN, ablation, leave-one-day-out, the
+collapse, the scoring diagram, ElasticNet detail, multi-peaked DEMs). Speaker notes are
+now talk notes with a time budget per slide, about 27 minutes in all. The band-weight
+question moved from the discussion slide to a muted line on the fix slide (one scalar
+chosen on validation; the 94 A column of the screen needs no solver DEM and plateaus at
+mu = 100). New appendix numbers: the adopted BP model flags 15.5% of pixels as
+multi-peaked at 53% precision and 60% recall (old model 9.9% / 36% / 26%, supervised
+41.1% / 24% / 72%; BP itself 13.5%); ElasticNet final at flare cores holds 99% of the
+solver's emission and reproduces 94 A at 53% against the ElasticNet solver's own 55%
+(supervised 48%), flare cores being 44% of the ElasticNet error (supervised 34%).
+`slides/talk_prep.md`: the 30-second version, timing, the arc in ten sentences, likely
+questions with answers and sources, numbers to have at hand, open items. Outline
+renumbered to match; `deck_lib.divider` takes a string label ("Appendix"). Nothing new
+ran. Inference speed against the solver is unmeasured (one short job if wanted).
+
 ### 2026-10-13: Overnight stiff-band runs; 120 + 120 continued is the new best; 680 wide blows up like 10M
 
 Four BP chains on band x100 launched 00:30 for the 13 Oct meeting via

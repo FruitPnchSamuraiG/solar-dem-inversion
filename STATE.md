@@ -1,6 +1,8 @@
 # DEM project state
 
-Last updated: 2026-10-14 (Claude: BP final = stiff band x100, sqrt+Fourier, 120 + 120 epochs; deck rebuilt)
+Last updated: 2026-10-15 (Claude: BP final = stiff band x100, sqrt+Fourier, 120 + 120 epochs; deck rebuilt)
+
+2026-10-15: deck restructured for the 30-minute advisor talk on 2026-10-21 (slides 1 to 26 main line with talk notes and time budgets, 27 to 35 appendix); prep sheet `slides/talk_prep.md`. No new runs.
 
 ## 2026-10-14 BP FINAL REVISED: stiff band (mu = 100), sqrt + Fourier, 120 + 120 epochs
 

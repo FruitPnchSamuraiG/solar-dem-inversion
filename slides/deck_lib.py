@@ -67,8 +67,8 @@ class Deck:
         return s
 
     def divider(self, part, name, sub=None):
-        """Section divider on the template's BIG_NUMBER layout: "Part N" over the section
-        name, with an optional one-line subtitle below."""
+        """Section divider on the template's BIG_NUMBER layout: "Part N" (or the given label,
+        e.g. "Appendix") over the section name, with an optional one-line subtitle below."""
         s = self.prs.slides.add_slide(self.big)
         for ph in list(s.placeholders):
             if ph.placeholder_format.type != PP_PLACEHOLDER.TITLE:
@@ -79,7 +79,8 @@ class Deck:
         title.left, title.top, title.width, title.height = 311700, 846450, 8520600, 1671000  # as placed in Google Slides
         p = title.text_frame.paragraphs[0]
         p.alignment = PP_ALIGN.CENTER
-        for i, words in enumerate((f"Part {part}", name)):
+        label = part if isinstance(part, str) else f"Part {part}"
+        for i, words in enumerate((label, name)):
             if i:
                 p.add_line_break()
             r = p.add_run()

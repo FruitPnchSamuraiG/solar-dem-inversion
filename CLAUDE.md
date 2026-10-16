@@ -111,6 +111,12 @@ solver's emission and reproduces 94 A at 53% against the ElasticNet solver's own
 questions with answers and sources, numbers to have at hand, open items. Outline
 renumbered to match; `deck_lib.divider` takes a string label ("Appendix"). Nothing new
 ran. Inference speed against the solver is unmeasured (one short job if wanted).
+Later the same day (job 20005027, 3 min): `eval_scaled.py --tail_losses` now breaks the
+ElasticNet objective down per pixel too, filling slide 9's empty ENet cells. 1.5M fresh-pixel
+runs on the test split, median / p99: MLP 0.020 / 0.47, CNN 0.033 / 0.52 (BP rows reproduced:
+0.98 / 17.9 vs 1.01 / 18.8). The 4x ENet mean gap (0.057 vs 0.245) is mostly a few CNN pixels:
+its worst 0.1% hold 73% of its loss (max 6.2e5); the MLP still wins at every percentile.
+Files in `results/plots/18_cnn_vs_mlp_resample_20261003/` (`eval_tail_20005027.log`).
 
 ### 2026-10-13: Overnight stiff-band runs; 120 + 120 continued is the new best; 680 wide blows up like 10M
 

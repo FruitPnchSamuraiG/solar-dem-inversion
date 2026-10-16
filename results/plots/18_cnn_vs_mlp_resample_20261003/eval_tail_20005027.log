@@ -1,0 +1,81 @@
+[dem] venv=/scratch/hsr3649/dem/env/.venv  scratch=/scratch/hsr3649/dem
+Couldn't import Gurobi; can't do a QP
+Device: cuda
+[check] 4 blocks: BP and ENet stagings share AIA exactly (max deviation 0.000e+00)
+D: (6, 54)   basis: 54   temps: 18
+  loaded  mlp6 / barrier epoch 40  input=log1p   <- scaled_mlp6_barrier_resample.pt
+  loaded   cnn / barrier epoch 40  input=log1p   <- scaled_cnn_barrier_resample.pt
+  loaded  mlp6 / enet    epoch 40  input=log1p   <- scaled_mlp6_enet_resample.pt
+  loaded   cnn / enet    epoch 40  input=log1p   <- scaled_cnn_enet_resample.pt
+
+==============================================================================
+LOSS TAIL -- per-pixel decomposition
+==============================================================================
+[test] 9,792 blocks x 512 px = 5,013,504 samples/epoch (AIA 256, DEM 128, patch 9@stride2)
+
+mlp6 / barrier   mean=2.07
+  median=0.9824  p90=4.617  p99=17.92  p99.9=51.2  p99.99=165.2  max=7622
+  share of total loss from the worst 1%: 17.2%   worst 0.1%: 5.6%
+  mean by term:  l1=1.837  below=0.1814  above=0.05116
+  mean loss by brightness decile:
+    d 1 [        0,     9.36]: mean=  0.03314  p99=    0.4804
+    d 2 [     9.36,     21.6]: mean=    0.134  p99=     1.295
+    d 3 [     21.6,     61.5]: mean=    0.311  p99=      1.57
+    d 4 [     61.5,      153]: mean=   0.7422  p99=     3.083
+    d 5 [      153,      232]: mean=    1.029  p99=     3.322
+    d 6 [      232,      307]: mean=    1.287  p99=     3.919
+    d 7 [      307,      398]: mean=    1.628  p99=     4.705
+    d 8 [      398,      538]: mean=    2.183  p99=     6.177
+    d 9 [      538,      847]: mean=    3.366  p99=     9.466
+    d10 [      847, 1.13e+05]: mean=    9.983  p99=     50.86
+[test] 9,792 blocks x 512 px = 5,013,504 samples/epoch (AIA 256, DEM 128, patch 9@stride2)
+
+cnn / barrier   mean=2.241
+  median=1.008  p90=4.743  p99=18.8  p99.9=56.99  p99.99=197.7  max=4.213e+05
+  share of total loss from the worst 1%: 21.2%   worst 0.1%: 9.7%
+  mean by term:  l1=1.792  below=0.2919  above=0.1573
+  mean loss by brightness decile:
+    d 1 [        0,     9.36]: mean=  0.03621  p99=    0.4869
+    d 2 [     9.36,     21.6]: mean=    0.143  p99=     1.305
+    d 3 [     21.6,     61.5]: mean=   0.3107  p99=     1.598
+    d 4 [     61.5,      153]: mean=   0.7669  p99=     3.199
+    d 5 [      153,      232]: mean=    1.062  p99=     3.455
+    d 6 [      232,      307]: mean=    1.323  p99=     4.095
+    d 7 [      307,      398]: mean=    1.671  p99=     4.944
+    d 8 [      398,      538]: mean=    2.244  p99=      6.52
+    d 9 [      538,      847]: mean=    3.462  p99=     10.07
+    d10 [      847, 1.13e+05]: mean=    11.39  p99=      56.6
+[test] 9,792 blocks x 512 px = 5,013,504 samples/epoch (AIA 256, DEM 128, patch 9@stride2)
+
+mlp6 / enet   mean=0.05726
+  median=0.01993  p90=0.1375  p99=0.4666  p99.9=1.19  p99.99=4.257  max=1490
+  share of total loss from the worst 1%: 18.5%   worst 0.1%: 8.2%
+  mean by term:  fit=0.04802  l1=0.003703  l2=0.005531
+  mean loss by brightness decile:
+    d 1 [        0,     9.36]: mean=  0.04153  p99=     0.253
+    d 2 [     9.36,     21.6]: mean=  0.05318  p99=    0.3851
+    d 3 [     21.6,     61.5]: mean=  0.04046  p99=    0.3808
+    d 4 [     61.5,      153]: mean=  0.04885  p99=    0.5987
+    d 5 [      153,      232]: mean=  0.04126  p99=     0.393
+    d 6 [      232,      307]: mean=  0.04106  p99=    0.3323
+    d 7 [      307,      398]: mean=  0.04518  p99=    0.3563
+    d 8 [      398,      538]: mean=   0.0542  p99=    0.4216
+    d 9 [      538,      847]: mean=  0.07277  p99=    0.5444
+    d10 [      847, 1.72e+05]: mean=   0.1341  p99=    0.8506
+[test] 9,792 blocks x 512 px = 5,013,504 samples/epoch (AIA 256, DEM 128, patch 9@stride2)
+
+cnn / enet   mean=0.245
+  median=0.0326  p90=0.1541  p99=0.52  p99.9=1.438  p99.99=7.553  max=6.228e+05
+  share of total loss from the worst 1%: 76.2%   worst 0.1%: 73.4%
+  mean by term:  fit=0.2353  l1=0.003856  l2=0.005819
+  mean loss by brightness decile:
+    d 1 [        0,     9.36]: mean=  0.04448  p99=    0.2548
+    d 2 [     9.36,     21.6]: mean=  0.05948  p99=    0.3887
+    d 3 [     21.6,     61.5]: mean=  0.04782  p99=    0.3904
+    d 4 [     61.5,      153]: mean=  0.05757  p99=    0.6105
+    d 5 [      153,      232]: mean=  0.05195  p99=    0.4121
+    d 6 [      232,      307]: mean=   0.0527  p99=    0.3527
+    d 7 [      307,      398]: mean=  0.05778  p99=    0.3772
+    d 8 [      398,      538]: mean=   0.4377  p99=    0.4453
+    d 9 [      538,      847]: mean=   0.1345  p99=    0.5887
+    d10 [      847, 1.72e+05]: mean=    1.506  p99=     1.127

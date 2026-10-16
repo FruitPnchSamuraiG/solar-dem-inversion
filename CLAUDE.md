@@ -117,6 +117,15 @@ runs on the test split, median / p99: MLP 0.020 / 0.47, CNN 0.033 / 0.52 (BP row
 0.98 / 17.9 vs 1.01 / 18.8). The 4x ENet mean gap (0.057 vs 0.245) is mostly a few CNN pixels:
 its worst 0.1% hold 73% of its loss (max 6.2e5); the MLP still wins at every percentile.
 Files in `results/plots/18_cnn_vs_mlp_resample_20261003/` (`eval_tail_20005027.log`).
+Evening: Hriday's Google Slides edits (slides 2, 4, 5, 7) synced into `build_deck_v2.py` and the
+outline, and the review changes applied: slide 9 as two per-track tables with those ElasticNet
+percentiles; slide 10 says plainly that the ElasticNet width was set on test evidence (validation
+preferred 1.43M, 0.0528 vs 0.0575, which blows up on rare bright pixels); slide 12 has arrows and
+shaded winners; slide 13 retitled; slide 15 names the old model (336, log1p, mu 1, 40 epochs);
+slide 18 has a plainer response table and the exact 0.266. The 28 Sep "label-free BP emits ~15%
+less EM everywhere (unexplained)" is explained: the soft band. The mu = 1 loss's own per-pixel
+optimum emits 0.855 of the solver's at 0.3-1x Bright, rising to 1.002 at mu = 100 (objective-gap
+screen); the adopted model emits 0.984. `talk_prep.md` gained eleven questions from the review.
 
 ### 2026-10-13: Overnight stiff-band runs; 120 + 120 continued is the new best; 680 wide blows up like 10M
 

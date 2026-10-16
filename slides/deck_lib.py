@@ -161,7 +161,7 @@ def card(slide, x, y, w, h, fill=CARD):
 
 def box(slide, x, y, w, h, head, sub="", fill=CARD, head_color=PURPLE, sub_color=DARK,
         head_size=12, sub_size=9.5):
-    """A rounded box with a bold head line and an optional smaller line."""
+    """A rounded box with a bold head line and optional smaller lines ("\n" separates them)."""
     b = card(slide, x, y, w, h, fill=fill)
     tf = b.text_frame
     tf.vertical_anchor = MSO_ANCHOR.MIDDLE
@@ -171,9 +171,9 @@ def box(slide, x, y, w, h, head, sub="", fill=CARD, head_color=PURPLE, sub_color
     p.alignment = PP_ALIGN.CENTER
     r = p.add_run(); r.text = head
     r.font.size = Pt(head_size); r.font.bold = True; r.font.color.rgb = head_color
-    if sub:
+    for line_ in sub.split("\n") if sub else []:
         p2 = tf.add_paragraph(); p2.alignment = PP_ALIGN.CENTER
-        r2 = p2.add_run(); r2.text = sub
+        r2 = p2.add_run(); r2.text = line_
         r2.font.size = Pt(sub_size); r2.font.color.rgb = sub_color
     return b
 

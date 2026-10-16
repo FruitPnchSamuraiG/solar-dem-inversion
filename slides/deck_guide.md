@@ -9,12 +9,13 @@ The speaker notes inside the file say the same at more length; they can be ignor
 
 **Slide 1 · Title.** Predicting DEM label-free.
 
-**Slide 2 · In one slide** [2 min]. Four cards. No labels needed: the network trains on the
+**Slide 2 · Brief Summary** [2 min]. Four cards. No labels needed: the network trains on the
 solver's own objective, solver DEMs only score it. Small is enough: a 400k-parameter MLP on
 one pixel's six intensities, and bigger models fail on rare pixels. Ahead of supervised on
 most measures: all six on ElasticNet, four of six on BP, the typical BP pixel three times
-closer. Flare cores found and fixed in the loss: one pixel in ten thousand held 90% of the
-BP error; the loss priced hot plasma out; a stiffer band put it back.
+closer. Flare cores found and fixed in the loss: one pixel in ten thousand holds 94% of our
+BP error; the loss priced hot plasma out; a stiffer band put it back. Without flare cores our
+BP DEM MSE is 1.1 times the supervised model's (0.102 against 0.091).
 Point: these four claims are the talk; everything after is the evidence.
 
 ## Part 1 · Problem and approach (slides 3 to 7) [5.5 min]
@@ -25,8 +26,9 @@ minimises, and what data and scoring everything below rests on.
 
 **Slide 4 · Same physics, different training signal** [1 min]. Two training loops as
 diagrams. Supervised: observed AIA, model, DEM, and the loss compares that DEM with the
-solver's DEM. Label-free: observed AIA, model, DEM, predicted AIA through the response
-matrix, and the loss compares predicted with observed AIA.
+solver's DEM. Label-free: observed AIA, model (54 basis weights, as the solvers use), DEM
+through the basis B, predicted AIA through the response matrix, and the loss compares
+predicted with observed AIA. The label-free row optimises the solver's objective directly.
 Point: we never train on a solver DEM; we use them only to evaluate.
 
 **Slide 5 · The model** [1.5 min]. Pipeline: 6 intensities, MLP (409k parameters), 54 basis
@@ -48,8 +50,11 @@ a rule and we treat it as a price, set by μ (1 originally, 100 in the final mod
 **Slide 7 · Data and scoring** [1.5 min]. Timeline of the split to scale: train to June
 2015 (917 images), validation to September (153), test to December (153), so every test
 image is later than training. 1,223 full-disk images, deconvolved, with a noise σ per pixel
-and channel. Training sees AIA and σ only, fresh pixels every epoch. Test on the supervised
-side's protocol: the same pixels and Bright cutoffs, five solver targets per image. Scores:
+and channel. Training sees AIA and σ only, no noise added: each image keeps a random quarter
+of its blocks (64 of 256), and every epoch draws 512 fresh pixels from each. Test on the
+supervised side's protocol, the same for both models: the clean AIA as input, five solver
+targets per image (the clean solve and four re-solves of noise-added copies), each scored on
+its own random quarter, about 800M pixel DEMs. Scores:
 DEM against the solver, AIA reconstruction against the observation, and medians and
 percentiles because the worst 1% of pixels hold 98% of the BP error.
 Point: scored exactly as the supervised model is, and the error is heavy-tailed.
@@ -61,17 +66,21 @@ loss, the first MLP, the patch CNN, the ablation, leave-one-day-out, the collaps
 the appendix if asked. The advisor's own position was the simplest model that scales; this
 part says the data agreed.
 
-**Slide 9 · At scale, the centre-pixel MLP beat the patch CNN** [1.5 min]. Table at 1.5M
-parameters each on the test split: the MLP wins the training objective on both tracks and
-at the median and p99; the CNN only reconstructs BP's AIA slightly better. The CNN's edge on
-four images was in-sample and vanished on held-out days.
+**Slide 9 · At scale, the centre-pixel MLP beat the patch CNN** [1.5 min]. Two tables, one
+per track, at 1.5M parameters each on the test split, the better cell shaded. Loss is each
+track's own training loss on test days. The MLP is lower at the median, p99 and mean on both
+tracks (ElasticNet median 0.020 against 0.033); the CNN only reconstructs BP's AIA slightly
+better. The 4x ElasticNet gap in the mean is mostly a few CNN pixels. The CNN's edge on four
+images was in-sample and vanished on held-out days.
 Point: the simplest model scales; no neighbourhood needed.
 
-**Slide 10 · Choosing the model: width 336** [1.5 min]. Chart of BP median pixel error
-against model size, 360k highlighted. Chosen by validation loss; 1.43M ties on validation
-but only nudges the typical pixel and blows up on the stiff band; ElasticNet blows up from
-722k on a few bright pixels; the square root plus Fourier input wins by validation on both
-tracks.
+**Slide 10 · Choosing the model: width 336** [1.5 min]. Chart of BP median pixel error on
+the test set against model size, 360k highlighted. The choice is made on the validation
+days: for BP, 336 is the validation best and 1.43M ties but only nudges the typical pixel and
+blows up on the stiff band. ElasticNet is the exception, said plainly: validation preferred
+the bigger models, which blow up from 722k on a few bright pixels the validation sample never
+saw, so 336 is the largest stable width, a choice the test set informed. The square root plus
+Fourier input wins on validation on both tracks.
 Point: one MLP of width 336 per track; bigger is unstable on rare pixels.
 
 ## Part 3 · Results (slides 11 to 13) [3.5 min]
@@ -80,12 +89,12 @@ What it is for: the headline table and the shape of the error, shown once with t
 models. Part 4 then explains the one number that is behind.
 
 **Slide 12 · Against supervised: all six on ElasticNet, four of six on BP** [2 min]. The
-table, bold is better. ElasticNet: every column. BP: DEM MAE, EM error, W1 and AIA MSE;
+table; every column is lower-is-better (↓ in the headers) and the better cell is shaded. ElasticNet: every column. BP: DEM MAE, EM error, W1 and AIA MSE;
 supervised keeps DEM MSE (0.91 against our 1.75) and AIA MAE. Muted line: the old BP final
 for reference.
 Point: ahead on most measures; DEM MSE is set by flare cores.
 
-**Slide 13 · The typical pixel and the average tell different stories** [1.5 min]. Two
+**Slide 13 · The typical pixel and the average disagree** [1.5 min]. Two
 callouts: median pixel error 0.036 against 0.112; 98% of our BP error sits in the worst 1%
 of pixels (supervised 95%). Up to the 99th percentile we are level or ahead on BP; the gap
 opens in the last 0.1%, the flare cores.
@@ -98,7 +107,7 @@ order is the story: the failure (a recap), the suggestions did not help, the cau
 loss does it, the fix, what training did on the new loss, flare cores now, what remains.
 
 **Slide 15 · Flare cores, 1 pixel in 10,000, held 90% of the BP error** [1 min, recap]. The
-old model: 0.01% of pixels, 90% of the DEM error (supervised 90% too). There it held 40% of
+old model (width 336, log1p input, μ = 1, 40 epochs): 0.01% of pixels, 90% of the DEM error (supervised 90% too). There it held 40% of
 the solver's emission, peaked 23% as high, 0.2 dex too cool, with extra peaks on 83% of
 curves. It fit 171, 193 and 211 Å to a few percent but reproduced only 23% of 94 Å. Figure:
 the old model at random flare cores.
@@ -120,10 +129,12 @@ model's DEM. The best answer itself reproduces only 26% of 94 Å, and the solver
 Point: the loss, not training, was the limit.
 
 **Slide 18 · Why: hot plasma is expensive to include and cheap to leave out** [2 min].
-Rule against price. Response table: a unit of warm plasma lights 171, 193 and 211 Å by tens
-of DN/s, so it is in the DEM anyway and its 94 Å comes free; a unit of hot plasma lights no
-channel above 0.4 DN/s, so a bright 94 Å reading needs hundreds of units, paid by the
-sparsity term. Worked example at a flare core: hot plasma in costs 616, out costs 85.
+Rule against price. A small table of what AIA sees from one unit of plasma (10²⁶ cm⁻⁵ of
+emission measure, the DEM's unit): warm plasma lights 171 Å by 36 to 95 DN/s, so it is in
+the DEM anyway and its 94 Å comes free; hot plasma gives 94 Å only 0.266 DN/s and no channel
+above 0.4, so a bright 94 Å reading needs hundreds of units, paid by the sparsity term. The
+plasma is never measured; AIA measures DN/s and R is a fixed table. Worked example at a flare
+core: hot plasma in costs 164 ÷ 0.266 ≈ 616, out costs 85.
 Point: at μ = 100 leaving it out costs 8,500, and the plasma goes back in.
 
 **Slide 19 · The fix: a stiffer band, chosen on validation** [1.5 min]. Screen table of

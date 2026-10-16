@@ -160,6 +160,76 @@ claim of the paper.
 3. Direct 18-bin output.
 4. Uncertainty from the noisy re-solves; AIA + XRT if in scope.
 
+**Why does the BP loss have a max, and the ElasticNet loss not?**
+BP's condition on the data is a band: any prediction inside o ± 1.4σ is equally good, so its
+term has to be zero across the whole band, and the max does that. ElasticNet is a
+least-squares fit, zero only at an exact match. The square in the BP loss is our choice of
+price; BP itself is a linear program with no square in it.
+
+**Why did the old BP model emit about 15% less than the solver everywhere?**
+The soft band. Inside the band nothing pulls the prediction toward the observation, so the
+L1 term drags emission down to the lower edge, where BP's answer also sits. A squared wall
+starts with zero slope at the edge, so with a finite μ it always pays to go a little past it.
+The loss's own best answer at 0.3 to 1× Bright emits 0.855 of the solver's at μ = 1, then
+0.886, 0.941, 0.981 and 1.002 at μ = 3, 10, 30 and 100; the trained μ = 1 network sat at
+0.866. The adopted model emits 0.984 overall. Source:
+`results/plots/21_followup_20261006/bp_objective_gap.txt`.
+
+**Why square the hinge at all?**
+It is smooth at the band edge. An unsquared hinge (μ times the excess) is an exact penalty:
+above some finite μ its minimum is BP's answer exactly. Its slope jumps at the edge, which
+gradient descent handles less well. Untested, and a cheap experiment.
+
+**What is σ?**
+The noise of each measurement, one per pixel and channel: a standard deviation from AIA's
+instrument noise model (aiapy's `estimate_error`, ported from SolarSoft), the same σ the
+solver used. Photon noise, which grows like √counts, plus read, dark, quantisation and
+compression noise; calibration errors are off. Median σ over signal: 94 Å 1.12, 335 Å 0.60,
+131 Å 0.44, 211 Å 0.08, 171 Å 0.07, 193 Å 0.06. The network never sees σ; only the loss
+does.
+
+**Where do the ElasticNet settings come from?**
+They are the solver's, supplied by the supervised side: scikit-learn's ElasticNet with
+α = 0.001, l1 ratio 0.5, non-negative, N = 6 channels (`eval_and_enet_specs/README.md`).
+That run made the supervised model's labels and everyone's test targets. We copy the
+settings, never the answers.
+
+**What are the five test targets?**
+The solver run once on the clean AIA and four times on copies with Gaussian noise of size σ
+added. Only the DEMs were saved, so the input is the clean AIA for all five. They measure the
+solver's own scatter, the same small floor for both models (0.4% of the BP Bright error when
+measured in September, 5.7% for ElasticNet). Each target is scored on its own random
+quarter of the image.
+
+**Does training see whole images?**
+No: a random quarter of each image (64 of its 256 blocks), chosen once when the data were
+staged, and 512 fresh pixels from each kept block every epoch, 30M per epoch. Brightness plays
+no part in either draw. Off-disk corona pixels are real data and are used.
+
+**Is the supervised model bigger than ours?**
+In all, yes: 1.05M parameters, but 855k of them are the uncertainty head (a 128-bin
+histogram for each of 26 outputs). The trunk plus DEM head is 191k, about half our 409k. In
+the width sweep our 176k model, about the same size, had a median pixel error of 0.030
+against the supervised 0.112, so size is not why the typical pixel is better.
+
+**Why not μ = 300?**
+The screen gain is small (DEM error 2.32 to 1.80; 200 gives 1.89, 1000 gives 2.16), Quiet
+error rises (0.041 to 0.048), and the trained μ = 300 network was behind μ = 100 at matched
+epochs (validation DEM MAE 0.099 at epoch 76 against 0.081 at epoch 70). It was stopped
+after about 90 epochs and never scored on test.
+
+**Was the ElasticNet width chosen on validation?**
+No, and say so. Validation preferred the bigger models (0.0528 at 1.43M against 0.0575 at
+336). They blow up on a handful of bright pixels that the validation sample, about 131k
+pixels, never contained: test DEM MSE 0.48, 3.24 and 36.2 at 336, 722k and 1.43M. We saw it
+on the test set, so 336 is the largest width that does not blow up. Validating on every pixel
+is the fix (slide 25).
+
+**The patch CNN, in detail?**
+A 9×9 patch on the DEM grid (18×18 AIA pixels, about 11 arcsec), three 3×3 convolutions of 64
+channels, then 256, 256 and 54 outputs: 1.48M parameters, against the width-680 MLP at 1.43M
+with the same log1p input, data and 40 epochs. Only a 9×9 neighbourhood was ever tried.
+
 ## Numbers to have at hand
 
 | | BP label-free | BP supervised | ENet label-free | ENet supervised |
@@ -191,7 +261,7 @@ Worked example: hot plasma in costs 616, out costs 85; at a band weight of 100, 
 
 ## Before the meeting
 
-- Upload `slides/DEM_deck_v2.pptx` to Google Slides; check that the tables on slides 12, 20
-  and 21 and the chart on slide 10 render.
+- Upload `slides/DEM_deck_v2.pptx` to Google Slides; check that the tables on slides 9, 12,
+  20 and 21 and the chart on slide 10 render.
 - Copy the staged website preview to Triborough if the viewer will be shown.
 - Rehearse once against the notes: 27 minutes without questions.

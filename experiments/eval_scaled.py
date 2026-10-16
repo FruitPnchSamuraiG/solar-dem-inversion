@@ -112,9 +112,19 @@ def barrier_terms(x, D_t, lb, ub, a_l1=1.0, mu=1.0):
     return l1, below, above
 
 
+def enet_terms(x, D_t, obs, lb, ub, C=6.0, alpha=0.001, lam=0.5):
+    """Per-pixel ElasticNet components, matching enet_loss_batch term for term."""
+    sigma2 = ((ub - lb) / 2) ** 2 + 1e-8
+    Dx = x @ D_t.T
+    fit = (0.5 / C) * ((Dx - obs) ** 2 / sigma2).sum(dim=1)
+    l1 = alpha * lam * x.abs().sum(dim=1)
+    l2 = 0.5 * alpha * (1.0 - lam) * (x ** 2).sum(dim=1)
+    return fit, l1, l2
+
+
 @torch.no_grad()
 def run_loss_tail(args, models, ckpts, D_t, device):
-    """Decompose the barrier objective per pixel.
+    """Decompose each run's own objective per pixel (barrier, and since Oct 2026 enet).
 
     Motivation: on the test split mlp6/barrier scores 44.32 against cnn's 11.27,
     while sp_coef and mae_aia agree to the third decimal. The barrier is a sum of
@@ -122,13 +132,15 @@ def run_loss_tail(args, models, ckpts, D_t, device):
     construction and a mean says nothing about whether the gap is a broad
     regression or a handful of catastrophic pixels. This separates the two.
     """
-    print(f"\n{'='*78}\nBARRIER LOSS TAIL -- per-pixel decomposition\n{'='*78}")
+    print(f"\n{'='*78}\nLOSS TAIL -- per-pixel decomposition\n{'='*78}")
     results = {}
     for (variant, loss) in RUNS:
-        if loss != "barrier":
-            continue                      # the enet runs minimise a different objective
+        if loss not in args.tail_losses.split(","):
+            continue
         a = Namespace(**ckpts[(variant, loss)]["args"])
-        _, loader = make_loader(args.bp_root, "test", batch_blocks=args.batch_blocks,
+        names = ("l1", "below", "above") if loss == "barrier" else ("fit", "l1", "l2")
+        root = args.bp_root if loss == "barrier" else args.enet_root
+        _, loader = make_loader(root, "test", batch_blocks=args.batch_blocks,
                                 num_workers=args.num_workers, shuffle=False,
                                 with_labels=True,
                                 pixels_per_block=args.pixels_per_block,
@@ -137,13 +149,20 @@ def run_loss_tail(args, models, ckpts, D_t, device):
         for batch in loader:
             patch, obs, lb, ub, dem, tol = (t.to(device) for t in flatten_blocks(batch))
             x = models[(variant, loss)](patch)
-            l1, below, above = barrier_terms(x, D_t, lb, ub,
-                                             a_l1=getattr(a, "alpha_l1", 1.0),
-                                             mu=getattr(a, "mu", 1.0))
-            tot.append((l1 + below + above).cpu().numpy())
-            l1s.append(l1.cpu().numpy())
-            lbs.append(below.cpu().numpy())
-            ubs.append(above.cpu().numpy())
+            if loss == "barrier":
+                t1, t2, t3 = barrier_terms(x, D_t, lb, ub,
+                                           a_l1=getattr(a, "alpha_l1", 1.0),
+                                           mu=getattr(a, "mu", 1.0))
+            else:
+                C = getattr(a, "enet_C", -1.0)
+                t1, t2, t3 = enet_terms(x, D_t, obs, lb, ub,
+                                        C=C if C > 0 else float(D_t.shape[0]),
+                                        alpha=getattr(a, "enet_alpha", 0.001),
+                                        lam=getattr(a, "enet_lam", 0.5))
+            tot.append((t1 + t2 + t3).cpu().numpy())
+            l1s.append(t1.cpu().numpy())
+            lbs.append(t2.cpu().numpy())
+            ubs.append(t3.cpu().numpy())
             brights.append(obs.sum(dim=1).cpu().numpy())
 
         tot = np.concatenate(tot)
@@ -155,14 +174,14 @@ def run_loss_tail(args, models, ckpts, D_t, device):
         q = {f"p{p}": float(np.percentile(tot, p))
              for p in (50, 90, 99, 99.9, 99.99)}
 
-        print(f"\n{variant} / barrier   mean={tot.mean():.3f}")
-        print(f"  median={q['p50']:.3f}  p90={q['p90']:.3f}  p99={q['p99']:.3f}  "
-              f"p99.9={q['p99.9']:.2f}  p99.99={q['p99.99']:.2f}  "
+        print(f"\n{variant} / {loss}   mean={tot.mean():.4g}")
+        print(f"  median={q['p50']:.4g}  p90={q['p90']:.4g}  p99={q['p99']:.4g}  "
+              f"p99.9={q['p99.9']:.4g}  p99.99={q['p99.99']:.4g}  "
               f"max={tot.max():.4g}")
         print(f"  share of total loss from the worst 1%: {100*share(0.01):.1f}%   "
               f"worst 0.1%: {100*share(0.001):.1f}%")
-        print(f"  mean by term:  l1={l1s.mean():.3f}  "
-              f"below-lb={lbs.mean():.3f}  above-ub={ubs.mean():.3f}")
+        print("  mean by term:  " + "  ".join(
+            f"{n}={v.mean():.4g}" for n, v in zip(names, (l1s, lbs, ubs))))
         # A tail concentrated in the bright decile is a targeted failure (flare
         # cores); one spread across deciles is a broad regression.
         edges = np.quantile(bright, np.linspace(0, 1, 11))
@@ -171,13 +190,12 @@ def run_loss_tail(args, models, ckpts, D_t, device):
             sel = (bright >= edges[k]) & (bright <= edges[k + 1])
             if sel.sum():
                 print(f"    d{k+1:>2} [{edges[k]:>9.3g},{edges[k+1]:>9.3g}]: "
-                      f"mean={tot[sel].mean():>9.3f}  p99={np.percentile(tot[sel], 99):>10.3f}")
+                      f"mean={tot[sel].mean():>9.4g}  p99={np.percentile(tot[sel], 99):>10.4g}")
 
-        results[f"{variant}_barrier"] = dict(
-            q, mean=float(tot.mean()), max=float(tot.max()),
+        results[f"{variant}_{loss}"] = dict(
+            q, mean=float(tot.mean()), max=float(tot.max()), n=int(len(tot)),
             share_worst_1pct=share(0.01), share_worst_0p1pct=share(0.001),
-            mean_l1=float(l1s.mean()), mean_below=float(lbs.mean()),
-            mean_above=float(ubs.mean()))
+            **{f"mean_{n}": float(v.mean()) for n, v in zip(names, (l1s, lbs, ubs))})
     return results
 
 
@@ -346,6 +364,8 @@ def parse_args():
                    help="select a sweep width, e.g. _h160")
     p.add_argument("--skip_metrics", action="store_true")
     p.add_argument("--skip_tail", action="store_true")
+    p.add_argument("--tail_losses", default="barrier,enet",
+                   help="which runs' objectives to break down per pixel")
     p.add_argument("--skip_curves", action="store_true")
     p.add_argument("--dpi", type=int, default=150)
     p.add_argument("--seed", type=int, default=0)

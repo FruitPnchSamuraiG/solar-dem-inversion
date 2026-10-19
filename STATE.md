@@ -17,7 +17,8 @@ Quiet MSE 0.032 / 0.034; flare cores: emission 93% / 92%, 94 A 77% / 85% (solver
 Deck (`slides/DEM_deck_v2.pptx`, 35 slides, outline synced) rebuilt on it; Part 7 is now the
 failure and the fix. Website images rebuilt (job 19721867, preview staged under
 `$SCRATCH/dem/visuals/matched_enet_alpha0p001/preview`, `compare.js` Results updated);
-Triborough upload pending (Hriday). Torch queue empty. The entries below describe the
+Uploaded to Triborough 2026-10-19 (the 312 BP images and the three viewer files; the old
+ones kept in `~/demdemo_backup_20261004` on Triborough). Torch queue empty. The entries below describe the
 2026-10-04 BP final (log1p, original loss), now superseded for BP.
 
 

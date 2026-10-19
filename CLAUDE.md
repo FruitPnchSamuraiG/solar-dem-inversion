@@ -127,6 +127,17 @@ less EM everywhere (unexplained)" is explained: the soft band. The mu = 1 loss's
 optimum emits 0.855 of the solver's at 0.3-1x Bright, rising to 1.002 at mu = 100 (objective-gap
 screen); the adopted model emits 0.984. `talk_prep.md` gained eleven questions from the review.
 
+### 2026-10-19: Website live with the adopted BP model
+
+Uploaded to `triborough:~/public_html/demdemo/` (public URL
+https://triborough.cs.nyu.edu/hsr3649/demdemo/webapp/compare.html): the 312 `bp_mlp6_h336`
+images from the 13 Oct rebuild and `compare.{html,js}`, `models.json` (Results BP Full row DEM MSE
+1.7511). The ElasticNet images were re-rendered on 13 Oct with identical sizes (same model), so
+they were not re-uploaded. Old files backed up in `~/demdemo_backup_20261004` on Triborough.
+Route: `ssh tri` via cims-access (Duo), then Triborough's own password; the files were pulled
+from Torch to `~/dem_preview` first. The page is served, but Triborough's TLS certificate
+expired 2026-09-16, so browsers show a security warning; that is the server's, not ours.
+
 ### 2026-10-13: Overnight stiff-band runs; 120 + 120 continued is the new best; 680 wide blows up like 10M
 
 Four BP chains on band x100 launched 00:30 for the 13 Oct meeting via

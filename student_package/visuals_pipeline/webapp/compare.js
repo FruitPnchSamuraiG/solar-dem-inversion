@@ -3,13 +3,13 @@ const path = "../results/test/";
 const RUN_LABELS = {
   bp_solver: "BP solver reference",
   enet_solver: "ENet solver reference",
-  bp_mlp6_h336: "Label-free MLP (360k)",
-  enet_mlp6_h336_sqrtff: "Label-free MLP (360k)",
+  bp_mlp6_h336: "Label-free MLP (409k)",
+  enet_mlp6_h336_sqrtff: "Label-free MLP (409k)",
   bp_supervised: "Supervised model",
   enet_supervised: "Supervised model",
 };
 
-// Final label-free model per track (chosen by validation loss, 2026-10-04).
+// Final label-free model per track (BP on the stiff band since 2026-10-13).
 const LABEL_FREE_RUN = {bp: "bp_mlp6_h336", enet: "enet_mlp6_h336_sqrtff"};
 
 const RESULTS = {
@@ -449,7 +449,7 @@ function renderResults(models, container) {
       <div><dt class="font-bold">W1 (dex) ↓</dt><dd>Average temperature-distribution distance between DEM curves normalized to unit total emission. Lower values indicate closer thermal shapes. Only pixels with positive emission in both curves are included.</dd></div>
       <div><dt class="font-bold">AIA MAE and MSE ↓</dt><dd>Mean absolute and mean squared differences between reconstructed and observed AIA brightness. MAE is in DN/s and MSE in (DN/s)², pooled across six channels and valid image pixels.</dd></div>
     </dl>
-    <p>Full includes all valid pixels. Bright means at least one AIA channel reaches its fixed brightness threshold; Quiet is the remaining valid population. Lower is better for all metrics. Supervised models learn solver labels; label-free models learn physical objectives. The label-free model is a 360k-parameter per-pixel MLP for each track, trained on fresh pixels every epoch and chosen by validation loss; the BP model takes log1p AIA input and the ENet model takes square-root AIA with 12 Fourier-feature frequencies.</p>
+    <p>Full includes all valid pixels. Bright means at least one AIA channel reaches its fixed brightness threshold; Quiet is the remaining valid population. Lower is better for all metrics. Supervised models learn solver labels; label-free models learn physical objectives. The label-free model is a 409k-parameter per-pixel MLP for each track, taking square-root AIA with 12 Fourier-feature frequencies and trained on fresh pixels every epoch. The BP model trains on a stiffer noise band (weight 100) for 120 + 120 epochs; the ENet model trains for 40 epochs.</p>
     <p class="mt-3">AIA metrics use one common finite-pixel mask for the two models within each track. The clean AIA input is repeated for five solver targets, so the block count is evaluation weighting rather than 48,960 independent observations.</p>`;
   container.appendChild(intro);
   for (const prefix of ["bp", "enet"]) {

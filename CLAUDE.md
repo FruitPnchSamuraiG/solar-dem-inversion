@@ -137,6 +137,10 @@ they were not re-uploaded. Old files backed up in `~/demdemo_backup_20261004` on
 Route: `ssh tri` via cims-access (Duo), then Triborough's own password; the files were pulled
 from Torch to `~/dem_preview` first. The page is served, but Triborough's TLS certificate
 expired 2026-09-16, so browsers show a security warning; that is the server's, not ours.
+Audit the same day: all 1,875 build files byte-identical on the live site (48 run/date
+folders, 39 files each, 6 JPDFs per date per run); all 72 Results numbers match the result JSONs;
+labels corrected to 409k (both final models take sqrt + Fourier input), the Results note now
+describes the stiff-band BP model, and the script version was bumped (`compare.js?v=20261019`).
 
 ### 2026-10-13: Overnight stiff-band runs; 120 + 120 continued is the new best; 680 wide blows up like 10M
 

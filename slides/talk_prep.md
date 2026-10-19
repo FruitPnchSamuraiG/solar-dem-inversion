@@ -263,5 +263,6 @@ Worked example: hot plasma in costs 616, out costs 85; at a band weight of 100, 
 
 - Upload `slides/DEM_deck_v2.pptx` to Google Slides; check that the tables on slides 9, 12,
   20 and 21 and the chart on slide 10 render.
-- Copy the staged website preview to Triborough if the viewer will be shown.
+- The website is live (uploaded 19 Oct). Triborough's HTTPS certificate expired on 16 Sep, so open
+  it once before the meeting and click through the browser warning.
 - Rehearse once against the notes: 27 minutes without questions.

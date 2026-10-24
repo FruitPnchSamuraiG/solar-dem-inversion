@@ -1,6 +1,8 @@
 # DEM project state
 
-Last updated: 2026-10-15 (Claude: BP final = stiff band x100, sqrt+Fourier, 120 + 120 epochs; deck rebuilt)
+Last updated: 2026-10-24 (Claude: advisor meeting done 21 Oct; next phase is the analysis questions and the written report)
+
+2026-10-21 advisor meeting: results accepted, writing starts. Open asks: a theory for mu (first answer 24 Oct, exterior-penalty violation eps = lambda_c t sigma_c / (2 mu), see the CLAUDE.md log), the blow-up pixels of big models, the low-end JPDF pixels (clamp artefact suspected), the final layer by eigenvector. Triborough back 24 Oct after a 3-day outage. Torch: six accounts, submit new jobs on torch_pr_41_cilvr.
 
 2026-10-15: deck restructured for the 30-minute advisor talk on 2026-10-21 (slides 1 to 26 main line with talk notes and time budgets, 27 to 35 appendix); prep sheet `slides/talk_prep.md`. No new runs.
 

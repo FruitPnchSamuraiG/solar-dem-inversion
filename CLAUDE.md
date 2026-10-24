@@ -91,6 +91,46 @@ From the paper's "Future Work" section:
 
 ## Progress Log (most recent first)
 
+### 2026-10-21: Advisor meeting; results accepted, writing starts; follow-up questions
+
+Hriday gave the 30-minute talk. Outcome (his recap on 24 Oct): the results were received as
+strong and the advisor said a written version can start; with good results the scrutiny moves
+to details. Asks, in the order of his notes:
+1. A theoretical grounding for the band weight mu (we have the validation screen only).
+2. Which pixels blow up when models get bigger (10M, 680 wide), and why a larger model should
+   fail on rare pixels at all.
+3. The pixels at the low end of the AIA JPDFs (observed near 1 DN/s, reconstruction far above
+   the diagonal) that appear for the label-free model and not for the supervised one: what are
+   they? The advisor raised cosmic rays and bad pixels, i.e. the AIA value itself may be wrong
+   there. Understand what fails and why, for both BP and ElasticNet.
+4. What the final layer (336 -> 54) looks like; sort it by eigenvector.
+5. A note "with this setup, smoothly back up; missing bits, relax the constraints?" whose
+   meaning is still to be confirmed with Hriday.
+Then a full written report: analysis by Claude, drafting by writer agents, review by Claude,
+positioned as label-free training with a principled loss weight.
+
+First answer to (1), 24 Oct, from penalty-method theory. At the optimum of the quadratic
+exterior penalty each channel sits outside its band by eps = lambda_c t sigma_c / (2 mu)
+half-widths, where lambda_c is the LP's dual price of channel c in weight units per DN/s,
+bounded by 1 / max_k (RB)_{c,k}: 94 A 1.48, 335 A 0.60, 131 A 0.10, 211 A 0.026, 193 A 0.007,
+171 A 0.003. At the slide-18 flare core (94 A sigma 11.5) this gives 11.9 half-widths at
+mu = 1 (the plasma is dropped outright), 1.19 at mu = 10, 0.40 at 30, 0.12 at 100, 0.04 at 300;
+mu = 119 holds every such pixel within 0.1 half-width. So mu follows from the response matrix
+and the brightest pixel's noise for a chosen tolerance, with no solver DEM. To verify on the
+validation screen (violation in half-widths per pixel) and to write up. Also found: the
+slide-18 price of including the hot plasma is 245, not 616 (the 0.2 dex Gaussian at logT 6.8
+gives 0.67 DN/s of 94 A per unit of weight, the spike 0.266); the conclusion is unchanged.
+Working hypothesis for (3): the deconvolution positivity clamp (about 5% of pixels with a
+bright channel at exactly MIN_OBS), excluded from our training but present in the test set
+and the viewer; the supervised model learned the solver's artefact-fitting DEM there.
+
+Infrastructure: Triborough was unreachable 21 to 23 Oct (no web, no SSH) and is back on
+24 Oct; a local copy of the viewer is in `~/dem_preview` (6.5 GB, all six runs; serve with
+`python3 -m http.server 8000 --bind 127.0.0.1 --directory ~/dem_preview`). Torch accounts
+are now six: torch_pr_41_{cilvr,courant,general,tandon_advanced} and torch_pr_718_{cds,cilvr};
+fair share is best on torch_pr_41_cilvr (unused, 1.00) and worst on tandon_advanced (0.03),
+so new jobs should use pr_41_cilvr or courant. Queue empty.
+
 ### 2026-10-15: Deck cut to a 30-minute talk for the 21 Oct advisor meeting; prep sheet
 
 `slides/DEM_deck_v2.pptx` restructured (35 slides, same numbers as 14 Oct): a main line

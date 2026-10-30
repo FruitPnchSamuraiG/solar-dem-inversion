@@ -91,6 +91,25 @@ From the paper's "Future Work" section:
 
 ## Progress Log (most recent first)
 
+### 2026-10-30: BP final is now the 1.5M clamp-mask model; all meeting questions answered
+
+Written report: `report/` (sections, `report.html`, `report.docx`). Results in
+`results/plots/23_meeting_followup_20261024/`. BP final: width 680 (1,528,694 parameters), sqrt +
+Fourier, mu = 100, 120 epochs, clamp pixels kept with clamped channels freed (`--clamp_mode mask`),
+checkpoint `output/experiments/followup/scaled_mlp6_barrier_h680_sqrt_ff12_resample_clampmask_mu100_ep120.pt`.
+Shared test vs supervised: DEM MAE 0.072/0.100, MSE 1.08/0.91, EM 11.0/14.3%, W1 0.070/0.133, AIA MAE
+3.54/2.95, MSE 148/157, median 0.031/0.112, flare-core emission 96.7/92%, 94 A 88/85% (solver 92%).
+Chosen with test evidence. ElasticNet final unchanged (409k, 40 epochs, no clamp pixels).
+mu theory verified: measured/predicted violation median 1.00 for mu >= 10 (Figure 3.2); band relaxation
+removes the best-answer trade-off, but mu = 300 relaxed trained worse on Quiet (0.050), so mu = 100 stays.
+Clamp-mask runs, DEM MSE excluded -> kept: BP 1.5M 897 -> 1.08, ENet 10M 2,062 -> 1.82, BP 409k 2.37 -> 2.79,
+ENet 409k 0.310 -> 0.439. Earlier "about 5% of pixels" for the training mask was wrong: it is ~40%.
+Wild pixels (recon > 1e3 and > 100x observed): 124 of 33.5M on the eight disks, 123 unsolved by the solver;
+`export_mlp6_full_disk.py --self_check` blanks them. Viewer run `bp_mlp6_h680_clamp` staged in the preview
+and copied to `~/dem_preview`; Triborough upload pending Hriday's login. Corrections: shared test BP targets
+skip relaxation (--zerochill inferred from the ENet command), re-solves add 0.5 sigma, validation loss
+covers four images. Slide 18 now 245. Compute goes on Torch; race a job across accounts when queues are long.
+
 ### 2026-10-21: Advisor meeting; results accepted, writing starts; follow-up questions
 
 Hriday gave the 30-minute talk. Outcome (his recap on 24 Oct): the results were received as

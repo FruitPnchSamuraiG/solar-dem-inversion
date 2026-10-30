@@ -17,7 +17,7 @@ cp "$REPO_DIR/student_package/visuals_pipeline/webapp/compare.html" "$WEBAPP/com
 cp "$REPO_DIR/student_package/visuals_pipeline/webapp/compare.js" "$WEBAPP/compare.js"
 
 entries=()
-RUNS=(bp_solver bp_mlp6_h336 bp_supervised enet_solver enet_mlp6_h336_sqrtff enet_supervised)
+RUNS=(bp_solver bp_mlp6_h680_clamp bp_supervised enet_solver enet_mlp6_h336_sqrtff enet_supervised)
 # Only the dates in visualizer_dates.txt are shown, whatever else is rendered.
 mapfile -t DATES < <(grep -v '^#' "$REPO_DIR/experiments/visualizer_dates.txt" | sed '/^$/d')
 for run in "${RUNS[@]}"; do

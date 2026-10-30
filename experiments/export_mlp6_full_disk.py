@@ -33,6 +33,9 @@ def parse_args():
     p.add_argument("--input_npz", required=True, help="full-disk staged solver NPZ")
     p.add_argument("--output", required=True)
     p.add_argument("--pixel_batch", type=int, default=65_536)
+    p.add_argument("--self_check", action="store_true",
+                   help="blank pixels whose DEM overshoots the observation: some channel "
+                        "reconstructed above 1e3 DN/s and more than 100x the observed value")
     p.add_argument("--stride", type=int, default=2,
                    help="AIA-to-DEM decimation used by the solver (normally 2)")
     return p.parse_args()
@@ -89,6 +92,16 @@ def main():
         raise ValueError(f"reference DEM grid {reference.shape[1:]} does not match AIA grid {aia.shape[1:]}")
     print(f"device={device}; model={ckpt['variant']}/{ckpt['loss']}; AIA={aia.shape}")
     dem = predict(model, basis_t, aia, args.pixel_batch)
+    if args.self_check:
+        # A DEM must reproduce what was observed. The pixels that fail this are single
+        # channel spikes among clamped zeros, nearly all without a solver answer
+        # (results/plots/23_meeting_followup_20261024/spike_flag_test.txt).
+        with np.load("RData.npz") as rdata:
+            response = np.asarray(rdata["R"][:, :N_AIA_BINS], dtype=np.float64) * 1e26
+        rec = np.einsum("ct,thw->chw", response, np.nan_to_num(dem).astype(np.float64))
+        flagged = ((rec > 1e3) & (rec > 100 * np.maximum(np.nan_to_num(aia), 1.0))).any(axis=0)
+        dem[:, flagged] = 0
+        print(f"self-check: blanked {int(flagged.sum())} pixels")
 
     os.makedirs(os.path.dirname(os.path.abspath(args.output)), exist_ok=True)
     payload = {"dem": dem, "aia": aia, "logT": np.asarray(logt[:N_AIA_BINS]),

@@ -3,33 +3,33 @@ const path = "../results/test/";
 const RUN_LABELS = {
   bp_solver: "BP solver reference",
   enet_solver: "ENet solver reference",
-  bp_mlp6_h336: "Label-free MLP (409k)",
+  bp_mlp6_h680_clamp: "Label-free MLP (1.5M)",
   enet_mlp6_h336_sqrtff: "Label-free MLP (409k)",
   bp_supervised: "Supervised model",
   enet_supervised: "Supervised model",
 };
 
-// Final label-free model per track (BP on the stiff band since 2026-10-13).
-const LABEL_FREE_RUN = {bp: "bp_mlp6_h336", enet: "enet_mlp6_h336_sqrtff"};
+// Final label-free model per track (BP: 1.5M, stiff band, clamp pixels in training, since 2026-10-31).
+const LABEL_FREE_RUN = {bp: "bp_mlp6_h680_clamp", enet: "enet_mlp6_h336_sqrtff"};
 
 const RESULTS = {
   bp: {
     title: "BP reference",
     rows: [
-      ["Full", 1.7511, 10.99, 0.0684, 0.9060, 14.34, 0.1334],
-      ["Bright", 17.0213, 7.35, 0.0468, 8.6565, 8.92, 0.0546],
-      ["Quiet", 0.0320, 14.88, 0.0710, 0.0335, 20.13, 0.1430],
+      ["Full", 1.0821, 10.97, 0.0703, 0.9060, 14.34, 0.1334],
+      ["Bright", 10.3996, 7.21, 0.0470, 8.6565, 8.92, 0.0546],
+      ["Quiet", 0.0331, 14.96, 0.0731, 0.0335, 20.13, 0.1430],
     ],
     // Approximate p50 of each pixel's SSE across 18 DEM bins: label-free, supervised.
     medianSSE: [
-      [0.03548133892335761, 0.11220184543019653],
-      [1.2302687708123812, 1.7782794100389228],
-      [0.023442288153199275, 0.08511380382023759],
+      [0.03146661308079727, 0.11220184543019653],
+      [1.1615823382512194, 1.7782794100389228],
+      [0.020518707475024423, 0.08511380382023759],
     ],
     aiaRows: [
-      ["Full", 3.4786665909, 103.1637264103, 2.9461307552, 156.6698630557],
-      ["Bright", 8.5182488185, 814.4273718556, 13.1345345278, 1444.9823134077],
-      ["Quiet", 2.9113190896, 23.0908882759, 1.7991377782, 11.6338627424],
+      ["Full", 3.5389, 148.04, 2.9461307552, 156.6698630557],
+      ["Bright", 8.592, 1250.64, 13.1345345278, 1444.9823134077],
+      ["Quiet", 2.970, 23.91, 1.7991377782, 11.6338627424],
     ],
   },
   enet: {
@@ -449,7 +449,7 @@ function renderResults(models, container) {
       <div><dt class="font-bold">W1 (dex) ↓</dt><dd>Average temperature-distribution distance between DEM curves normalized to unit total emission. Lower values indicate closer thermal shapes. Only pixels with positive emission in both curves are included.</dd></div>
       <div><dt class="font-bold">AIA MAE and MSE ↓</dt><dd>Mean absolute and mean squared differences between reconstructed and observed AIA brightness. MAE is in DN/s and MSE in (DN/s)², pooled across six channels and valid image pixels.</dd></div>
     </dl>
-    <p>Full includes all valid pixels. Bright means at least one AIA channel reaches its fixed brightness threshold; Quiet is the remaining valid population. Lower is better for all metrics. Supervised models learn solver labels; label-free models learn physical objectives. The label-free model is a 409k-parameter per-pixel MLP for each track, taking square-root AIA with 12 Fourier-feature frequencies and trained on fresh pixels every epoch. The BP model trains on a stiffer noise band (weight 100) for 120 + 120 epochs; the ENet model trains for 40 epochs.</p>
+    <p>Full includes all valid pixels. Bright means at least one AIA channel reaches its fixed brightness threshold; Quiet is the remaining valid population. Lower is better for all metrics. Supervised models learn solver labels; label-free models learn physical objectives. The label-free model is a per-pixel MLP for each track, taking square-root AIA with 12 Fourier-feature frequencies and trained on fresh pixels every epoch. The BP model has 1.5M parameters and trains on a stiffer noise band (weight 100) for 120 epochs, with deconvolution-clamp pixels kept in training and their clamped channels freed from the band. The ENet model has 409k parameters and trains for 40 epochs. In the BP images, pixels whose DEM overshoots the observation by more than 100 times (lone single-channel spikes, about 15 per disk) are blanked.</p>
     <p class="mt-3">AIA metrics use one common finite-pixel mask for the two models within each track. The clean AIA input is repeated for five solver targets, so the block count is evaluation weighting rather than 48,960 independent observations.</p>`;
   container.appendChild(intro);
   for (const prefix of ["bp", "enet"]) {
@@ -480,7 +480,7 @@ function renderResults(models, container) {
   const tailNote = document.createElement("section");
   tailNote.className = "results-section leading-relaxed";
   tailNote.innerHTML = `<h2 class="serif text-2xl mb-3">Interpreting large DEM errors</h2>
-    <p>Squared error is strongly concentrated in a small upper tail, especially among bright pixels. For label-free BP, the worst 1% of pixels contribute about 97.9% of total squared error (supervised 95.2%); for label-free ENet, 54.9% (supervised 49.4%). On BP, pixels at 32 times the Bright threshold or more (about 1 in 10,000) hold about 90% of the squared error for both models. These errors remain part of the reported means; they are not discarded.</p>
+    <p>Squared error is strongly concentrated in a small upper tail, especially among bright pixels. For label-free BP, the worst 1% of pixels contribute about 96.4% of total squared error (supervised 95.2%); for label-free ENet, 54.9% (supervised 49.4%). On BP, pixels at 32 times the Bright threshold or more (about 1 in 10,000) hold about 92% of the label-free squared error and 90% of the supervised. These errors remain part of the reported means; they are not discarded.</p>
     <p class="mt-3">A lower full-population median does not remove the importance of large tail errors. Label-free BP has the lower median on the full and Quiet populations, but not Bright, so its bright-pixel disagreement is not explained solely by a few extreme outliers. Label-free ENet has the lower median in all three populations.</p>
     <p class="mt-3">AIA MSE is also sensitive to large residuals: Bright-pixel MSE is much larger than Quiet-pixel MSE, and can disagree with the MAE ranking. We therefore show both MAE and MSE and avoid interpreting MSE alone. AIA error percentiles were not computed.</p>`;
   container.appendChild(tailNote);

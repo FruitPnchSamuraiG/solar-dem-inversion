@@ -60,7 +60,8 @@ for track in ${TRACKS:-bp enet}; do
     echo "Label-free $track: $stamp"
     export_file="$VIS_ROOT/exports/$RUN/dem_$stamp.npz"
     python3 -u experiments/export_mlp6_full_disk.py \
-      --model "$MODEL" --input_npz "$INPUT_DIR/$stamp.npz" --output "$export_file"
+      --model "$MODEL" --input_npz "$INPUT_DIR/$stamp.npz" --output "$export_file" \
+      ${SELF_CHECK:+--self_check}
     # Sanity check against the solver on this disk (finite pixels only).
     python3 - "$export_file" <<'EOF'
 import sys

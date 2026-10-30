@@ -195,7 +195,7 @@ s = deck.slide("Data and scoring: two years of full-disk AIA, split in time",
                "solver, AIA reconstruction against the observation, and, because the error is heavy-tailed, "
                "medians and percentiles. If asked: each image keeps a random 64 of its 256 blocks, chosen once; "
                "every epoch takes 512 fresh pixels from each, 30M in all. The noisy targets come from adding "
-               "Gaussian noise of size sigma to the AIA before the solve; the input stays the clean AIA, so they "
+               "Gaussian noise of half sigma to the AIA before the solve; the input stays the clean AIA, so they "
                "measure the solver's own scatter, the same floor for both models. About 800M pixel-targets per "
                "solver, 705M where BP returned an answer. Pixels where deconvolution clamped a bright channel to "
                "zero, about 5%, are left out of training only. Off-disk corona pixels are real data and are "
@@ -521,7 +521,7 @@ s = deck.slide("Why: hot plasma is expensive to include and cheap to leave out",
                "193 and 211 A by tens of DN/s, so it has to be in the DEM anyway and its 94 A comes free. A unit "
                "of hot plasma lights no channel by more than 0.4 DN/s, so a bright 94 A reading needs hundreds "
                "of units, all paid by the sparsity term. The worked example at a typical flare core: putting the "
-               "hot plasma in costs 616, leaving it out costs 85, so the best answer leaves it out. At mu = 100 "
+               "hot plasma in costs 245 by the cheapest shape (616 as a single spike), leaving it out costs 85, so the best answer leaves it out. At mu = 100 "
                "leaving it out costs 8,500 and the plasma goes back in. If asked: one unit is 10^26 cm^-5 of "
                "emission measure, the DEM's own unit; the plasma is never measured, AIA measures DN/s and R is a "
                "fixed table; the full response per unit, warm (logT 6.0 to 6.1): 94 A 0.2, 131 A 0.5 to 1.2, "
@@ -540,7 +540,7 @@ RESP = [["One unit of plasma at", "What AIA sees"],
 tb = table(s, L, TOP + Inches(0.7), Inches(5.6), RESP, col_w=[1.9, 3.7], size=10.5,
            row_h=Inches(0.36), bold_first_col=True, text_cols=2)
 EX = [["A flare core: 94 Å = 164 ± 11.5", "Sparsity", "Penalty (μ = 1)", "Total"],
-      ["Hot plasma in: 164 ÷ 0.266 ≈ 616 units", "616", "0", "616"],
+      ["Hot plasma in, cheapest shape: 164 ÷ 0.67 ≈ 245 units", "245", "0", "245"],
       ["Hot plasma out: 94 Å ≈ 0, 148 below the band", "0", "(148 ÷ 16.1)² = 85", "85"]]
 tb = table(s, L, TOP + Inches(1.95), Inches(5.6), EX, col_w=[2.75, 0.75, 1.5, 0.6], size=10.5,
            row_h=Inches(0.36), bold_first_col=True, highlight=(2,))
@@ -552,7 +552,7 @@ text(s, Inches(6.3), TOP + Inches(0.7), Inches(3.3), Inches(3.3),
      ["Warm plasma lights 171, 193, 211 Å by tens of DN/s: it has to be in the DEM, and its 94 Å comes free.",
       "Hot plasma lights no channel above 0.4 DN/s: a bright 94 Å reading needs hundreds of units, all paid "
       "for by the sparsity term.",
-      "Leaving it out costs 85; putting it in costs 616. The best answer leaves it out.",
+      "Leaving it out costs 85; putting it in costs at least 245. The best answer leaves it out.",
       [("At μ = 100 the penalty is 8,500: the plasma goes back in.", {"bold": True, "color": PURPLE})]],
      size=11, bullets=True, space_after=5)
 

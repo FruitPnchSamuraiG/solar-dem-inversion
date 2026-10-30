@@ -1,0 +1,86 @@
+# JPDF low-end, clamp and spike census: BP track, shared test set
+blocks 48,960 of 48,960; valid pixels 705,016,779 of 802,160,640; non-finite predictions excluded 0
+
+## Clamp (observed <= 1e-3 DN/s)
+any channel: 279,950,703 valid pixels (39.71%), 54,612,955 more where the solver DEM is not finite
+    94 A: 118,231,181 (16.77%)  exact zeros 116,533,147
+   131 A:  81,533,669 (11.56%)  exact zeros 80,723,173
+   171 A:  64,133,822 ( 9.10%)  exact zeros 45,367,890
+   193 A:  53,597,363 ( 7.60%)  exact zeros 39,680,062
+   211 A:  38,164,453 ( 5.41%)  exact zeros 31,736,762
+   335 A: 116,619,226 (16.54%)  exact zeros 115,890,667
+clamped share by band (any channel): <0.03x 96.1%  0.03-0.1x 80.8%  0.1-0.3x 55.6%  0.3-1x 21.2%  1-1.8x 2.2%  1.8-3.2x 0.2%  3.2-10x 0.0%  10-32x 0.0%  >=32x 0.0%
+
+## Low cluster: observed < 1 DN/s, reconstruction > 10x the floored observation
+chan      base pop    label_free    supervised        solver   label-free cluster: same-ch clamp / any clamp / dip / spike
+--------------------------------------------------------------------------------------------------------------------------
+94A    509,505,739           465             1             0   100.0% / 100.0% / 100.0% /   0.0%
+131A   248,765,579       163,630         3,792       152,767    98.2% /  98.2% /  99.9% /   0.0%
+171A    95,755,282     3,562,486           369             0   100.0% / 100.0% / 100.0% /   0.0%
+193A    73,974,186     2,020,334           460       123,154   100.0% / 100.0% / 100.0% /   0.0%
+211A    89,526,664     1,089,583            36             0   100.0% / 100.0% / 100.0% /   0.0%
+335A   294,865,664        92,898            63       102,110    95.2% /  95.2% /  99.7% /   0.0%
+three-way membership within the base population (label-free / supervised / solver):
+    94 A: none 509,505,273  supervised 1  label_free 465
+   131 A: none 248,549,826  solver 52,045  supervised 4  supervised+solver 74  label_free 62,981  label_free+solver 96,935  label_free+supervised 1  all 3,713
+   171 A: none 92,192,450  supervised 346  label_free 3,562,463  label_free+supervised 23
+   193 A: none 71,921,013  solver 32,573  supervised 73  supervised+solver 193  label_free 1,929,940  label_free+solver 90,200  label_free+supervised 6  all 188
+   211 A: none 88,437,045  supervised 36  label_free 1,089,583
+   335 A: none 294,745,744  solver 27,021  supervised 1  label_free 17,809  label_free+solver 75,027  all 62
+mean log10(reconstruction / observation) on the label-free cluster, by source:
+    94 A: label_free +1.02  supervised +0.56  solver +0.30
+   131 A: label_free +1.18  supervised +0.32  solver +0.88
+   171 A: label_free +1.20  supervised +0.07  solver +0.37
+   193 A: label_free +1.36  supervised +0.04  solver +0.25
+   211 A: label_free +1.30  supervised +0.00  solver +0.09
+   335 A: label_free +1.12  supervised +0.59  solver +1.09
+label-free cluster by brightness band:
+    94 A: 0.3-1x 0%  1-1.8x 3%  1.8-3.2x 92%  3.2-10x 4%
+   131 A: <0.03x 0%  0.03-0.1x 3%  0.1-0.3x 5%  0.3-1x 70%  1-1.8x 19%  1.8-3.2x 3%  3.2-10x 0%
+   171 A: <0.03x 4%  0.03-0.1x 21%  0.1-0.3x 62%  0.3-1x 12%  1-1.8x 0%  1.8-3.2x 0%
+   193 A: <0.03x 4%  0.03-0.1x 7%  0.1-0.3x 69%  0.3-1x 19%  1-1.8x 1%  1.8-3.2x 0%
+   211 A: 0.03-0.1x 0%  0.1-0.3x 73%  0.3-1x 27%  1-1.8x 0%  1.8-3.2x 0%
+   335 A: 0.1-0.3x 0%  0.3-1x 54%  1-1.8x 39%  1.8-3.2x 7%  3.2-10x 0%
+
+## High cluster: observed > 20 DN/s and > 10x the floored reconstruction
+chan      base pop    label_free    supervised        solver   label-free cluster: same-ch clamp / any clamp / dip / spike
+--------------------------------------------------------------------------------------------------------------------------
+94A      1,025,540             0             0             0     0.0% /   0.0% /   0.0% /   0.0%
+131A    27,172,828             0             0        16,537     0.0% /   0.0% /   0.0% /   0.0%
+171A   448,406,381             0         1,100             0     0.0% /   0.0% /   0.0% /   0.0%
+193A   481,986,975             0           845         3,224     0.0% /   0.0% /   0.0% /   0.0%
+211A   387,345,696             0             0             0     0.0% /   0.0% /   0.0% /   0.0%
+335A    12,073,282           102             0         1,386     0.0% /  63.7% /   0.0% /  83.3%
+three-way membership within the base population (label-free / supervised / solver):
+    94 A: none 1,025,540
+   131 A: none 27,156,291  solver 16,537
+   171 A: none 448,405,281  supervised 1,100
+   193 A: none 481,982,906  solver 3,224  supervised 845
+   211 A: none 387,345,696
+   335 A: none 12,071,895  solver 1,285  label_free 1  label_free+solver 101
+mean log10(reconstruction / observation) on the label-free cluster, by source:
+   335 A: label_free -1.21  supervised -0.35  solver -1.56
+label-free cluster by brightness band:
+   335 A: 1.8-3.2x 100%
+
+## Headline metrics under three masks (label-free / supervised)
+all_valid must reproduce the known numbers; no_clamp drops pixels with any channel at or below 1e-3; not_lf_low drops pixels in the label-free low cluster in any channel
+mask        subset          pixels           DEM MSE         DEM MAE        EM err %           AIA MSE         AIA MAE
+----------------------------------------------------------------------------------------------------------------------
+all_valid   full       705,016,779   1.0821/0.9060    0.0723/0.1000    10.97/14.34     148.04/156.67     3.539/2.946  
+all_valid   bright      71,338,420  10.3996/8.6565    0.2784/0.3262     7.21/8.92     1250.64/1444.98    8.592/13.135 
+all_valid   quiet      633,678,359   0.0331/0.0335    0.0491/0.0746    14.96/20.13      23.91/11.63      2.970/1.799  
+no_clamp    full       425,066,076   1.7749/1.4866    0.0981/0.1309     9.78/12.58     237.41/256.18     4.594/4.125  
+no_clamp    bright      70,273,117  10.5329/8.7732    0.2759/0.3250     7.08/8.81     1268.75/1464.92    8.642/13.248 
+no_clamp    quiet      354,792,959   0.0403/0.0433    0.0629/0.0924    13.37/17.58      33.13/16.77      3.792/2.318  
+not_lf_low  full       699,478,819   1.0898/0.9124    0.0722/0.1001    10.86/14.25     148.85/157.83     3.540/2.962  
+not_lf_low  bright      71,249,265  10.4105/8.6642    0.2782/0.3255     7.20/8.90     1251.98/1446.38    8.592/13.139 
+not_lf_low  quiet      628,229,554   0.0327/0.0333    0.0489/0.0745    14.76/19.96      23.74/11.70      2.967/1.808  
+
+## Pixels with observed < 1 DN/s: share of each source more than one decade above the floored observation
+    94 A: label_free   0.0%  supervised   0.0%  solver   0.0%
+   131 A: label_free   0.1%  supervised   0.0%  solver   0.1%
+   171 A: label_free   3.7%  supervised   0.0%  solver   0.0%
+   193 A: label_free   2.7%  supervised   0.0%  solver   0.2%
+   211 A: label_free   1.2%  supervised   0.0%  solver   0.0%
+   335 A: label_free   0.0%  supervised   0.0%  solver   0.0%

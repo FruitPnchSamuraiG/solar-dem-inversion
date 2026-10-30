@@ -1,0 +1,101 @@
+# Blow-up census, BP track (48,960 blocks, complete test set)
+
+## Tail concentration of DEM SSE
+model                    MSE nonfinite  w0.01%   w0.1%     w1%  top100   top1k   top5k distinct1k
+-------------------------------------------------------------------------------------------------
+h336_mu100_cont      31.5190         0  0.9510  0.9617  0.9774  0.6732  0.8183  0.8979        726
+h336_mu100_ep120     35.9441         0  0.9546  0.9646  0.9791  0.6977  0.8329  0.9060        726
+h680_mu100_ep120  16143.9004         0  0.9999  0.9999  1.0000  0.9968  0.9994  0.9997        752
+h1800_mu100         642.5867         0  0.9970  0.9977  0.9987  0.9798  0.9895  0.9940        730
+h1800_mu1            91.7810         0  0.9147  0.9635  0.9833  0.5010  0.6591  0.7690        704
+h336_mu1             82.0407         0  0.9078  0.9584  0.9812  0.5063  0.6585  0.7655        702
+
+## Overlap of the worst sets (Jaccard), keyed by input
+  top 100: h336_mu100_cont vs h336_mu100_ep120 0.91; h336_mu100_cont vs h680_mu100_ep120 0.07; h336_mu100_ep120 vs h680_mu100_ep120 0.05; h1800_mu100 vs h336_mu100_cont 0.44; h1800_mu100 vs h336_mu100_ep120 0.44; h1800_mu100 vs h680_mu100_ep120 0.15; h1800_mu100 vs h336_mu1 0.47; h1800_mu1 vs h336_mu100_cont 0.62; h1800_mu1 vs h336_mu100_ep120 0.69; h1800_mu1 vs h680_mu100_ep120 0.05; h1800_mu1 vs h1800_mu100 0.47; h1800_mu1 vs h336_mu1 0.93; h336_mu1 vs h336_mu100_cont 0.62; h336_mu1 vs h336_mu100_ep120 0.69; h336_mu1 vs h680_mu100_ep120 0.05
+  top 1000: h336_mu100_cont vs h336_mu100_ep120 0.95; h336_mu100_cont vs h680_mu100_ep120 0.56; h336_mu100_ep120 vs h680_mu100_ep120 0.56; h1800_mu100 vs h336_mu100_cont 0.88; h1800_mu100 vs h336_mu100_ep120 0.89; h1800_mu100 vs h680_mu100_ep120 0.58; h1800_mu100 vs h336_mu1 0.62; h1800_mu1 vs h336_mu100_cont 0.57; h1800_mu1 vs h336_mu100_ep120 0.59; h1800_mu1 vs h680_mu100_ep120 0.50; h1800_mu1 vs h1800_mu100 0.59; h1800_mu1 vs h336_mu1 0.88; h336_mu1 vs h336_mu100_cont 0.61; h336_mu1 vs h336_mu100_ep120 0.63; h336_mu1 vs h680_mu100_ep120 0.53
+  top 5000: h336_mu100_cont vs h336_mu100_ep120 0.97; h336_mu100_cont vs h680_mu100_ep120 0.75; h336_mu100_ep120 vs h680_mu100_ep120 0.76; h1800_mu100 vs h336_mu100_cont 0.90; h1800_mu100 vs h336_mu100_ep120 0.91; h1800_mu100 vs h680_mu100_ep120 0.78; h1800_mu100 vs h336_mu1 0.66; h1800_mu1 vs h336_mu100_cont 0.62; h1800_mu1 vs h336_mu100_ep120 0.63; h1800_mu1 vs h680_mu100_ep120 0.65; h1800_mu1 vs h1800_mu100 0.64; h1800_mu1 vs h336_mu1 0.89; h336_mu1 vs h336_mu100_cont 0.64; h336_mu1 vs h336_mu100_ep120 0.66; h336_mu1 vs h680_mu100_ep120 0.69
+
+## The worst 1,000 distinct inputs per model
+
+### h336_mu100_cont
+  bands: 1-1.8x 5, 1.8-3.2x 2, >=32x 993
+  clamp (a channel <= 0.001): 0.7% of pixels; by channel 94 0.0%, 131 0.7%, 171 0.6%, 193 0.7%, 211 0.7%, 335 0.6%
+  solver multi-peaked 6.0%, model multi-peaked 13.1%; emission pred/solver median 0.82, peak ratio median 0.38
+  SSE share in bins logT >= 6.6: 99.7%; where the solver is below 1% of its peak: 1.9%
+  reconstruction / observed: 171 A median 0.98 (p90 1.06); 94 A median 0.59 (p90 0.75)
+  other models' median SSE at these pixels, relative to this model's: h336_mu100_cont 1, h336_mu100_ep120 1.05, h680_mu100_ep120 1.42, h1800_mu100 1.1, h1800_mu1 2.73, h336_mu1 2.46
+  nearest training pixel, >=32x (n=993): worst median 0.402 p90 0.970; controls median 0.213 p99 0.661; worst beyond controls' p99: 20.0%
+  outside the training range: 18.8%; above the training 99.999th percentile in some channel: 42.2%
+  log10(channel / 171 A) medians, >=32x: worst 94 -0.45, 131 -0.29, 193 +0.32, 211 -0.12, 335 -0.95 | controls 94 -0.88, 131 -0.68, 193 +0.24, 211 -0.11, 335 -1.03
+
+### h336_mu100_ep120
+  bands: 1-1.8x 1, 1.8-3.2x 1, >=32x 998
+  clamp (a channel <= 0.001): 0.2% of pixels; by channel 94 0.0%, 131 0.2%, 171 0.2%, 193 0.2%, 211 0.2%, 335 0.2%
+  solver multi-peaked 7.0%, model multi-peaked 11.9%; emission pred/solver median 0.81, peak ratio median 0.37
+  SSE share in bins logT >= 6.6: 99.8%; where the solver is below 1% of its peak: 1.5%
+  reconstruction / observed: 171 A median 1.00 (p90 1.07); 94 A median 0.58 (p90 0.73)
+  other models' median SSE at these pixels, relative to this model's: h336_mu100_cont 0.953, h336_mu100_ep120 1, h680_mu100_ep120 1.35, h1800_mu100 1.05, h1800_mu1 2.64, h336_mu1 2.38
+  nearest training pixel, >=32x (n=998): worst median 0.406 p90 1.003; controls median 0.213 p99 0.661; worst beyond controls' p99: 21.4%
+  outside the training range: 19.0%; above the training 99.999th percentile in some channel: 43.3%
+  log10(channel / 171 A) medians, >=32x: worst 94 -0.45, 131 -0.30, 193 +0.31, 211 -0.12, 335 -0.95 | controls 94 -0.88, 131 -0.68, 193 +0.24, 211 -0.11, 335 -1.03
+
+### h680_mu100_ep120
+  bands: 0.3-1x 166, 1-1.8x 51, 1.8-3.2x 3, >=32x 780
+  clamp (a channel <= 0.001): 22.0% of pixels; by channel 94 0.1%, 131 14.4%, 171 19.9%, 193 21.3%, 211 19.5%, 335 18.3%
+  solver multi-peaked 6.5%, model multi-peaked 28.9%; emission pred/solver median 0.77, peak ratio median 0.32
+  SSE share in bins logT >= 6.6: 11.1%; where the solver is below 1% of its peak: 80.0%
+  reconstruction / observed: 171 A median 0.99 (p90 260850.70); 94 A median 0.49 (p90 2129.23)
+  other models' median SSE at these pixels, relative to this model's: h336_mu100_cont 0.434, h336_mu100_ep120 0.452, h680_mu100_ep120 1, h1800_mu100 0.49, h1800_mu1 1.17, h336_mu1 1.07
+  nearest training pixel, 0.3-1x (n=166): worst median 4.894 p90 5.025; controls median 0.148 p99 1.784; worst beyond controls' p99: 100.0%
+  nearest training pixel, 1-1.8x (n=51): worst median 4.914 p90 5.067; controls median 0.097 p99 0.596; worst beyond controls' p99: 100.0%
+  nearest training pixel, >=32x (n=780): worst median 0.403 p90 1.111; controls median 0.213 p99 0.661; worst beyond controls' p99: 24.2%
+  outside the training range: 38.8%; above the training 99.999th percentile in some channel: 38.7%
+  log10(channel / 171 A) medians, 0.3-1x: worst 94 +3.42, 131 +0.00, 193 +0.00, 211 +0.00, 335 +0.00 | controls 94 -2.21, 131 -1.47, 193 -0.04, 211 -0.51, 335 -1.72
+  log10(channel / 171 A) medians, 1-1.8x: worst 94 +3.53, 131 +0.00, 193 +0.00, 211 +0.00, 335 +0.00 | controls 94 -2.15, 131 -1.41, 193 +0.07, 211 -0.38, 335 -1.67
+  log10(channel / 171 A) medians, >=32x: worst 94 -0.44, 131 -0.30, 193 +0.33, 211 -0.11, 335 -0.93 | controls 94 -0.88, 131 -0.68, 193 +0.24, 211 -0.11, 335 -1.03
+
+### h1800_mu100
+  bands: 0.3-1x 2, 1-1.8x 23, 1.8-3.2x 3, >=32x 972
+  clamp (a channel <= 0.001): 2.8% of pixels; by channel 94 0.0%, 131 2.0%, 171 2.1%, 193 1.5%, 211 2.4%, 335 2.7%
+  solver multi-peaked 6.3%, model multi-peaked 14.8%; emission pred/solver median 0.81, peak ratio median 0.34
+  SSE share in bins logT >= 6.6: 37.7%; where the solver is below 1% of its peak: 59.0%
+  reconstruction / observed: 171 A median 1.00 (p90 1.07); 94 A median 0.56 (p90 0.74)
+  other models' median SSE at these pixels, relative to this model's: h336_mu100_cont 0.861, h336_mu100_ep120 0.899, h680_mu100_ep120 1.24, h1800_mu100 1, h1800_mu1 2.43, h336_mu1 2.16
+  nearest training pixel, 1-1.8x (n=23): worst median 4.544 p90 5.082; controls median 0.097 p99 0.596; worst beyond controls' p99: 100.0%
+  nearest training pixel, >=32x (n=972): worst median 0.411 p90 1.007; controls median 0.213 p99 0.661; worst beyond controls' p99: 21.9%
+  outside the training range: 22.0%; above the training 99.999th percentile in some channel: 44.5%
+  log10(channel / 171 A) medians, 1-1.8x: worst 94 +3.57, 131 +0.00, 193 +0.00, 211 +0.00, 335 +0.00 | controls 94 -2.15, 131 -1.41, 193 +0.07, 211 -0.38, 335 -1.67
+  log10(channel / 171 A) medians, >=32x: worst 94 -0.46, 131 -0.29, 193 +0.31, 211 -0.12, 335 -0.95 | controls 94 -0.88, 131 -0.68, 193 +0.24, 211 -0.11, 335 -1.03
+
+### h1800_mu1
+  bands: 0.3-1x 1, >=32x 999
+  clamp (a channel <= 0.001): 0.1% of pixels; by channel 94 0.1%, 131 0.0%, 171 0.1%, 193 0.0%, 211 0.1%, 335 0.0%
+  solver multi-peaked 9.8%, model multi-peaked 86.4%; emission pred/solver median 0.08, peak ratio median 0.04
+  SSE share in bins logT >= 6.6: 99.7%; where the solver is below 1% of its peak: 0.1%
+  reconstruction / observed: 171 A median 1.09 (p90 1.12); 94 A median 0.03 (p90 0.07)
+  other models' median SSE at these pixels, relative to this model's: h336_mu100_cont 0.301, h336_mu100_ep120 0.319, h680_mu100_ep120 0.439, h1800_mu100 0.335, h1800_mu1 1, h336_mu1 0.852
+  nearest training pixel, >=32x (n=999): worst median 0.439 p90 1.123; controls median 0.213 p99 0.661; worst beyond controls' p99: 29.5%
+  outside the training range: 25.7%; above the training 99.999th percentile in some channel: 58.3%
+  log10(channel / 171 A) medians, >=32x: worst 94 -0.51, 131 -0.31, 193 +0.30, 211 -0.12, 335 -0.95 | controls 94 -0.88, 131 -0.68, 193 +0.24, 211 -0.11, 335 -1.03
+
+### h336_mu1
+  bands: >=32x 1000
+  clamp (a channel <= 0.001): 0.0% of pixels; by channel 94 0.0%, 131 0.0%, 171 0.0%, 193 0.0%, 211 0.0%, 335 0.0%
+  solver multi-peaked 9.8%, model multi-peaked 76.9%; emission pred/solver median 0.30, peak ratio median 0.14
+  SSE share in bins logT >= 6.6: 99.7%; where the solver is below 1% of its peak: 0.5%
+  reconstruction / observed: 171 A median 1.03 (p90 1.10); 94 A median 0.12 (p90 0.17)
+  other models' median SSE at these pixels, relative to this model's: h336_mu100_cont 0.361, h336_mu100_ep120 0.379, h680_mu100_ep120 0.515, h1800_mu100 0.4, h1800_mu1 1.17, h336_mu1 1
+  nearest training pixel, >=32x (n=1000): worst median 0.423 p90 1.123; controls median 0.213 p99 0.661; worst beyond controls' p99: 27.4%
+  outside the training range: 24.3%; above the training 99.999th percentile in some channel: 53.7%
+  log10(channel / 171 A) medians, >=32x: worst 94 -0.51, 131 -0.33, 193 +0.30, 211 -0.12, 335 -0.94 | controls 94 -0.88, 131 -0.68, 193 +0.24, 211 -0.11, 335 -1.03
+
+## Controls (random valid test pixels per band)
+  <0.03x     nearest training pixel median 2.394 p90 4.840; clamp 96.8%
+  0.03-0.1x  nearest training pixel median 0.958 p90 2.883; clamp 80.8%
+  0.1-0.3x   nearest training pixel median 0.431 p90 1.899; clamp 53.5%
+  0.3-1x     nearest training pixel median 0.148 p90 0.515; clamp 21.6%
+  1-1.8x     nearest training pixel median 0.097 p90 0.172; clamp 1.8%
+  1.8-3.2x   nearest training pixel median 0.086 p90 0.142; clamp 0.5%
+  3.2-10x    nearest training pixel median 0.080 p90 0.137; clamp 0.0%
+  10-32x     nearest training pixel median 0.106 p90 0.212; clamp 0.0%
+  >=32x      nearest training pixel median 0.213 p90 0.384; clamp 0.0%

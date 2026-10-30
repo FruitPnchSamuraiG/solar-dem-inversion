@@ -1,0 +1,185 @@
+Band-weight theory check: barrier objective, val split, t = 1.4, mus [1.0, 3.0, 10.0, 30.0, 100.0, 300.0, 1000.0], 11,954 pixels, 281.0 s
+Prediction: violation (half band-widths) = lambda_c x t sigma_c / (2 mu), lambda_c the LP's dual price.
+Single-channel price bound 1/max_k D[c,k] (weight units per DN/s): 94 A 1.480, 131 A 0.100, 171 A 0.003, 193 A 0.007, 211 A 0.026, 335 A 0.604
+mu needed over every sampled pixel, by tolerance: eps 0.5: 12760, eps 0.2: 31900, eps 0.1: 63801, eps 0.05: 127601 (set by a >=32x pixel, 335 A)
+L-BFGS-B not converged per mu: {'mu1': 277, 'mu3': 292, 'mu10': 319, 'mu30': 406, 'mu100': 516, 'mu300': 641, 'mu1000': 681}
+
+== <0.03x: n = 50; LP feasible at 1.4 sigma 100.0%; solver DEM inside 1.4 sigma (all six channels) 46%
+   tol 1: 100% of pixels, solver inside 1.4 sigma 46%
+   mu     max violation p50   p90   p99   max | within 0.5  0.2  0.1 0.05 | v/vhat p10  p50  p90 (n)   | not in LP | DEM MSE  EM    94A  94A in band
+       1               0.017 0.042 0.097  0.10 |        100  100   98   94 |       1.00 1.00 1.00 (   73) |        3% | 3.7e-06  0.98  0.40  100%
+       3               0.006 0.015 0.032  0.03 |        100  100  100  100 |       1.00 1.00 1.00 (   73) |        0% | 7.19e-07  1.00  0.40  100%
+      10               0.002 0.004 0.011  0.01 |        100  100  100  100 |       1.00 1.00 1.00 (   73) |        0% | 5.86e-07  1.00  0.40  100%
+      30               0.001 0.001 0.004  0.00 |        100  100  100  100 |       1.00 1.00 1.00 (   73) |        0% | 5.69e-07  1.00  0.40  100%
+     100               0.000 0.000 0.001  0.00 |        100  100  100  100 |       1.00 1.00 1.00 (   73) |        0% | 5.77e-07  1.00  0.40  100%
+     300               0.000 0.000 0.000  0.00 |        100  100  100  100 |       1.00 1.00 1.00 (   72) |        0% | 5.81e-07  1.00  0.40  100%
+    1000               0.000 0.000 0.000  0.00 |        100  100  100  100 |       1.00 1.00 1.00 (   65) |        0% | 5.82e-07  1.00  0.40  100%
+   solver DEM: DEM MSE 0, EM 1.00, 94A 0.40, 94A in band 100%
+   net_adopted: max violation p50 0.000 p90 0.000 p99 0.000 max 0.00; within 0.1: 100%; DEM MSE 1.22e-05, EM 1.04, 94A 0.41; violated channel: 94 -%, 131 -%, 171 -%, 193 -%, 211 -%, 335 -%
+   lambda (active side, weight units per DN/s) p50 / p99 / max: 94 0.000 / 0.000 / 0.000; 131 0.000 / 0.000 / 0.000; 171 0.000 / 0.020 / 0.020; 193 0.000 / 0.035 / 0.037; 211 0.022 / 0.100 / 0.102; 335 0.000 / 0.000 / 0.000
+   lambda_94 above the single-channel bound: 0%; 94 A active at 0% of pixels
+   mu needed (p50 / p90 / p99 / max): eps 0.5: 0.0 / 0.1 / 0 / 0 | eps 0.2: 0.1 / 0.2 / 1 / 1 | eps 0.1: 0.2 / 0.4 / 1 / 1 | eps 0.05: 0.3 / 0.9 / 2 / 2
+   dearest channel: 94 6%, 131 0%, 171 8%, 193 30%, 211 56%, 335 0%
+   1/mu law over mu >= 10: CV of mu x violation p50 0.000, p90 0.002 over 65 pixel-channels (89% of mu = 10 violations persist to mu = 1000)
+
+== 0.03-0.1x: n = 296; LP feasible at 1.4 sigma 99.3%; solver DEM inside 1.4 sigma (all six channels) 25%
+   tol 1: 99% of pixels, solver inside 1.4 sigma 26%, tol 3: 1% of pixels, solver inside 1.4 sigma 0%, inside its own band 50%
+   mu     max violation p50   p90   p99   max | within 0.5  0.2  0.1 0.05 | v/vhat p10  p50  p90 (n)   | not in LP | DEM MSE  EM    94A  94A in band
+       1               0.030 0.126 0.348  0.54 |        100   96   85   70 |       0.78 1.00 1.00 (  544) |        0% | 0.00339  0.91  0.44  100%
+       3               0.010 0.046 0.187  0.43 |        100   99   97   92 |       1.00 1.00 1.00 (  546) |        0% | 0.00361  0.93  0.44  100%
+      10               0.003 0.014 0.151  0.21 |        100  100   98   97 |       1.00 1.00 1.00 (  549) |        0% | 0.00213  0.97  0.45  100%
+      30               0.001 0.005 0.069  0.15 |        100  100  100   98 |       1.00 1.00 1.00 (  549) |        0% | 0.00132  0.99  0.45  100%
+     100               0.000 0.001 0.027  0.16 |        100  100  100  100 |       1.00 1.00 1.00 (  551) |        0% |  0.0011  1.01  0.45  100%
+     300               0.000 0.000 0.009  0.16 |        100  100  100  100 |       1.00 1.00 1.00 (  552) |        0% | 0.00107  1.01  0.45  100%
+    1000               0.000 0.000 0.003  0.16 |        100  100  100  100 |       1.00 1.00 1.00 (  523) |        0% | 0.00107  1.01  0.45  100%
+   solver DEM: DEM MSE 0, EM 1.00, 94A 0.45, 94A in band 100%
+   net_adopted: max violation p50 0.000 p90 0.000 p99 0.032 max 0.18; within 0.1: 100%; DEM MSE 0.00129, EM 1.02, 94A 0.44; violated channel: 94 0%, 131 0%, 171 0%, 193 42%, 211 58%, 335 0%
+   lambda (active side, weight units per DN/s) p50 / p99 / max: 94 0.000 / 0.000 / 0.000; 131 0.000 / 0.110 / 0.332; 171 0.001 / 0.109 / 5.070; 193 0.007 / 0.582 / 0.724; 211 0.026 / 3.724 / 6.012; 335 0.000 / 0.000 / 0.000
+   lambda_94 above the single-channel bound: 0%; 94 A active at 0% of pixels
+   mu needed (p50 / p90 / p99 / max): eps 0.5: 0.1 / 0.3 / 4 / 7 | eps 0.2: 0.2 / 0.7 / 10 / 18 | eps 0.1: 0.3 / 1.4 / 21 / 36 | eps 0.05: 0.6 / 2.7 / 42 / 72
+   dearest channel: 94 5%, 131 0%, 171 6%, 193 30%, 211 59%, 335 0%
+   1/mu law over mu >= 10: CV of mu x violation p50 0.000, p90 0.057 over 520 pixel-channels (95% of mu = 10 violations persist to mu = 1000)
+
+== 0.1-0.3x: n = 608; LP feasible at 1.4 sigma 98.7%; solver DEM inside 1.4 sigma (all six channels) 21%
+   tol 1: 99% of pixels, solver inside 1.4 sigma 21%, tol 3: 1% of pixels, solver inside 1.4 sigma 0%, inside its own band 38%
+   mu     max violation p50   p90   p99   max | within 0.5  0.2  0.1 0.05 | v/vhat p10  p50  p90 (n)   | not in LP | DEM MSE  EM    94A  94A in band
+       1               0.058 0.167 0.461  0.89 |         99   93   74   43 |       0.51 1.00 1.00 ( 1307) |        3% | 0.00852  0.95  0.62  100%
+       3               0.021 0.068 0.335  0.87 |         99   98   95   84 |       0.82 1.00 1.00 ( 1321) |        1% | 0.00808  0.97  0.62  100%
+      10               0.006 0.023 0.337  0.87 |        100   99   98   97 |       1.00 1.00 1.00 ( 1327) |        1% | 0.00504  0.99  0.63  100%
+      30               0.002 0.009 0.200  0.87 |        100   99   98   98 |       1.00 1.00 1.00 ( 1331) |        0% | 0.00603  1.00  0.63  100%
+     100               0.001 0.003 0.190  0.87 |        100   99   99   98 |       1.00 1.00 1.00 ( 1325) |        0% | 0.00737  1.01  0.63  100%
+     300               0.000 0.001 0.188  0.87 |        100   99   99   99 |       1.00 1.00 1.00 ( 1329) |        0% | 0.00725  1.01  0.63  100%
+    1000               0.000 0.000 0.187  0.87 |        100   99   99   99 |       1.00 1.00 1.00 ( 1313) |        0% | 0.00726  1.02  0.63  100%
+   solver DEM: DEM MSE 0, EM 1.00, 94A 0.63, 94A in band 100%
+   net_adopted: max violation p50 0.000 p90 0.000 p99 0.212 max 0.92; within 0.1: 99%; DEM MSE 0.00997, EM 1.11, 94A 0.66; violated channel: 94 0%, 131 3%, 171 9%, 193 28%, 211 59%, 335 0%
+   lambda (active side, weight units per DN/s) p50 / p99 / max: 94 0.000 / 0.000 / 0.000; 131 0.000 / 0.334 / 1.734; 171 0.002 / 0.778 / 6.165; 193 0.006 / 0.464 / 0.724; 211 0.025 / 0.656 / 6.012; 335 0.000 / 0.564 / 1.042
+   lambda_94 above the single-channel bound: 0%; 94 A active at 0% of pixels
+   mu needed (p50 / p90 / p99 / max): eps 0.5: 0.1 / 0.5 / 3 / 13 | eps 0.2: 0.3 / 1.2 / 8 / 32 | eps 0.1: 0.6 / 2.5 / 15 / 65 | eps 0.05: 1.3 / 5.0 / 31 / 130
+   dearest channel: 94 2%, 131 12%, 171 6%, 193 29%, 211 49%, 335 1%
+   1/mu law over mu >= 10: CV of mu x violation p50 0.000, p90 0.055 over 1,302 pixel-channels (98% of mu = 10 violations persist to mu = 1000)
+
+== 0.3-1x: n = 1,000; LP feasible at 1.4 sigma 94.3%; solver DEM inside 1.4 sigma (all six channels) 12%
+   tol 1: 94% of pixels, solver inside 1.4 sigma 13%, tol 3: 6% of pixels, solver inside 1.4 sigma 0%, inside its own band 23%, tol 5: 0% of pixels, solver inside 1.4 sigma 0%, inside its own band 100%
+   mu     max violation p50   p90   p99   max | within 0.5  0.2  0.1 0.05 | v/vhat p10  p50  p90 (n)   | not in LP | DEM MSE  EM    94A  94A in band
+       1               0.162 0.503 1.083  2.73 |         90   60   31   10 |       0.16 1.00 1.08 ( 2475) |       10% |   0.106  0.86  0.82   96%
+       3               0.067 0.362 0.956  2.72 |         95   79   63   39 |       0.26 1.00 1.00 ( 2562) |        7% |  0.0817  0.90  0.83   95%
+      10               0.023 0.196 0.781  2.70 |         98   90   77   68 |       0.50 1.00 1.00 ( 2669) |        4% |  0.0515  0.95  0.85   94%
+      30               0.008 0.078 0.719  2.70 |         98   95   91   83 |       0.76 1.00 1.00 ( 2701) |        2% |  0.0463  0.99  0.87   94%
+     100               0.002 0.028 0.711  2.70 |         98   97   94   93 |       0.99 1.00 1.00 ( 2737) |        1% |  0.0638  1.01  0.87   94%
+     300               0.001 0.010 0.696  2.70 |         98   97   95   94 |       1.00 1.00 1.00 ( 2750) |        0% |  0.0731  1.02  0.87   94%
+    1000               0.000 0.003 0.696  2.70 |         98   97   96   95 |       1.00 1.00 1.00 ( 2703) |        0% |  0.0764  1.02  0.87   94%
+   solver DEM: DEM MSE 0, EM 1.00, 94A 0.87, 94A in band 96%
+   net_adopted: max violation p50 0.000 p90 0.011 p99 0.734 max 2.77; within 0.1: 95%; DEM MSE 0.0908, EM 1.10, 94A 0.92; violated channel: 94 23%, 131 18%, 171 1%, 193 9%, 211 38%, 335 9%
+   lambda (active side, weight units per DN/s) p50 / p99 / max: 94 0.000 / 15.199 / 84.374; 131 0.000 / 1.822 / 27.684; 171 0.002 / 0.099 / 2.764; 193 0.007 / 0.121 / 0.592; 211 0.022 / 0.292 / 4.851; 335 0.000 / 2.430 / 8.982
+   lambda_94 above the single-channel bound: 3%; 94 A active at 5% of pixels
+   mu needed (p50 / p90 / p99 / max): eps 0.5: 0.5 / 4.1 / 29 / 75 | eps 0.2: 1.1 / 10.3 / 72 / 189 | eps 0.1: 2.3 / 20.6 / 144 / 377 | eps 0.05: 4.5 / 41.1 / 289 / 754
+   dearest channel: 94 3%, 131 26%, 171 3%, 193 17%, 211 26%, 335 25%
+   1/mu law over mu >= 10: CV of mu x violation p50 0.000, p90 0.323 over 2,544 pixel-channels (91% of mu = 10 violations persist to mu = 1000)
+
+== 1-1.8x: n = 1,000; LP feasible at 1.4 sigma 87.6%; solver DEM inside 1.4 sigma (all six channels) 5%
+   tol 1: 88% of pixels, solver inside 1.4 sigma 5%, tol 3: 12% of pixels, solver inside 1.4 sigma 0%, inside its own band 19%
+   mu     max violation p50   p90   p99   max | within 0.5  0.2  0.1 0.05 | v/vhat p10  p50  p90 (n)   | not in LP | DEM MSE  EM    94A  94A in band
+       1               0.430 1.073 1.665  2.25 |         59   16    5    1 |       0.10 0.79 1.32 ( 2715) |       14% |   0.674  0.82  0.91   82%
+       3               0.222 0.752 1.357  2.23 |         76   46   22    6 |       0.18 0.95 1.09 ( 2926) |        8% |   0.469  0.88  0.93   82%
+      10               0.104 0.415 1.207  2.22 |         92   69   49   33 |       0.37 1.00 1.00 ( 3099) |        4% |   0.305  0.96  0.97   78%
+      30               0.043 0.275 1.173  2.17 |         94   88   76   55 |       0.60 1.00 1.00 ( 3188) |        2% |   0.359  1.00  0.99   77%
+     100               0.014 0.183 1.162  2.17 |         95   91   86   82 |       0.86 1.00 1.00 ( 3232) |        1% |   0.511  1.02  0.99   77%
+     300               0.005 0.113 1.162  2.17 |         95   91   90   86 |       0.97 1.00 1.00 ( 3221) |        0% |   0.569  1.03  1.00   78%
+    1000               0.001 0.085 1.162  2.17 |         95   91   90   88 |       0.96 1.00 1.00 ( 3172) |        0% |    0.63  1.04  1.00   78%
+   solver DEM: DEM MSE 0, EM 1.00, 94A 1.00, 94A in band 86%
+   net_adopted: max violation p50 0.000 p90 0.170 p99 1.192 max 2.17; within 0.1: 87%; DEM MSE 0.571, EM 1.08, 94A 1.02; violated channel: 94 43%, 131 11%, 171 1%, 193 11%, 211 24%, 335 10%
+   lambda (active side, weight units per DN/s) p50 / p99 / max: 94 0.000 / 42.768 / 254.271; 131 0.029 / 2.251 / 27.397; 171 0.005 / 0.066 / 1.246; 193 0.012 / 0.150 / 0.739; 211 0.031 / 0.409 / 0.991; 335 0.000 / 8.463 / 32.012
+   lambda_94 above the single-channel bound: 11%; 94 A active at 17% of pixels
+   mu needed (p50 / p90 / p99 / max): eps 0.5: 2.3 / 8.7 / 54 / 377 | eps 0.2: 5.7 / 21.8 / 135 / 943 | eps 0.1: 11.4 / 43.5 / 269 / 1885 | eps 0.05: 22.8 / 87.1 / 539 / 3771
+   dearest channel: 94 11%, 131 26%, 171 1%, 193 6%, 211 13%, 335 43%
+   1/mu law over mu >= 10: CV of mu x violation p50 0.022, p90 0.398 over 2,960 pixel-channels (91% of mu = 10 violations persist to mu = 1000)
+
+== 1.8-3.2x: n = 1,000; LP feasible at 1.4 sigma 90.2%; solver DEM inside 1.4 sigma (all six channels) 4%
+   tol 1: 90% of pixels, solver inside 1.4 sigma 5%, tol 3: 10% of pixels, solver inside 1.4 sigma 0%, inside its own band 18%, tol 5: 0% of pixels, solver inside 1.4 sigma 0%, inside its own band 0%
+   mu     max violation p50   p90   p99   max | within 0.5  0.2  0.1 0.05 | v/vhat p10  p50  p90 (n)   | not in LP | DEM MSE  EM    94A  94A in band
+       1               0.626 1.328 2.253  4.07 |         34    4    1    0 |       0.16 0.86 1.56 ( 3014) |       15% |    1.79  0.84  0.92   81%
+       3               0.294 0.911 1.745  3.73 |         67   31    9    2 |       0.24 1.00 1.17 ( 3223) |        8% |    1.04  0.90  0.94   80%
+      10               0.126 0.477 1.524  3.69 |         91   66   45   17 |       0.44 1.00 1.01 ( 3383) |        4% |   0.645  0.97  0.98   78%
+      30               0.050 0.255 1.405  3.70 |         93   89   76   50 |       0.70 1.00 1.00 ( 3475) |        2% |   0.791  1.00  1.00   77%
+     100               0.016 0.130 1.345  3.70 |         95   91   89   84 |       0.88 1.00 1.00 ( 3506) |        1% |    1.14  1.01  1.00   77%
+     300               0.005 0.086 1.346  3.70 |         95   92   90   89 |       0.99 1.00 1.00 ( 3496) |        0% |    1.38  1.02  1.00   77%
+    1000               0.002 0.036 1.346  3.70 |         95   92   91   90 |       1.00 1.00 1.00 ( 3476) |        0% |     1.5  1.02  1.00   77%
+   solver DEM: DEM MSE 0, EM 1.00, 94A 1.01, 94A in band 84%
+   net_adopted: max violation p50 0.000 p90 0.179 p99 1.379 max 3.70; within 0.1: 89%; DEM MSE 1.33, EM 1.05, 94A 1.02; violated channel: 94 47%, 131 4%, 171 1%, 193 9%, 211 28%, 335 12%
+   lambda (active side, weight units per DN/s) p50 / p99 / max: 94 0.000 / 30.512 / 188.060; 131 0.078 / 0.895 / 5.161; 171 0.005 / 0.048 / 0.261; 193 0.012 / 0.128 / 0.558; 211 0.038 / 0.236 / 3.301; 335 0.010 / 3.317 / 11.779
+   lambda_94 above the single-channel bound: 9%; 94 A active at 18% of pixels
+   mu needed (p50 / p90 / p99 / max): eps 0.5: 2.7 / 9.5 / 56 / 311 | eps 0.2: 6.7 / 23.8 / 140 / 778 | eps 0.1: 13.4 / 47.5 / 280 / 1555 | eps 0.05: 26.8 / 95.0 / 561 / 3111
+   dearest channel: 94 11%, 131 29%, 171 0%, 193 4%, 211 15%, 335 41%
+   1/mu law over mu >= 10: CV of mu x violation p50 0.020, p90 0.385 over 3,214 pixel-channels (90% of mu = 10 violations persist to mu = 1000)
+
+== 3.2-10x: n = 1,000; LP feasible at 1.4 sigma 96.2%; solver DEM inside 1.4 sigma (all six channels) 4%
+   tol 1: 96% of pixels, solver inside 1.4 sigma 4%, tol 3: 4% of pixels, solver inside 1.4 sigma 0%, inside its own band 17%, tol 5: 0% of pixels, solver inside 1.4 sigma 0%, inside its own band 0%
+   mu     max violation p50   p90   p99   max | within 0.5  0.2  0.1 0.05 | v/vhat p10  p50  p90 (n)   | not in LP | DEM MSE  EM    94A  94A in band
+       1               0.996 2.173 3.476  4.56 |         11    1    0    0 |       0.16 0.79 1.74 ( 3229) |       25% |    15.1  0.76  0.78   72%
+       3               0.570 1.177 2.030  3.85 |         46   10    2    1 |       0.24 0.93 1.27 ( 3683) |       12% |    6.41  0.86  0.84   74%
+      10               0.232 0.478 1.315  3.89 |         91   44   23    5 |       0.43 1.00 1.03 ( 3976) |        5% |    2.04  0.95  0.91   73%
+      30               0.083 0.204 1.234  3.86 |         97   90   62   33 |       0.64 1.00 1.00 ( 4078) |        2% |    1.49  0.98  0.93   72%
+     100               0.025 0.073 1.000  3.87 |         98   96   93   83 |       0.88 1.00 1.00 ( 4109) |        1% |    1.82  1.00  0.94   72%
+     300               0.008 0.026 0.996  3.87 |         98   97   96   94 |       0.95 1.00 1.00 ( 4107) |        0% |     2.1  1.00  0.94   72%
+    1000               0.002 0.008 0.995  3.87 |         98   97   97   96 |       0.90 1.00 1.00 ( 4035) |        0% |    2.14  1.00  0.94   73%
+   solver DEM: DEM MSE 0, EM 1.00, 94A 0.95, 94A in band 83%
+   net_adopted: max violation p50 0.000 p90 0.074 p99 1.232 max 4.01; within 0.1: 92%; DEM MSE 2.09, EM 1.02, 94A 0.96; violated channel: 94 46%, 131 4%, 171 1%, 193 10%, 211 33%, 335 7%
+   lambda (active side, weight units per DN/s) p50 / p99 / max: 94 0.000 / 31.339 / 220.961; 131 0.069 / 0.577 / 5.835; 171 0.004 / 0.040 / 0.287; 193 0.009 / 0.085 / 0.642; 211 0.035 / 0.210 / 1.052; 335 0.569 / 2.772 / 35.009
+   lambda_94 above the single-channel bound: 11%; 94 A active at 26% of pixels
+   mu needed (p50 / p90 / p99 / max): eps 0.5: 5.1 / 13.5 / 89 / 570 | eps 0.2: 12.6 / 33.7 / 223 / 1426 | eps 0.1: 25.3 / 67.5 / 446 / 2852 | eps 0.05: 50.6 / 134.9 / 891 / 5703
+   dearest channel: 94 15%, 131 20%, 171 0%, 193 1%, 211 13%, 335 52%
+   1/mu law over mu >= 10: CV of mu x violation p50 0.032, p90 0.447 over 3,747 pixel-channels (89% of mu = 10 violations persist to mu = 1000)
+
+== 10-32x: n = 1,000; LP feasible at 1.4 sigma 99.5%; solver DEM inside 1.4 sigma (all six channels) 2%
+   tol 1: 100% of pixels, solver inside 1.4 sigma 2%, tol 3: 0% of pixels, solver inside 1.4 sigma 0%, inside its own band 25%, tol 5: 0% of pixels, solver inside 1.4 sigma 0%, inside its own band 0%
+   mu     max violation p50   p90   p99   max | within 0.5  0.2  0.1 0.05 | v/vhat p10  p50  p90 (n)   | not in LP | DEM MSE  EM    94A  94A in band
+       1               2.862 4.436 5.923  8.01 |          0    0    0    0 |       0.19 0.72 1.92 ( 3967) |       26% |     315  0.56  0.44   26%
+       3               1.413 2.112 3.060  5.99 |          7    0    0    0 |       0.32 0.89 1.42 ( 4579) |       13% |    97.6  0.78  0.66   30%
+      10               0.479 0.781 1.373  3.83 |         54    8    1    0 |       0.57 1.00 1.10 ( 4869) |        5% |    25.2  0.92  0.80   37%
+      30               0.169 0.290 0.609  3.69 |         97   65   14    4 |       0.78 1.00 1.01 ( 4961) |        3% |    8.39  0.97  0.85   39%
+     100               0.051 0.094 0.261  3.65 |        100   98   91   48 |       0.92 1.00 1.00 ( 4973) |        1% |    5.55  0.99  0.87   40%
+     300               0.017 0.034 0.108  3.63 |        100  100   99   96 |       0.96 1.00 1.00 ( 4915) |        0% |    5.03  0.99  0.88   39%
+    1000               0.005 0.010 0.032  4.25 |        100  100  100   99 |       0.86 1.00 1.06 ( 4812) |        0% |    6.33  1.00  0.88   40%
+   solver DEM: DEM MSE 0, EM 1.00, 94A 0.88, 94A in band 71%
+   net_adopted: max violation p50 0.000 p90 0.157 p99 1.114 max 4.76; within 0.1: 84%; DEM MSE 16.9, EM 1.02, 94A 0.90; violated channel: 94 50%, 131 8%, 171 3%, 193 6%, 211 20%, 335 12%
+   lambda (active side, weight units per DN/s) p50 / p99 / max: 94 0.584 / 7.830 / 74.323; 131 0.109 / 0.890 / 2.387; 171 0.007 / 0.038 / 107.192; 193 0.014 / 0.066 / 0.925; 211 0.045 / 0.200 / 12.277; 335 0.626 / 2.342 / 27.582
+   lambda_94 above the single-channel bound: 14%; 94 A active at 61% of pixels
+   mu needed (p50 / p90 / p99 / max): eps 0.5: 10.5 / 20.4 / 49 / 885 | eps 0.2: 26.3 / 51.1 / 124 / 2212 | eps 0.1: 52.5 / 102.1 / 247 / 4423 | eps 0.05: 105.0 / 204.2 / 494 / 8846
+   dearest channel: 94 31%, 131 10%, 171 0%, 193 0%, 211 3%, 335 56%
+   1/mu law over mu >= 10: CV of mu x violation p50 0.061, p90 0.406 over 4,474 pixel-channels (87% of mu = 10 violations persist to mu = 1000)
+
+== >=32x: n = 6,000; LP feasible at 1.4 sigma 87.9%; solver DEM inside 1.4 sigma (all six channels) 1%
+   tol 1: 88% of pixels, solver inside 1.4 sigma 1%, tol 3: 6% of pixels, solver inside 1.4 sigma 0%, inside its own band 1%, tol 5: 6% of pixels, solver inside 1.4 sigma 0%, inside its own band 3%
+   mu     max violation p50   p90   p99   max | within 0.5  0.2  0.1 0.05 | v/vhat p10  p50  p90 (n)   | not in LP | DEM MSE  EM    94A  94A in band
+       1               7.246 20.484 34.534 56.18 |          0    0    0    0 |       0.14 0.66 2.39 (17548) |       38% | 2.33e+05  0.30  0.26    1%
+       3               3.400 10.138 17.921 30.41 |          0    0    0    0 |       0.11 0.73 1.64 (21022) |       25% | 1.15e+05  0.70  0.65    1%
+      10               1.367 5.857 11.133 24.40 |          1    0    0    0 |       0.22 0.88 1.21 (24957) |       10% | 6.91e+04  0.90  0.81    2%
+      30               0.554 3.117 6.460 15.29 |         47    6    0    0 |       0.41 1.00 1.09 (26436) |        4% | 3.1e+04  0.97  0.89    4%
+     100               0.179 2.013 4.611  6.38 |         77   53   27    2 |       0.60 1.00 1.06 (26510) |        2% | 1.36e+04  1.00  0.93    5%
+     300               0.060 1.182 4.512  5.71 |         86   78   68   44 |       0.65 1.00 1.11 (26100) |        1% | 1.01e+04  1.01  0.94    5%
+    1000               0.018 0.965 4.497  5.70 |         89   86   84   77 |       0.62 1.00 1.23 (25661) |        0% | 1.25e+04  1.01  0.95    6%
+   solver DEM: DEM MSE 0, EM 1.00, 94A 0.94, 94A in band 46%
+   net_adopted: max violation p50 0.787 p90 10.091 p99 29.440 max 1695.26; within 0.1: 26%; DEM MSE 1e+05, EM 0.94, 94A 0.78; violated channel: 94 64%, 131 2%, 171 8%, 193 3%, 211 13%, 335 10%
+   lambda (active side, weight units per DN/s) p50 / p99 / max: 94 1.457 / 8.759 / 45.150; 131 0.174 / 2.221 / 13.797; 171 0.011 / 0.449 / 18.102; 193 0.020 / 0.753 / 4.392; 211 0.061 / 2.668 / 10.127; 335 0.562 / 27.995 / 324.063
+   lambda_94 above the single-channel bound: 49%; 94 A active at 96% of pixels
+   mu needed (p50 / p90 / p99 / max): eps 0.5: 33.7 / 152.6 / 764 / 12760 | eps 0.2: 84.2 / 381.6 / 1909 / 31900 | eps 0.1: 168.4 / 763.2 / 3818 / 63801 | eps 0.05: 336.9 / 1526.3 / 7636 / 127601
+   dearest channel: 94 70%, 131 13%, 171 0%, 193 2%, 211 0%, 335 15%
+   1/mu law over mu >= 10: CV of mu x violation p50 0.193, p90 0.591 over 21,787 pixel-channels (77% of mu = 10 violations persist to mu = 1000)
+
+== all: n = 11,954; LP feasible at 1.4 sigma 91.2%; solver DEM inside 1.4 sigma (all six channels) 5%
+   tol 1: 91% of pixels, solver inside 1.4 sigma 5%, tol 3: 6% of pixels, solver inside 1.4 sigma 0%, inside its own band 9%, tol 5: 3% of pixels, solver inside 1.4 sigma 0%, inside its own band 3%
+   mu     max violation p50   p90   p99   max | within 0.5  0.2  0.1 0.05 | v/vhat p10  p50  p90 (n)   | not in LP | DEM MSE  EM    94A  94A in band
+       1               4.158 15.327 31.112 56.18 |         24   14    9    5 |       0.15 0.77 1.95 (34872) |       30% | 1.17e+05  0.31  0.26   38%
+       3               1.834 7.241 16.124 30.41 |         32   22   16   11 |       0.16 0.87 1.43 (39935) |       19% | 5.76e+04  0.71  0.65   39%
+      10               0.634 3.452 9.952 24.40 |         44   31   24   18 |       0.31 1.00 1.11 (44902) |        8% | 3.47e+04  0.90  0.81   39%
+      30               0.224 1.655 5.605 15.29 |         71   46   35   27 |       0.50 1.00 1.03 (46792) |        3% | 1.56e+04  0.97  0.89   40%
+     100               0.069 0.734 4.090  6.38 |         87   74   59   41 |       0.71 1.00 1.00 (47016) |        1% | 6.82e+03  1.00  0.93   41%
+     300               0.023 0.321 3.945  5.71 |         92   87   81   68 |       0.78 1.00 1.00 (46542) |        1% | 5.05e+03  1.01  0.94   41%
+    1000               0.007 0.119 3.939  5.70 |         93   91   89   86 |       0.75 1.00 1.07 (45760) |        0% | 6.27e+03  1.01  0.95   41%
+   solver DEM: DEM MSE 0, EM 1.00, 94A 0.94, 94A in band 66%
+   net_adopted: max violation p50 0.024 p90 4.682 p99 20.221 max 1695.26; within 0.1: 58%; DEM MSE 5.03e+04, EM 0.94, 94A 0.78; violated channel: 94 59%, 131 3%, 171 6%, 193 4%, 211 17%, 335 10%
+   lambda (active side, weight units per DN/s) p50 / p99 / max: 94 0.607 / 15.864 / 254.271; 131 0.098 / 1.683 / 27.684; 171 0.006 / 0.309 / 107.192; 193 0.013 / 0.645 / 4.392; 211 0.045 / 2.156 / 12.277; 335 0.504 / 27.571 / 324.063
+   lambda_94 above the single-channel bound: 28%; 94 A active at 58% of pixels
+   mu needed (p50 / p90 / p99 / max): eps 0.5: 12.8 / 73.3 / 579 / 12760 | eps 0.2: 32.1 / 183.3 / 1447 / 31900 | eps 0.1: 64.2 / 366.6 / 2893 / 63801 | eps 0.05: 128.4 / 733.3 / 5786 / 127601
+   dearest channel: 94 40%, 131 17%, 171 1%, 193 6%, 211 10%, 335 26%
+   1/mu law over mu >= 10: CV of mu x violation p50 0.103, p90 0.518 over 40,613 pixel-channels (83% of mu = 10 violations persist to mu = 1000)

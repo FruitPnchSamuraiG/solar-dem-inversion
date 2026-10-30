@@ -1,0 +1,18 @@
+# By solver tolLevel and position on the Sun: BP track, our test split
+blocks 9,792 of 9,792; pixels 160,432,128; other tolLevel values 0
+
+## tolLevel (0 unsolved, 1 tight band, 3 and 5 relaxed); DEM metrics on pixels with a solver DEM
+tol         pixels   share  bright      DEM MSE lf/sup      EM% lf/sup        AIA MSE lf/sup/sol    in 1.4s lf/sup/sol    in own band lf/sup/sol
+0           14,959   0.01%   no solver DEM; AIA MSE lf/sup 86961792705.2/5274225.8; in 1.4 sigma 31/43
+1      146,622,145  91.39%   11.6%    4.2138/3.0574        9.3/14.3       453.0/295.7/64.9                  99/93/79                  99/93/79
+3       13,666,906   8.52%   21.1%   13.8182/8.4141       46.7/52.1      8520.9/339.0/683.2                 60/77/39                100/100/86
+5          128,118   0.08%   37.1%  741.8953/575.2695     44.5/48.3    119352.6/19118.7/3179.5                35/59/34                  98/99/83
+in-band shares are means over the six channels; per-channel values are in the JSON
+
+## Position on the Sun (block positions replayed from the staging draw; centre 2048, radius 1600 px)
+check: off-limb pixels must be faint in 171 A
+region           pixels  mean 171   171<5    tol0  clamp any   low lab   low sup   low sol  high lab  high sup  high sol     dip   spike
+disk         67,819,641     175.7    0.0%    0.0%     26.22%     0.07%     0.01%     0.22%    0.000%    0.002%    0.007%  41.37%  5.600%
+limb         18,835,936     346.0    0.0%    0.0%     15.62%     0.24%     0.01%     0.68%    0.000%    0.002%    0.008%  27.42%  3.070%
+off_limb     73,776,551      25.2   51.0%    0.0%     63.21%     0.04%     0.01%     0.12%    0.006%    0.003%    0.019%  76.85% 11.814%
+clamp by channel and region (% of pixels): disk 94:11.96 131:4.99 171:0.00 193:0.02 211:0.06 335:12.44; limb 94:6.92 131:1.61 171:0.00 193:0.00 211:0.00 335:8.36; off_limb 94:24.75 131:22.68 171:19.87 193:16.80 211:11.59 335:23.53

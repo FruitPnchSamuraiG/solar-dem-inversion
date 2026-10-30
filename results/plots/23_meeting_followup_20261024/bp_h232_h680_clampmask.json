@@ -1,0 +1,190 @@
+{
+  "model": "/home/hsr3649/projects/dem/output/experiments/followup/scaled_mlp6_barrier_h680_sqrt_ff12_resample_clampmask_mu100_ep120.pt",
+  "data": "/projects/rps/dff6142/fouheylab/solar_dem/bp_AIA_hofdeconv_full_DS",
+  "reference": "bp",
+  "n_blocks": 48960,
+  "bright_thresholds": [
+    3.1212000846862793,
+    16.998600006103516,
+    448.8948059082031,
+    498.3443908691406,
+    190.73880004882812,
+    10.332599639892578
+  ],
+  "rows": {
+    "full": {
+      "dem_mse": 1.0820618373499824,
+      "em_rel_err_pct": 10.965152522580938,
+      "mean_pixel_em_rel_err_pct": 24.689380105693214,
+      "dem_bin_rel_err_pct": 16.508415713601522,
+      "w1_dex": 0.0702919447179535,
+      "n_pixels": 705016779,
+      "n_w1_pixels": 655680764,
+      "per_pixel_dem_sse_distribution": {
+        "method": "streaming_log10_histogram",
+        "bin_width_dex": 0.0001,
+        "per_pixel_dem_sse_quantiles_approx": {
+          "p50": 0.03146661308079727,
+          "p90": 1.8224264081853785,
+          "p99": 25.73653050127599,
+          "p99.9": 168.98571748468268,
+          "p99.99": 987.0746533573106
+        },
+        "upper_tail_sse_share_approx": {
+          "top_1_pct": {
+            "n_pixels": 7050168,
+            "min_sse_approx": 25.733567644261147,
+            "total_sse_share_pct_approx": 96.36343256567925
+          },
+          "top_0.1_pct": {
+            "n_pixels": 705017,
+            "min_sse_approx": 168.9662634048706,
+            "total_sse_share_pct_approx": 93.7588239352466
+          },
+          "top_0.01_pct": {
+            "n_pixels": 70502,
+            "min_sse_approx": 986.9610187296468,
+            "total_sse_share_pct_approx": 92.25485071879346
+          }
+        },
+        "max_per_pixel_dem_sse": 823223479.4328564
+      },
+      "leave_one_worst_pixel_out": {
+        "dem_mse": 1.017191556115047,
+        "em_rel_err_pct": 10.964271608484248,
+        "mean_pixel_em_rel_err_pct": 24.689380046126878,
+        "dem_bin_rel_err_pct": 16.508399993980742,
+        "w1_dex": 0.07029194476632972,
+        "worst_pixel": {
+          "sq": 823223479.4328564,
+          "em_abs_err": 45395.06375663591,
+          "em_abs_truth": 68074.13701198334,
+          "pixel_em_rel": 0.6668464568856622,
+          "bin_rel": 1997.8388658534254,
+          "w1": 0.038572587307753245,
+          "w1_valid": true,
+          "block": 12993,
+          "row": 40,
+          "col": 73
+        },
+        "worst_pixel_mse_share_pct": 5.995062429758737
+      }
+    },
+    "bright": {
+      "dem_mse": 10.399581814811315,
+      "em_rel_err_pct": 7.214847948210868,
+      "mean_pixel_em_rel_err_pct": 12.59453813457217,
+      "dem_bin_rel_err_pct": 33.783912602967725,
+      "w1_dex": 0.04699785899596774,
+      "n_pixels": 71338420,
+      "n_w1_pixels": 71332644,
+      "per_pixel_dem_sse_distribution": {
+        "method": "streaming_log10_histogram",
+        "bin_width_dex": 0.0001,
+        "per_pixel_dem_sse_quantiles_approx": {
+          "p50": 1.1615823382512194,
+          "p90": 18.43953648560809,
+          "p99": 164.49397671795873,
+          "p99.9": 976.4499780697727,
+          "p99.99": 18102.977014987733
+        },
+        "upper_tail_sse_share_approx": {
+          "top_1_pct": {
+            "n_pixels": 713385,
+            "min_sse_approx": 164.4750397391459,
+            "total_sse_share_pct_approx": 96.41383748101696
+          },
+          "top_0.1_pct": {
+            "n_pixels": 71339,
+            "min_sse_approx": 976.3375665826446,
+            "total_sse_share_pct_approx": 94.87014272088467
+          },
+          "top_0.01_pct": {
+            "n_pixels": 7134,
+            "min_sse_approx": 18100.892952707556,
+            "total_sse_share_pct_approx": 93.45872361754074
+          }
+        },
+        "max_per_pixel_dem_sse": 823223479.4328564
+      },
+      "leave_one_worst_pixel_out": {
+        "dem_mse": 9.758487885512322,
+        "em_rel_err_pct": 7.2130254553031685,
+        "mean_pixel_em_rel_err_pct": 12.594537376353694,
+        "dem_bin_rel_err_pct": 33.78375749270522,
+        "w1_dex": 0.04699785911408017,
+        "worst_pixel": {
+          "sq": 823223479.4328564,
+          "em_abs_err": 45395.06375663591,
+          "em_abs_truth": 68074.13701198334,
+          "pixel_em_rel": 0.6668464568856622,
+          "bin_rel": 1997.8388658534254,
+          "w1": 0.038572587307753245,
+          "w1_valid": true,
+          "block": 12993,
+          "row": 40,
+          "col": 73
+        },
+        "worst_pixel_mse_share_pct": 6.164613899930197
+      }
+    },
+    "quiet": {
+      "dem_mse": 0.03311146044348062,
+      "em_rel_err_pct": 14.961770280067332,
+      "mean_pixel_em_rel_err_pct": 26.05099661683784,
+      "dem_bin_rel_err_pct": 14.563569980275389,
+      "w1_dex": 0.07313550434831945,
+      "n_pixels": 633678359,
+      "n_w1_pixels": 584348120,
+      "per_pixel_dem_sse_distribution": {
+        "method": "streaming_log10_histogram",
+        "bin_width_dex": 0.0001,
+        "per_pixel_dem_sse_quantiles_approx": {
+          "p50": 0.020518707475024423,
+          "p90": 0.9518094229146193,
+          "p99": 10.453217816485584,
+          "p99.9": 45.79836774360569,
+          "p99.99": 115.73107840940455
+        },
+        "upper_tail_sse_share_approx": {
+          "top_1_pct": {
+            "n_pixels": 6336784,
+            "min_sse_approx": 10.452014414584394,
+            "total_sse_share_pct_approx": 41.38192508361165
+          },
+          "top_0.1_pct": {
+            "n_pixels": 633679,
+            "min_sse_approx": 45.793095315174405,
+            "total_sse_share_pct_approx": 12.671970665385683
+          },
+          "top_0.01_pct": {
+            "n_pixels": 63368,
+            "min_sse_approx": 115.71775514357104,
+            "total_sse_share_pct_approx": 2.6667094173069614
+          }
+        },
+        "max_per_pixel_dem_sse": 989.4956616519497
+      },
+      "leave_one_worst_pixel_out": {
+        "dem_mse": 0.03311137374512798,
+        "em_rel_err_pct": 14.961767681033395,
+        "mean_pixel_em_rel_err_pct": 26.050919249413568,
+        "dem_bin_rel_err_pct": 14.563565251624912,
+        "w1_dex": 0.07313550297867846,
+        "worst_pixel": {
+          "sq": 989.4956616519497,
+          "em_abs_err": 54.17827751589108,
+          "em_abs_truth": 0.01045044502643408,
+          "pixel_em_rel": 490.5211337349035,
+          "bin_rel": 541.9812671402295,
+          "w1": 0.873482637613207,
+          "w1_valid": true,
+          "block": 39803,
+          "row": 34,
+          "col": 121
+        },
+        "worst_pixel_mse_share_pct": 0.0002619957082195384
+      }
+    }
+  }
+}

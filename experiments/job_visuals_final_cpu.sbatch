@@ -17,6 +17,7 @@
 # more; ENet (2026-10-04) is unchanged. Inputs are the same full-disk solver
 # files the earlier viewer exports used, so the solver and supervised images are
 # reused unchanged. The run name bp_mlp6_h336 is kept so the viewer needs no change.
+# BP_MODEL, BP_RUN, TRACKS and NO_STAGE=1 render a candidate BP model alongside.
 #   mkdir -p logs/visuals
 #   sbatch experiments/job_visuals_final_cpu.sbatch
 set -euo pipefail
@@ -32,9 +33,9 @@ test "${#DATES[@]}" -gt 0
 
 setup_track() {
   if [ "$1" = bp ]; then
-    MODEL=output/experiments/followup/scaled_mlp6_barrier_h336_sqrt_ff12_resample_mu100_ep120_cont.pt
+    MODEL=${BP_MODEL:-output/experiments/followup/scaled_mlp6_barrier_h336_sqrt_ff12_resample_mu100_ep120_cont.pt}
     INPUT_DIR="$SCRATCH/dem/data/lp_AIA_hofdeconv_full"
-    RUN=bp_mlp6_h336
+    RUN=${BP_RUN:-bp_mlp6_h336}
   else
     MODEL=output/experiments/input_encoding/scaled_mlp6_enet_h336_sqrt_ff12_resample.pt
     INPUT_DIR="$VIS_ROOT/references"
@@ -43,7 +44,7 @@ setup_track() {
 }
 
 # Check every input before spending time on the first export.
-for track in bp enet; do
+for track in ${TRACKS:-bp enet}; do
   setup_track "$track"
   test -r "$MODEL"
   for stamp in "${DATES[@]}"; do
@@ -52,7 +53,7 @@ for track in bp enet; do
   done
 done
 
-for track in bp enet; do
+for track in ${TRACKS:-bp enet}; do
   setup_track "$track"
   echo "Model ($track): $MODEL"
   for stamp in "${DATES[@]}"; do
@@ -76,5 +77,6 @@ EOF
       --output "$VIS_ROOT/assets/$RUN/$stamp"
   done
 done
-bash experiments/stage_visualizer_preview.sh
-echo "Completed final-model viewer assets: $VIS_ROOT/preview"
+# NO_STAGE=1 renders assets only, leaving the preview as it is (a candidate run).
+if [ "${NO_STAGE:-0}" != 1 ]; then bash experiments/stage_visualizer_preview.sh; fi
+echo "Completed final-model viewer assets under $VIS_ROOT/assets"

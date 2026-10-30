@@ -166,17 +166,21 @@ class RegressionClassificationResynthLoss(nn.Module):
         total = self.rc_weight * rc_loss + self.resynth_weight * resynth_loss
         return total, {'reg_loss': reg_loss, 'cls_loss': cls_loss, 'resynth_loss': resynth_loss}
     
-def barrier_loss_batch(x, D, I_obs, lb, ub, a_l2=0, a_l1=1.0, mu=1.0, alpha=0, mu_pos=0):
+def barrier_loss_batch(x, D, I_obs, lb, ub, a_l2=0, a_l1=1.0, mu=1.0, alpha=0, mu_pos=0,
+                       half=None):
     # x: [B, n_basis]
     # D: [n_obs, n_temps]
     # I_obs: [B, n_obs]
     # lb, ub: [B, n_obs] lower and upper bounds for the observed data
+    # half: [B, n_obs] optional normalising half-width; default (ub - lb) / 2. A
+    #   relaxed band (wider lb/ub where the solver relaxed) passes the unrelaxed
+    #   1.4 sigma here, so the excess is still measured in noise units.
 
     # per-channel noise sigma derived from the tolerance band: sigma = (ub - lb) / 2
     # dividing by sigma^2 normalises each channel so faint and bright channels
     # contribute equally (chi-squared style), preventing bright channels from
     # dominating and the NN ignoring faint ones (e.g. 94A, 131A)
-    sigma2 = ((ub - lb) / 2) ** 2 + 1e-8  # [B, n_obs]
+    sigma2 = ((ub - lb) / 2 if half is None else half) ** 2 + 1e-8  # [B, n_obs]
 
     # L2 regularization
     l2_term = 0.5 * a_l2 * torch.sum(x**2, dim=1)  # [B]
@@ -201,14 +205,14 @@ def barrier_loss_batch(x, D, I_obs, lb, ub, a_l2=0, a_l1=1.0, mu=1.0, alpha=0, m
     total_loss = l2_term + l1_term + barrier_x + barrier_lb + barrier_ub + fit
     return total_loss.mean()
 
-def enet_loss_batch(x, D, I_obs, lb, ub, C=1.0, alpha=1.0, lam=0.9):
+def enet_loss_batch(x, D, I_obs, lb, ub, C=1.0, alpha=1.0, lam=0.9, half=None):
     # Elastic Net objective (Athiray & Winebarger 2024), unconstrained:
     #   (1/2C)||o - Dx||^2 + alpha*lam*||x||_1 + (1/2)*alpha*(1-lam)*||x||_2^2
     # x >= 0 is handled by the network's Softplus output, so no barrier needed.
     # The fit term is chi-squared normalised (sigma from the tolerance band,
     # same convention as barrier_loss_batch) so faint channels aren't ignored.
     # lam=1 recovers Lasso; lam=0 recovers ridge.
-    sigma2 = ((ub - lb) / 2) ** 2 + 1e-8  # [B, n_obs]
+    sigma2 = ((ub - lb) / 2 if half is None else half) ** 2 + 1e-8  # [B, n_obs]
 
     Dx = torch.matmul(x, D.T)  # [B, n_obs]
     fit = (0.5 / C) * torch.sum((Dx - I_obs) ** 2 / sigma2, dim=1)  # [B]

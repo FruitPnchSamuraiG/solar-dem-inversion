@@ -100,4 +100,10 @@ pick bp_clampmask       && ACCOUNT=torch_pr_41_cilvr   run bp_clampmask bp 2 cpu
 pick bp_h680_clampmask  && ACCOUNT=torch_pr_41_courant run bp_h680_clampmask bp 5 cpu "${B}_h680_sqrt_ff12_resample_clampmask_mu100_ep120" MU=100 HIDDEN=680 EPOCHS=120 MAX_HOURS=1.85 CLAMP_MODE=mask TAG_SUFFIX=_mu100_ep120
 pick enet_clampmask     && ACCOUNT=torch_pr_718_cds    run enet_clampmask enet 2 cpu "${E}_h336_sqrt_ff12_resample_clampmask" CLAMP_MODE=mask
 pick enet_10m_clampmask && ACCOUNT=torch_pr_41_general run enet_10m_clampmask enet 5 gpu "${E}_h1800_sqrt_ff12_resample_clampmask" HIDDEN=1800 TF32=1 CLAMP_MODE=mask
+# The solver widens its band where no DEM fits 1.4 sigma; our loss did not, and on
+# validation those ~8% of pixels carry most of the stiff band's cost
+# (experiments/relaxed_band_screen.py: with the solver's own band, excess still in
+# noise units, the best answer improves monotonically with mu). mu = 300 on the
+# fixed band trained behind mu = 100; this repeats it with the relaxed band.
+pick bp_mu300_relax     && ACCOUNT=torch_pr_718_cilvr  run bp_mu300_relax bp 4 cpu "${B}_h336_sqrt_ff12_resample_relax_mu300_ep120" MU=300 EPOCHS=120 MAX_HOURS=1.85 RELAX_BAND=1 TAG_SUFFIX=_mu300_ep120
 true

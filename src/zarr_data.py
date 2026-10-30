@@ -65,7 +65,8 @@ class ZarrPatchBlockDataset(Dataset):
     """One item = one staged block, subsampled to `pixels_per_block` pixels.
 
     Returns (patch [P,6,K,K], obs [P,6], lb [P,6], ub [P,6]); with
-    `with_labels=True`, also (dem [P,n_bins], tol [P]).
+    `relax_band=True` also half [P,6] (the loss's normalising half-width), and
+    with `with_labels=True` then (dem [P,n_bins], tol [P]).
     """
 
     def __init__(self, root, phase, patch_size=9, stride=2, tolfac=1.4,
@@ -182,7 +183,7 @@ class ZarrPatchBlockDataset(Dataset):
             # the caller's mask drops them rather than the batch shape changing.
             patch = torch.zeros(P, 6, self.patch_size, self.patch_size)
             zc = torch.zeros(P, 6)
-            out = (patch, zc, zc, zc)
+            out = (patch, zc, zc, zc) + ((zc,) if self.relax_band else ())
             if self.with_labels:
                 out = out + (torch.zeros(P, self.n_bins), torch.zeros(P, dtype=torch.uint8))
             return out
@@ -209,16 +210,23 @@ class ZarrPatchBlockDataset(Dataset):
         center_obs = np.ascontiguousarray(obs_c[:, i, j].T)        # [P, 6]
         center_err = np.ascontiguousarray(err_c[:, i, j].T)        # [P, 6]
         half = self.tolfac * center_err
+        wide = half
         if self.relax_band:
-            half = half * np.maximum(tol[i, j], 1).astype(np.float32)[:, None]
-        lb = center_obs - half
-        ub = center_obs + half
+            wide = half * np.maximum(tol[i, j], 1).astype(np.float32)[:, None]
+        lb = center_obs - wide
+        ub = center_obs + wide
         if self.clamp_mode == "mask":
             clamped = center_obs <= self.min_obs
             lb[clamped], ub[clamped] = -UNCONSTRAINED, UNCONSTRAINED
+            half = np.where(clamped, UNCONSTRAINED, half).astype(np.float32)
 
         out = (torch.from_numpy(patch), torch.from_numpy(center_obs),
                torch.from_numpy(lb), torch.from_numpy(ub))
+        if self.relax_band:
+            # The losses measure the excess in units of the unrelaxed 1.4 sigma;
+            # dividing by the widened half-width instead would soften the penalty
+            # 9x or 25x at relaxed pixels (experiments/relaxed_band_screen.py).
+            out = out + (torch.from_numpy(np.ascontiguousarray(half)),)
 
         if self.with_labels:
             dem = np.asarray(self.Y[:self.n_bins, :, :, idx], dtype=np.float32)

@@ -165,17 +165,18 @@ def make_loss_fn(args, thr_t=None):
             # cutoff. Quiet pixels keep the base weight; at a 100x flare core the
             # sparsity pull is 100x weaker (p = 1), which experiments/objective_gap.py
             # showed lets the per-pixel optimum reach the solver's emission there.
-            def fn(x, D, obs, lb, ub):
+            def fn(x, D, obs, lb, ub, half=None):
                 inten = (obs / thr_t).amax(dim=1).clamp(min=1.0)
                 return barrier_loss_batch(x, D, obs, lb, ub,
                                           a_l1=args.alpha_l1 / inten ** args.l1_bright_power,
-                                          a_l2=args.alpha_l2, mu=args.mu)
+                                          a_l2=args.alpha_l2, mu=args.mu, half=half)
             return fn
-        return lambda x, D, obs, lb, ub: barrier_loss_batch(
-            x, D, obs, lb, ub, a_l1=args.alpha_l1, a_l2=args.alpha_l2, mu=args.mu)
+        return lambda x, D, obs, lb, ub, half=None: barrier_loss_batch(
+            x, D, obs, lb, ub, a_l1=args.alpha_l1, a_l2=args.alpha_l2, mu=args.mu, half=half)
     if args.loss == "enet":
-        return lambda x, D, obs, lb, ub: enet_loss_batch(
-            x, D, obs, lb, ub, C=args.enet_C, alpha=args.enet_alpha, lam=args.enet_lam)
+        return lambda x, D, obs, lb, ub, half=None: enet_loss_batch(
+            x, D, obs, lb, ub, C=args.enet_C, alpha=args.enet_alpha, lam=args.enet_lam,
+            half=half)
     raise ValueError(f"unknown loss: {args.loss}")
 
 
@@ -199,9 +200,12 @@ def evaluate(model, loader, D_t, B_t, loss_fn, device, n_bins):
                  for k in (1, "relaxed")}
 
     for batch in loader:
-        patch, obs, lb, ub, dem, tol = (t.to(device) for t in flatten_blocks(batch))
+        batch = [t.to(device) for t in flatten_blocks(batch)]
+        # relax_band inserts the normalising half-width after ub
+        half = batch.pop(4) if len(batch) == 7 else None
+        patch, obs, lb, ub, dem, tol = batch
         x = model(patch)
-        agg["loss"] += loss_fn(x, D_t, obs, lb, ub).item()
+        agg["loss"] += loss_fn(x, D_t, obs, lb, ub, half).item()
         agg["n_batches"] += 1
 
         # B is [n_temps, n_basis]; the stored label has 26 bins of which only the
@@ -369,11 +373,12 @@ def train(args):
         ep_gn, ep_clipped, ep_core, ep_bright = 0.0, 0.0, 0.0, 0.0
 
         for batch in train_loader:
-            patch, obs, lb, ub = (t.to(device, non_blocking=True)
-                                  for t in flatten_blocks(batch))
+            batch = [t.to(device, non_blocking=True) for t in flatten_blocks(batch)]
+            patch, obs, lb, ub = batch[:4]
+            half = batch[4] if len(batch) == 5 else None
             optimizer.zero_grad()
             x = model(patch)
-            loss = loss_fn(x, D_t, obs, lb, ub)
+            loss = loss_fn(x, D_t, obs, lb, ub, half)
             loss.backward()
             gn = float(torch.nn.utils.clip_grad_norm_(model.parameters(), args.clip))
             optimizer.step()

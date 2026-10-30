@@ -14,9 +14,7 @@ The network sees the six intensities of one pixel: not its neighbours (section 5
 
 Four hidden layers of width 336 with SiLU activations feed a linear layer to 54 outputs and a softplus, which keeps every weight non-negative. The softplus input is clamped at −20 so that its gradient never vanishes, and the output layer starts small (weights scaled by 0.01, bias −3) so that the first DEM reproduces intensities of the order of the observations; both fixes date from the collapse of the first full-disk runs (appendix A). The network has 408,630 parameters (150·336 + 3·336² + 336·54 weights and 1,398 biases), quoted as 409k; on six log1p inputs the same width has 360k. Its speed against the solver has not been measured.
 
-The output is the solver's own variable. Neither solver works on the 18 DEM bins (logT 5.5 to 7.2, 0.1 dex apart) directly: both solve for 54 weights on a fixed basis B, at each bin a spike and two Gaussians exp(−ΔlogT²/a²) with a = 0.1 and 0.2 dex, and report DEM = Bw, whose intensities are Dw with D = RB (R in DN/s per 10^26 cm^-5). Predicting the same weights, the network searches the solver's space of DEMs (the solver fits flare cores in it, so the basis is not the limit), BP's sparsity term means the same thing for both, and the sparsity score (Σw)²/Σw² is comparable with the solver's (1.79 on BP). The supervised model instead outputs the 18 bins. One difference remains: our basis zeroes each Gaussian below 0.04 of its peak, while the solver runs pass `--notrunc` and keep those tails, at most 2.1% of an element's emission [[check: that the shared test set's BP targets also used --notrunc, as the ElasticNet command does, and whether the difference moves any reported number]].
-
-[[FIGURE: pipeline (deck slide 5): six intensities, encoding, MLP (409k parameters), 54 weights, DEM = Bw, AIA = RBw, and the loss against the observed AIA and its band]]
+The output is the solver's own variable. Neither solver works on the 18 DEM bins (logT 5.5 to 7.2, 0.1 dex apart) directly: both solve for 54 weights on a fixed basis B, at each bin a spike and two Gaussians exp(−ΔlogT²/a²) with a = 0.1 and 0.2 dex, and report DEM = Bw, whose intensities are Dw with D = RB (R in DN/s per 10^26 cm^-5). Predicting the same weights, the network searches the solver's space of DEMs (the solver fits flare cores in it, so the basis is not the limit), BP's sparsity term means the same thing for both, and the sparsity score (Σw)²/Σw² is comparable with the solver's (1.79 on BP). The supervised model instead outputs the 18 bins. One difference remains: our basis zeroes each Gaussian below 0.04 of its peak, while the solver runs pass `--notrunc` and keep those tails, at most 2.1% of an element's emission; both generation commands we have pass it, and the difference moves the price bounds of section 3.3 by under 1%.
 
 ### 3.2 Losses
 
@@ -28,7 +26,7 @@ $$
 
 The first term is BP's objective, the total weight. The hinge is zero inside the band, so there is no fit term there: any DEM within the noise is equally good and sparsity breaks the tie, as in BP. Dividing by the half-width tσ_c makes a half-width outside cost the same in every channel, so 94 Å at a few DN/s counts as much as 171 Å at hundreds. The square is our choice (BP is a linear program with a hard band): it makes the penalty smooth at the edge, at the cost of an optimum that sits slightly outside the band at any finite μ (section 3.3). The band weight μ is the exchange rate between squared half-widths and units of weight. BP treats the band as a rule and the loss treats it as a price; section 6 turns on that difference. The old model used μ = 1, the adopted BP model the stiff band, μ = 100. Per pixel the loss is convex in w, so each pixel has one best answer under the loss.
 
-[[FIGURE: the band penalty, zero inside ±tσ and quadratic outside (deck slide 6; slides/img/band_penalty.png, to be copied under results/plots/ for the build)]]
+![Figure 3.1. The BP loss's band penalty for one channel: zero inside the band of ±tσ around the observation, growing as the square of the distance outside it, measured in half-widths. (slides/img/band_penalty.png)](figures/band_penalty.png)
 
 The ElasticNet loss is
 
@@ -36,7 +34,7 @@ $$
 L_{\mathrm{EN}}(w) = \frac{1}{2C} \sum_{c=1}^{6} \left[ \frac{(Dw)_c - o_c}{t\sigma_c} \right]^2 + \alpha\lambda \sum_{k=1}^{54} w_k + \frac{\alpha(1-\lambda)}{2} \sum_{k=1}^{54} w_k^2, \qquad w \ge 0,
 $$
 
-with the supervised side's α = 0.001, λ = 0.5 and C = 6. This is the solver's objective term for term (scikit-learn's non-negative ElasticNet fitted to D and o divided by tσ_c, whose 1/(2N) over N = 6 rows is the 1/(2C) above), except that the solver floors tσ_c at 0.5 DN/s [[check: whether tσ_c ever falls below 0.5 DN/s in the staged errors]]. The L2 term makes it strictly convex, so each pixel's best answer under the loss is, up to that floor, the solver's DEM; and with no band there is nothing to price, which is why ElasticNet never had BP's flare-core failure. Both losses are averaged over the 8,192 pixels of a batch.
+with the supervised side's α = 0.001, λ = 0.5 and C = 6. This is the solver's objective term for term (scikit-learn's non-negative ElasticNet fitted to D and o divided by tσ_c, whose 1/(2N) over N = 6 rows is the 1/(2C) above), except that the solver floors tσ_c at 0.5 DN/s; on the staged validation errors 1.4σ falls below 0.5 DN/s at under 0.1% of pixels, so the floor hardly ever binds. The L2 term makes it strictly convex, so each pixel's best answer under the loss is, up to that floor, the solver's DEM; and with no band there is nothing to price, which is why ElasticNet never had BP's flare-core failure. Both losses are averaged over the 8,192 pixels of a batch.
 
 ### 3.3 The band weight μ
 
@@ -46,7 +44,7 @@ $$
 \min_{w \ge 0} \ \sum_{k} w_k \quad \text{subject to} \quad o_c - t\sigma_c \le (Dw)_c \le o_c + t\sigma_c, \quad c = 1, \dots, 6,
 $$
 
-and penalty-method theory says what it does at finite μ [[TODO: textbook reference for the exterior-penalty result; the house style bans personal names, so decide how citations are written]]. At the penalised optimum, a channel whose band edge binds sits outside the band by v_c DN/s, where the marginal penalty, 2μv_c/(tσ_c)² per DN/s, equals the marginal saving in total weight: the linear program's dual price λ_c of that edge, in weight units per DN/s. Hence
+and penalty-method theory says what it does at finite μ (Nocedal and Wright 2006, chapter 17). At the penalised optimum, a channel whose band edge binds sits outside the band by v_c DN/s, where the marginal penalty, 2μv_c/(tσ_c)² per DN/s, equals the marginal saving in total weight: the linear program's dual price λ_c of that edge, in weight units per DN/s. Hence
 
 $$
 \frac{2\mu\, v_c}{(t\sigma_c)^2} = \lambda_c \qquad \Longrightarrow \qquad \frac{v_c}{t\sigma_c} = \frac{\lambda_c\, t\sigma_c}{2\mu}.
@@ -68,7 +66,7 @@ Table 3.1. Single-channel price bound, in weight units (10^26 cm^-5) per DN/s.
 
 The bound differs more than 400-fold between 94 Å and 171 Å: a unit of weight buys at most two thirds of a DN/s of 94 Å but a few hundred of 171 Å. 94 Å is the dear channel.
 
-At the flare core worked through in section 6, 94 Å reads 164 DN/s with σ = 11.5, so tσ = 16.1 and the band runs from 148 to 180. At the bound the 94 Å violation is 1.48 × 16.1/(2μ) = 11.9/μ half-widths. At μ = 1 that exceeds the 9.2 half-widths (148/16.1) by which a DEM without hot plasma falls short, so the best answer drops the hot plasma outright. At μ = 10 the violation is 1.19 half-widths, at 30 it is 0.40, at 100 0.12 and at 300 0.04; μ = 119 holds the pixel within 0.1 half-width.
+At the flare core worked through in section 6, 94 Å reads 164 DN/s with σ = 11.5, so tσ = 16.1 and the band runs from 148 to 180. At the bound the 94 Å violation is 1.48 × 16.1/(2μ) = 11.9/μ half-widths. At μ = 1 that exceeds the 9.2 half-widths (148/16.1) by which a DEM without hot plasma falls short, so the best answer drops the hot plasma outright. At μ = 10 the violation is 1.19 half-widths, at 30 it is 0.40, at 100 0.12 and at 300 0.04; μ = 120 holds the pixel within 0.1 half-width.
 
 Turned round, a tolerance of ε half-widths needs μ ≥ λ_c tσ_c/(2ε), a number set by the response, the basis and the noise, with no solver DEM. Photon noise makes σ grow as the square root of the counts, so the μ needed grows with the square root of the brightness. Faint pixels have small σ, and their 94 Å comes free with the warm plasma that 171, 193 and 211 Å demand (section 6), so they hardly respond to μ; flare cores combine the largest σ with the dearest channel and need μ near 100. The same law, a small violation below the lower band edges that shrinks as 1/μ, explains the old model's emission deficit at ordinary pixels: on validation pixels at 0.3 to 1 times the Bright cutoff, the best answer under the loss emits 0.861 of the solver's emission at μ = 1 and 1.009 at μ = 100.
 
@@ -76,7 +74,16 @@ Two refinements follow, neither yet trained. A per-pixel, per-channel weight pro
 
 The bound assumes one binding edge. When several bind, the price can exceed it, because the element that sets the bound may push another channel out of its band. The 94 Å bound comes from warm plasma, the 0.2 dex Gaussian at logT 6.1 (0.676 DN/s per unit), which also lights 171 Å; at a flare core the hot element at logT 6.8 (0.669 DN/s per unit) sets a price 1% higher, and other combinations can raise it further. The theory is therefore checked on validation pixels.
 
-[[TODO: validation check from results/plots/23_meeting_followup_20261024/bp_mu_theory_val.txt]]
+**Validation check.** On the 11,954 validation pixels of the μ screen (every flare core of the split and about 1,000 per brightness band), we solved BP's linear program at t = 1.4 for its dual prices and the best answer under the loss at μ = 1 to 1,000, and compared the measured violation with λ_c tσ_c/(2μ) (`experiments/mu_theory.py`, Figure 3.2).
+
+- **The law holds.** At μ = 100 the measured violation divided by the predicted one has a median of 1.00 over 45,925 violated pixel-channels, and the median is 1.00 in every brightness band for μ ≥ 10. μ times the violation stays constant from μ = 10 to 1,000 (a coefficient of variation of 0.00 to 0.06 at the median pixel below flare cores, 0.19 at flare cores). Below μ ≈ 10 the best answer drops basis elements the linear program keeps, the hot plasma at bright pixels, and the first-order law no longer applies (at flare cores the median ratio is 0.66 at μ = 1).
+- **The prices.** At flare cores the median 94 Å price is 1.46, at the single-edge bound of 1.48; it exceeds the bound at 49% of them (99th percentile 8.8) where other edges bind. 94 Å is the dearest channel at 70% of flare cores, 335 Å at 15% and 131 Å at 13%; over all pixels 94 Å leads at 40%, 335 Å at 26% and 131 Å at 17%.
+- **μ for a tolerance.** From the measured prices, holding the median flare core within 0.5, 0.2 and 0.1 half-widths needs μ = 34, 84 and 168; the 90th-percentile flare core needs 153, 382 and 763. At μ = 100 the median flare core sits about 0.17 half-widths outside its band and the 90th percentile about 0.8, roughly one noise σ beyond the edge. Over all pixels the median needs only μ = 13 for 0.5 and 64 for 0.1. A single global μ cannot hold every pixel to one tolerance: the most demanding feasible pixel in the sample, a flare core priced on 335 Å, would need 63,801 for 0.1 half-width. This is the case for the per-pixel weight above.
+- **Infeasible pixels.** At 8.8% of the sample (12% of flare cores) no DEM fits the 1.4σ band, and these are exactly the pixels the solver relaxed (section 7.3). There the violation stops falling at a floor set by the observation, whatever μ, and the law does not apply.
+
+![Figure 3.2. Left: the largest band violation at feasible validation pixels against μ, median and 90th percentile, for three brightness ranges, with a 1/μ guide. Right: measured against predicted violation at μ = 100, per violated pixel-channel. (results/plots/23_meeting_followup_20261024/fig1_violation_vs_mu.png)](figures/fig1_violation_vs_mu.png)
+
+So μ is not a free hyperparameter. Given the response, the basis and the noise, the theory states how far outside its band the best answer sits at any μ, and validation confirms it pixel by pixel. μ = 100 is the value that holds the typical flare core to about a sixth of a half-width; section 7.3 shows that once the band is relaxed where the solver relaxes it, larger μ only moves the best answer closer to the solver.
 
 ### 3.4 Training
 

@@ -1,0 +1,21 @@
+# Lone-spike and missing-target checks, 29 Oct 2026 (one-off CPU job on Torch, srun, cpu_short)
+# For each model's worst 100 distinct test inputs (by DEM SSE, from *_blowup_census.npz) and the
+# BP JPDF low clusters (bp_jpdf_pixels.npz): channels at zero (<= 1e-3 DN/s), whether exactly one
+# channel is non-zero, and that channel's value against the median of its 8 neighbours (shared test set).
+BP h680_mu100_ep120: 100 distinct worst inputs; channels at zero: median 5; one channel non-zero: 56% (that channel: 94 A 56); that channel vs its 8 neighbours: median 27.9x, >5x in 100%; its value median 3.04 DN/s
+BP h1800_mu100: 100 distinct worst inputs; channels at zero: median 0; one channel non-zero: 10% (that channel: 94 A 10); that channel vs its 8 neighbours: median 84.2x, >5x in 100%; its value median 4.01 DN/s
+BP h336_mu100_cont: 100 distinct worst inputs; channels at zero: median 0; one channel non-zero: 2% (that channel: 94 A 2); that channel vs its 8 neighbours: median 105.7x, >5x in 100%; its value median 5.71 DN/s
+ENet h336_sqrtff: 100 distinct worst inputs; channels at zero: median 0; one channel non-zero: 0%
+ENet h1800_sqrtff: 100 distinct worst inputs; channels at zero: median 5; one channel non-zero: 64% (that channel: 94 A 64); that channel vs its 8 neighbours: median 56.8x, >5x in 98%; its value median 4.19 DN/s
+ENet h336_log1p: 100 distinct worst inputs; channels at zero: median 4; one channel non-zero: 21% (that channel: 94 A 1, 131 A 18, 335 A 2); that channel vs its 8 neighbours: median 1948.9x, >5x in 95%; its value median 213.18 DN/s
+ENet h480_log1p: 100 distinct worst inputs; channels at zero: median 4; one channel non-zero: 24% (that channel: 94 A 1, 131 A 23); that channel vs its 8 neighbours: median 1534.7x, >5x in 96%; its value median 181.73 DN/s
+ENet h680_log1p: 100 distinct worst inputs; channels at zero: median 4; one channel non-zero: 23% (that channel: 94 A 1, 131 A 22); that channel vs its 8 neighbours: median 1566.7x, >5x in 96%; its value median 185.00 DN/s
+BP JPDF low cluster 171 A: 44 distinct worst inputs; channels at zero: median 4; one channel non-zero: 50% (that channel: 94 A 22); that channel vs its 8 neighbours: median 38.4x, >5x in 100%; its value median 3.51 DN/s
+BP JPDF low cluster 211 A: 67 distinct worst inputs; channels at zero: median 4; one channel non-zero: 31% (that channel: 94 A 21); that channel vs its 8 neighbours: median 37.6x, >5x in 100%; its value median 3.52 DN/s
+
+# Shared test set, BP track: share of on-disk-finite pixels with no BP answer, by target
+# (30 random timestamps x 4 blocks per target; file k = (block // 64) % 5)
+missing BP answer by target (clean, noise 1-4): 7.7% 12.1% 13.2% 12.6% 13.4%
+# Our clean labels (relaxation on), test split: tolLevel 3 at 8.52%, 5 at 0.08%, unsolved 0.01% (bp_jpdf_pixels_tol.txt)
+# The supervised side's ElasticNet command (eval_and_enet_specs/submit_enet_aia_hofdeconv_full.py) passes --zerochill and no
+# --noisescale, so the re-solves add 0.5 sigma of Gaussian noise (fullBP.py default) and skip the relaxation.

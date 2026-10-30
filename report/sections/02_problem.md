@@ -20,7 +20,7 @@ Table 2.1. The three basis components at a bin away from the ends of the grid.
 
 The weights are therefore not the plasma. A unit of weight on a spike is one unit of plasma in one bin, but a unit on the 0.1 dex Gaussian spreads 1.74 units over three bins, and a unit on the 0.2 dex Gaussian 3.5 units over seven. So the sum of the 54 weights, which BP minimises (our BP loss's sparsity term), is not the plasma summed over the 18 bins: a DEM shaped like one 0.2 dex Gaussian costs 1 written as that Gaussian and 3.5 written as seven spikes. Responses differ the same way: per unit of weight, the 0.2 dex Gaussian at logT 6.8 gives 94 Å 0.67 DN/s, the spike at logT 6.9 only 0.266.
 
-Our network's basis has this truncation; the solver runs that made the reference DEMs used `--notrunc`, which keeps the tails, so their Gaussians carry about 1.77 and 3.54 units per unit of weight. [[check: whether this small basis difference matters anywhere, for example where solver DEMs are rewritten as 54 weights]]
+Our network's basis has this truncation; the solver runs that made the reference DEMs used `--notrunc`, which keeps the tails, so their Gaussians carry about 1.77 and 3.54 units per unit of weight. Both generation commands we have pass `--notrunc` (ours for BP, the supervised side's for ElasticNet). The difference is at most 2.1% of an element's emission and moves the price bounds of section 3.3 by under 1%; where solver DEMs are rewritten as 54 weights (sections 6.3 and 8.3) the decomposition uses our truncated basis.
 
 ### 2.3 Noise
 

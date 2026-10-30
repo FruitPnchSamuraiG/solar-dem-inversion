@@ -1,0 +1,15 @@
+## 9. Limitations and open items
+
+**Validation.** The validation loss that chose widths, inputs and checkpoints covers only the first four validation images (256 blocks, 131,072 pixels), and it uses the training mask, so it never contains a pixel with a clamped channel. It preferred every model larger than 409k, each of which blew up on test (sections 3.5 and 7.1). The ElasticNet width and epochs were set with test evidence for the same reason. Validating on every pixel of the validation split, clamp pixels included, is the fix; the clamp-mask runs of section 7.1 validate that way.
+
+**Inputs the training excluded.** Pixels with a channel at the clamp floor, 40% of all valid pixels and nearly all faint, were excluded from training. At inference they still occur, and the lone-spike subset (a single channel 30 to 2,000 times its neighbours among zeroed channels) is where the larger models extrapolate without bound. Until the clamp-mask runs report, an inference-time flag is the safe course: a pixel whose only non-zero channel is far above its neighbours should be marked rather than inverted. Despiking such inputs before inversion is a second option.
+
+**The band's rule.** Our loss keeps the 1.4σ band where the solver relaxed it (8.5% of our test split). Section 7.3 shows that the solver's own rule, with the excess measured in noise units, removes the stiff band's cost; a training run at μ = 300 with it is under way. The per-pixel weight and the L1 exact penalty of section 3.3 are untested in training.
+
+**The evaluation protocol.** The shared test set's BP targets exclude the pixels where the band is infeasible (7.7% of clean solves, 12% to 13% of re-solves), so the BP headline numbers say nothing about them. The four re-solves add Gaussian noise of half the estimated σ, not σ (the generation command uses the default `--noisescale 0.5`). Our network's basis truncates each Gaussian below 4% of its peak while the solver's runs keep the tails (`--notrunc`); the difference is at most 2.1% of an element's emission and moves the price bounds by less than 1%. The ElasticNet solver floors its residual scale at 0.5 DN/s and our loss does not; 1.4σ falls below 0.5 DN/s at under 0.1% of pixels.
+
+**Flare cores.** On BP the adopted model still holds 94% of its DEM error in flare cores, where it reproduces 77% of 94 Å against the solver's 92% (section 6.7). Longer training has kept closing that gap, and a third 120-epoch continuation is untested.
+
+**Not addressed.** Inference speed against the solver is unmeasured. The uncertainty head, which needs a distribution over DEMs rather than one answer, and the AIA plus XRT models are outside this report.
+
+Sources: `report/sections/03_method.md` (3.5), `07_failure_analysis.md`, `06_flare_cores.md`; `results/plots/23_meeting_followup_20261024/lone_spike_check.txt`, `bp_jpdf_pixels_tol.txt`, `bp_relaxed_band_screen.txt`; `fullBP.py` (`--noisescale` default 0.5, `_minimumDNs` = 0.5, `getBasis` truncation); `eval_and_enet_specs/submit_enet_aia_hofdeconv_full.py`; the 1.4σ-below-0.5 share from a validation-split check of 29 Oct 2026 (40 blocks, at most 0.1% in 171 Å, 0.0% elsewhere).

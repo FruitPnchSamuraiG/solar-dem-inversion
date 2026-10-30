@@ -1,0 +1,17 @@
+## 10. Conclusions
+
+We set out to replace a per-pixel DEM solver with a network that never sees its output. Four conclusions follow.
+
+**Label-free training is enough.** A 409k-parameter MLP that reads one pixel's six AIA intensities and is trained only on the solver's objective matches or beats a supervised emulator trained on the solver's DEMs. It is ahead on all six headline ElasticNet measures and on four of six BP measures, and on the typical BP pixel it is three times closer to the solver (median pixel error 0.036 against 0.112). Solver DEMs were needed only to score it, and when the ElasticNet settings changed it needed retraining, not new labels.
+
+**Check the loss before the training.** BP's one failure, flare cores, was in the loss. The network sat close to its loss's per-pixel optimum, and with the band weight at μ = 1 that optimum leaves the hot plasma out, because only 94 and 131 Å ask for it, at under 0.4 DN/s per unit. No training change on that loss could fix it; a stiffer band (μ = 100, chosen on validation) with longer training did, lifting flare-core emission from 40% to 93% of the solver's. Penalty-method theory ties μ to the response matrix and the noise, so the band weight need not be a free hyperparameter.
+
+**Bigger is not better.** At scale the per-pixel MLP beat the patch CNN at every percentile of the training loss on both tracks, so spatial context is not needed. Larger MLPs improved the typical pixel a little, and on the stiff band and on ElasticNet every one of them failed by orders of magnitude on a few rare pixels.
+
+**The remaining error is concentrated.** Flare cores are one pixel in 10,000 and hold 94% of the label-free BP squared error and 90% of the supervised model's, so the BP DEM MSE, 1.9 times the supervised model's, measures those pixels. Up to the 99th percentile the label-free model is level with or ahead of the supervised one: percentiles, not means, describe the typical pixel. At BP flare cores the shortfall left is in 94 Å (77% reproduced against the solver's 92%), a training gap that longer training has kept closing.
+
+Section 9 lists what stays open, including the unmeasured inference speed and the ElasticNet width and epochs, which were set with test evidence.
+
+Sources: `STATE.md` (2026-10-14 block: the BP headline numbers, 409k parameters, flare-core emission and 94 Å; 2026-10-04 blocks: the ElasticNet numbers and the ElasticNet blow-ups at 722k and 1.43M); `slides/deck_outline.md` (slide 9: the MLP ahead of the patch CNN at every percentile; slide 10: the ElasticNet width set on test evidence; slides 12 and 13: the measures won and the percentiles; slide 19: μ = 100 chosen on validation; slide 21: flare cores now); `results/followup_recap_20261013.md` (section 5: the network close to its loss's optimum; section 6: the hot plasma, 94 and 131 Å, under 0.4 DN/s per unit; sections 8 and 9: the stiff band, longer training, the stiff-band blow-ups; section 10: the ElasticNet 10M blow-up, and 120 epochs worsening DEM MSE, so 40 were kept); `CLAUDE.md` (2026-09-11: the ElasticNet retrain on the same observations; 2026-10-21: the penalty-method result); `slides/talk_prep.md` (94 Å rising with epochs; inference speed unmeasured); `results/plots/21_followup_20261006/bp_bright_failure_fu_bp_mu100_ep120_cont.txt` and `results/plots/13_bright_diagnostic_20260928/bp_bright_failure_supervised.txt` (flare cores: 0.01% of pixels, 94.2% and 90.0% of the squared error).
+
+[[TODO: update after sections 7 and 8]]

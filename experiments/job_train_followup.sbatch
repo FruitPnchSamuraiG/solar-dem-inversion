@@ -40,6 +40,10 @@ EXTRA=()
 if [ "${TF32:-0}" = 1 ]; then EXTRA+=(--tf32); fi
 # INIT_FROM=<checkpoint>: warm start from its weights (a continuation run)
 if [ -n "${INIT_FROM:-}" ]; then EXTRA+=(--init_from "$INIT_FROM"); fi
+# CLAMP_MODE=mask keeps deconvolution-clamp pixels with the clamped channels free;
+# RELAX_BAND=1 widens the band by the solver's tolLevel (both add a tag suffix)
+if [ -n "${CLAMP_MODE:-}" ]; then EXTRA+=(--clamp_mode "$CLAMP_MODE"); fi
+if [ "${RELAX_BAND:-0}" = 1 ]; then EXTRA+=(--relax_band); fi
 python3 -u experiments/train_scaled.py \
   --root "$ROOT" \
   --variant mlp6 \

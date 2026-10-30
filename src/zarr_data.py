@@ -55,6 +55,11 @@ N_STORED_BINS = 26
 # (94A, 0.76) so it cannot clip real signal, and removes ~5% of pixels.
 MIN_OBS = 1e-3
 
+# Band half-width for a channel that carries no constraint (clamp_mode="mask"):
+# relu(lb - Dx) and relu(Dx - ub) vanish and ((ub - lb) / 2)**2 stays finite in
+# float32, so both losses drop the channel without a separate weight argument.
+UNCONSTRAINED = 1e15
+
 
 class ZarrPatchBlockDataset(Dataset):
     """One item = one staged block, subsampled to `pixels_per_block` pixels.
@@ -66,7 +71,8 @@ class ZarrPatchBlockDataset(Dataset):
     def __init__(self, root, phase, patch_size=9, stride=2, tolfac=1.4,
                  pixels_per_block=512, n_bins=N_AIA_BINS, with_labels=False,
                  tol_levels=(1, 3, 5), min_obs=MIN_OBS, max_blocks=None, seed=0,
-                 bright_gamma=0.0, thresholds=None, bright_cap=1000.0):
+                 bright_gamma=0.0, thresholds=None, bright_cap=1000.0,
+                 clamp_mode="exclude", relax_band=False):
         import zarr
 
         self.root = root
@@ -74,6 +80,18 @@ class ZarrPatchBlockDataset(Dataset):
         self.patch_size = patch_size
         self.stride = stride
         self.tolfac = tolfac
+        # Channels at or below min_obs are the deconvolution clamp (an artefact
+        # in that channel, ~40% of all pixels have one, nearly all faint).
+        # "exclude" drops the whole pixel (every run before 2026-10-29); "mask"
+        # keeps the pixel and frees only the clamped channels from the band, so
+        # the network sees such inputs in training instead of extrapolating.
+        if clamp_mode not in ("exclude", "mask"):
+            raise ValueError(f"clamp_mode must be exclude or mask, got {clamp_mode!r}")
+        self.clamp_mode = clamp_mode
+        # The solver widens the band to 3x and then 5x where no DEM fits 1.4
+        # sigma (fullBP.py:515) and records the level in tolLevel; relax_band
+        # applies the same band here instead of keeping 1.4 sigma everywhere.
+        self.relax_band = relax_band
         self.pixels_per_block = pixels_per_block
         self.n_bins = n_bins
         self.with_labels = with_labels
@@ -128,12 +146,13 @@ class ZarrPatchBlockDataset(Dataset):
         return self.n_blocks
 
     def _valid_mask(self, obs_c, err_c, tol):
-        """Pixels usable for training: solver-solved, finite, and above the
-        deconvolution-clamp floor in every channel (see MIN_OBS)."""
-        finite = np.all(np.isfinite(obs_c) & np.isfinite(err_c) &
-                        (obs_c > self.min_obs), axis=0)
+        """Pixels usable for training: solver-solved, finite, and (clamp_mode
+        "exclude") above the deconvolution-clamp floor in every channel."""
+        ok = np.isfinite(obs_c) & np.isfinite(err_c)
+        if self.clamp_mode == "exclude":
+            ok &= obs_c > self.min_obs
         solved = np.isin(tol, self.tol_levels)
-        return finite & solved
+        return np.all(ok, axis=0) & solved
 
     def __getitem__(self, idx):
         # An index past n_blocks is a later draw of the same block (EpochResampler):
@@ -189,8 +208,14 @@ class ZarrPatchBlockDataset(Dataset):
 
         center_obs = np.ascontiguousarray(obs_c[:, i, j].T)        # [P, 6]
         center_err = np.ascontiguousarray(err_c[:, i, j].T)        # [P, 6]
-        lb = center_obs - self.tolfac * center_err
-        ub = center_obs + self.tolfac * center_err
+        half = self.tolfac * center_err
+        if self.relax_band:
+            half = half * np.maximum(tol[i, j], 1).astype(np.float32)[:, None]
+        lb = center_obs - half
+        ub = center_obs + half
+        if self.clamp_mode == "mask":
+            clamped = center_obs <= self.min_obs
+            lb[clamped], ub[clamped] = -UNCONSTRAINED, UNCONSTRAINED
 
         out = (torch.from_numpy(patch), torch.from_numpy(center_obs),
                torch.from_numpy(lb), torch.from_numpy(ub))

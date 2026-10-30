@@ -30,13 +30,13 @@ run() {  # name track segments eval(cpu|gpu) checkpoint-tag env...
   done
   local ck=$OUT/$tag.pt evals
   if [ "$ev" = gpu ]; then
-    evals=$(sbatch --parsable --dependency=afterok:$prev --job-name="fe_$name" \
+    evals=$(sbatch --parsable --dependency=afterok:$prev --job-name="fe_$name" ${ACCOUNT:+--account="$ACCOUNT"} \
             --export=ALL,TRACK=$track,MODEL_PATH=$ck,TAG=fu_$name experiments/job_eval_followup_gpu.sbatch)
   else
     local d a
-    d=$(sbatch --parsable --dependency=afterok:$prev --job-name="fd_$name" \
+    d=$(sbatch --parsable --dependency=afterok:$prev --job-name="fd_$name" ${ACCOUNT:+--account="$ACCOUNT"} \
         --export=ALL,TRACK=$track,MODEL_PATH=$ck,TAG=fu_$name experiments/job_diagnose_bright_failures.sbatch)
-    a=$(sbatch --parsable --dependency=afterok:$prev --job-name="fa_$name" \
+    a=$(sbatch --parsable --dependency=afterok:$prev --job-name="fa_$name" ${ACCOUNT:+--account="$ACCOUNT"} \
         --export=ALL,TRACK=$track,LF_MODEL=$ck,TAG=fu_$name experiments/job_aia_fit_by_brightness.sbatch)
     evals="$d,$a"
   fi
@@ -87,4 +87,17 @@ pick bp_mu100_ep120_cont && ACCOUNT=torch_pr_41_tandon_advanced run bp_mu100_ep1
 pick bp_mu100_ep240      && ACCOUNT=torch_pr_718_cilvr run bp_mu100_ep240 bp 7 cpu "${B}_h336_sqrt_ff12_resample_mu100_ep240" MU=100 EPOCHS=240 MAX_HOURS=1.85 TAG_SUFFIX=_mu100_ep240
 pick bp_mu100_h680_ep120 && ACCOUNT=torch_pr_718_cds run bp_mu100_h680_ep120 bp 4 cpu "${B}_h680_sqrt_ff12_resample_mu100_ep120" MU=100 HIDDEN=680 EPOCHS=120 MAX_HOURS=1.85 TAG_SUFFIX=_mu100_ep120
 pick bp_mu300_ep120      && ACCOUNT=torch_pr_41_tandon_advanced run bp_mu300_ep120 bp 4 cpu "${B}_h336_sqrt_ff12_resample_mu300_ep120" MU=300 EPOCHS=120 MAX_HOURS=1.85 TAG_SUFFIX=_mu300_ep120
+# 2026-10-29, after the 21 Oct meeting. The worst pixels of the large models and the
+# low end of the JPDFs are deconvolution-clamp pixels (a channel at the 1e-3 floor),
+# which every run so far excluded from training, so the network never saw them.
+# CLAMP_MODE=mask keeps them and frees only the clamped channels from the band.
+# Each run repeats an existing one with that single change:
+#   clampmask         = bp_mu100 (336 wide, 40 epochs)          production size
+#   h680_clampmask    = bp_mu100_h680_ep120 (blew up, DEM MSE 897)
+#   enet_clampmask    = the ElasticNet final (336 wide, 40 epochs)
+#   enet_10m_clampmask = enet_10m (blew up, DEM MSE 2,062)
+pick bp_clampmask       && ACCOUNT=torch_pr_41_cilvr   run bp_clampmask bp 2 cpu "${B}_h336_sqrt_ff12_resample_clampmask_mu100" MU=100 CLAMP_MODE=mask TAG_SUFFIX=_mu100
+pick bp_h680_clampmask  && ACCOUNT=torch_pr_41_courant run bp_h680_clampmask bp 5 cpu "${B}_h680_sqrt_ff12_resample_clampmask_mu100_ep120" MU=100 HIDDEN=680 EPOCHS=120 MAX_HOURS=1.85 CLAMP_MODE=mask TAG_SUFFIX=_mu100_ep120
+pick enet_clampmask     && ACCOUNT=torch_pr_718_cds    run enet_clampmask enet 2 cpu "${E}_h336_sqrt_ff12_resample_clampmask" CLAMP_MODE=mask
+pick enet_10m_clampmask && ACCOUNT=torch_pr_41_general run enet_10m_clampmask enet 5 gpu "${E}_h1800_sqrt_ff12_resample_clampmask" HIDDEN=1800 TF32=1 CLAMP_MODE=mask
 true

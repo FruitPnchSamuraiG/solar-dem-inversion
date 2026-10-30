@@ -267,7 +267,8 @@ def train(args):
 
     data_kw = dict(patch_size=args.patch_size, stride=args.stride, tolfac=args.tolfac,
                    pixels_per_block=args.pixels_per_block, n_bins=args.n_bins,
-                   min_obs=args.min_obs)
+                   min_obs=args.min_obs, clamp_mode=args.clamp_mode,
+                   relax_band=args.relax_band)
     _, train_loader = make_loader(args.root, 'train', batch_blocks=args.batch_blocks,
                                   num_workers=args.num_workers, shuffle=True,
                                   resample=args.resample_pixels,
@@ -333,6 +334,10 @@ def train(args):
         tag += "_resample"
     if args.bright_gamma > 0:
         tag += f"_bg{args.bright_gamma:g}"
+    if args.clamp_mode != "exclude":
+        tag += f"_clamp{args.clamp_mode}"
+    if args.relax_band:
+        tag += "_relax"
     tag += args.tag_suffix
     out_dir = args.out_dir
     os.makedirs(out_dir, exist_ok=True)
@@ -477,6 +482,12 @@ def parse_args():
     p.add_argument("--tolfac", type=float, default=1.4)
     p.add_argument("--min_obs", type=float, default=MIN_OBS,
                    help="drop pixels with any channel below this (deconvolution clamp)")
+    p.add_argument("--clamp_mode", choices=["exclude", "mask"], default="exclude",
+                   help="exclude: drop pixels with a clamped channel (the original runs); "
+                        "mask: keep them and free only the clamped channels from the band")
+    p.add_argument("--relax_band", action="store_true",
+                   help="widen the band by the solver's tolLevel (3x, 5x) where it did, "
+                        "instead of 1.4 sigma everywhere")
     p.add_argument("--max_train_blocks", type=int, default=None)
     p.add_argument("--max_val_blocks", type=int, default=256)
     p.add_argument("--num_workers", type=int, default=8)

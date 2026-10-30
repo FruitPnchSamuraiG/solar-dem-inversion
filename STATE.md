@@ -1,8 +1,8 @@
 # DEM project state
 
-Last updated: 2026-10-30 (Claude: BP final = 1.5M clamp-mask model; report built; website upload pending)
+Last updated: 2026-10-30 (Claude: BP final = 1.5M clamp-mask model; report built; website live)
 
-2026-10-30: meeting questions answered and report built (`report/`). BP final 1.5M clamp-mask, mu = 100, 120 epochs (DEM MSE 1.08); ElasticNet final unchanged. Full detail in the CLAUDE.md log. Viewer preview staged with run `bp_mlp6_h680_clamp`; Triborough upload pending. Torch queue empty.
+2026-10-30: meeting questions answered and report built (`report/`). BP final 1.5M clamp-mask, mu = 100, 120 epochs (DEM MSE 1.08); ElasticNet final unchanged. Full detail in the CLAUDE.md log. Website live on Triborough with run `bp_mlp6_h680_clamp`. Torch queue empty.
 
 2026-10-21 advisor meeting: results accepted, writing starts. Open asks: a theory for mu (first answer 24 Oct, exterior-penalty violation eps = lambda_c t sigma_c / (2 mu), see the CLAUDE.md log), the blow-up pixels of big models, the low-end JPDF pixels (clamp artefact suspected), the final layer by eigenvector. Triborough back 24 Oct after a 3-day outage. Torch: six accounts, submit new jobs on torch_pr_41_cilvr.
 

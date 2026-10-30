@@ -105,8 +105,8 @@ removes the best-answer trade-off, but mu = 300 relaxed trained worse on Quiet (
 Clamp-mask runs, DEM MSE excluded -> kept: BP 1.5M 897 -> 1.08, ENet 10M 2,062 -> 1.82, BP 409k 2.37 -> 2.79,
 ENet 409k 0.310 -> 0.439. Earlier "about 5% of pixels" for the training mask was wrong: it is ~40%.
 Wild pixels (recon > 1e3 and > 100x observed): 124 of 33.5M on the eight disks, 123 unsolved by the solver;
-`export_mlp6_full_disk.py --self_check` blanks them. Viewer run `bp_mlp6_h680_clamp` staged in the preview
-and copied to `~/dem_preview`; Triborough upload pending Hriday's login. Corrections: shared test BP targets
+`export_mlp6_full_disk.py --self_check` blanks them. Viewer run `bp_mlp6_h680_clamp` is live on Triborough
+(uploaded 30 Oct, 315 files byte-identical, old viewer files in `~/demdemo_backup_20261030` there). Corrections: shared test BP targets
 skip relaxation (--zerochill inferred from the ENet command), re-solves add 0.5 sigma, validation loss
 covers four images. Slide 18 now 245. Compute goes on Torch; race a job across accounts when queues are long.
 

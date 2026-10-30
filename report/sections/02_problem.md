@@ -2,7 +2,7 @@
 
 ### 2.1 Observations and the DEM
 
-The data are SDO/AIA images in six EUV channels (94, 131, 171, 193, 211 and 335 Å), deconvolved for the instrument's point-spread function and corrected for exposure time and degradation, so a pixel's six values o_c are intensities in DN/s. DEMs are computed on a 2048 × 2048 grid, DEM pixel (i, j) taking the AIA values at pixel (2i, 2j).
+The data are SDO/AIA images in six EUV channels (94, 131, 171, 193, 211 and 335 Å), deconvolved for the instrument's point-spread function (with the revised functions of Hofmeister et al. 2025) and corrected for exposure time and degradation, so a pixel's six values o_c are intensities in DN/s. DEMs are computed on a 2048 × 2048 grid, DEM pixel (i, j) taking the AIA values at pixel (2i, 2j).
 
 A DEM has 18 values, on temperature bins from logT 5.5 to 7.2 in steps of 0.1 dex (about 0.3 to 16 MK). Each is the emission measure in its bin in units of 10^26 cm^-5, which this report calls one unit of plasma. (The solver files pad the grid to logT 8.0 with zeros.) The response matrix R (6 × 18) gives each channel's DN/s per unit of plasma in each bin, so the predicted intensities are R times the DEM. With six measurements and 18 unknowns, many DEMs fit within the noise; the solver's regulariser picks one.
 
@@ -24,7 +24,7 @@ Our network's basis has this truncation; the solver runs that made the reference
 
 ### 2.3 Noise
 
-Each pixel and channel has a noise σ_c from AIA's instrument noise model: aiapy's `estimate_error` with the SolarSoft error table, which adds shot (photon), dark, read, quantisation and onboard-compression noise in quadrature, with the photometric-calibration and atomic-data terms off. Shot noise grows as the square root of the counts, so the relative noise falls as a pixel brightens. In the median pixel σ/o is 1.12 in 94 Å, 0.60 in 335 Å and 0.44 in 131 Å, against 0.06 to 0.08 in 171, 193 and 211 Å. The band of channel c is o_c ± tσ_c with t = 1.4.
+Each pixel and channel has a noise σ_c from AIA's instrument noise model: the `estimate_error` routine of aiapy (Barnes et al. 2020) with the SolarSoft error table, which adds shot (photon), dark, read, quantisation and onboard-compression noise in quadrature, with the photometric-calibration and atomic-data terms off. Shot noise grows as the square root of the counts, so the relative noise falls as a pixel brightens. In the median pixel σ/o is 1.12 in 94 Å, 0.60 in 335 Å and 0.44 in 131 Å, against 0.06 to 0.08 in 171, 193 and 211 Å. The band of channel c is o_c ± tσ_c with t = 1.4.
 
 ### 2.4 Basis Pursuit
 
@@ -40,7 +40,7 @@ ElasticNet fits the same weights by penalised least squares:
 
 minimise over w ≥ 0: (1/2C) Σ_c [((RBw)_c − o_c) / (tσ_c)]² + αλ Σ_k w_k + ½α(1 − λ) Σ_k w_k²,
 
-with each residual divided by the band's half-width tσ_c (floored at 0.5 DN/s). The supervised side's settings are α = 0.001, λ = 0.5 (scikit-learn's l1_ratio) and C = 6, the number of channels, since scikit-learn's ElasticNet divides the squared error by twice the number of rows; the fit is non-negative (positive=True), without intercept, with at most 10,000 iterations. With no band there is no relaxation: every pixel gets a DEM, though our solver runs at these settings logged convergence warnings. The L2 term spreads weight over more components, so ElasticNet DEMs are broader than BP's. Our first ElasticNet runs used α = 1, the code's default; every ElasticNet number in this report uses α = 0.001.
+with each residual divided by the band's half-width tσ_c (floored at 0.5 DN/s). The supervised side's settings are α = 0.001, λ = 0.5 (the l1_ratio of scikit-learn; Pedregosa et al. 2011) and C = 6, the number of channels, since scikit-learn's ElasticNet divides the squared error by twice the number of rows; the fit is non-negative (positive=True), without intercept, with at most 10,000 iterations. With no band there is no relaxation: every pixel gets a DEM, though our solver runs at these settings logged convergence warnings. The L2 term spreads weight over more components, so ElasticNet DEMs are broader than BP's. Our first ElasticNet runs used α = 1, the code's default; every ElasticNet number in this report uses α = 0.001.
 
 ### 2.6 What the channels see
 

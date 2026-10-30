@@ -5,7 +5,7 @@ Read `report/outline.md` first; each section file covers one outline entry.
 
 ## Rules
 
-- No personal names anywhere. Say "the supervised side", "the supervised model", "the
+- No names of collaborators. Literature citations in author-year form are allowed. Say "the supervised side", "the supervised model", "the
   supervised side's solver settings", "the advisor". The label-free side is "we" or "the
   label-free model".
 - No em dashes. Use commas, colons, parentheses or a new sentence.

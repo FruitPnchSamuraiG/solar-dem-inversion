@@ -9,7 +9,7 @@ const RUN_LABELS = {
   enet_supervised: "Supervised model",
 };
 
-// Final label-free model per track (BP: 1.5M, stiff band, clamp pixels in training, since 2026-10-31).
+// Final label-free model per track (BP: 1.5M, stiff band, clamp pixels in training, since 2026-10-30).
 const LABEL_FREE_RUN = {bp: "bp_mlp6_h680_clamp", enet: "enet_mlp6_h336_sqrtff"};
 
 const RESULTS = {

@@ -39,4 +39,22 @@ The weights also show that the 54-weight representation is not unique. The adopt
 
 The ElasticNet model spreads its weight over all three shapes (27%, 36% and 36%) and about 20 elements per pixel, as the L2 term asks; its weight matrix and outputs are lower-rank than the adopted BP model's (Table 8.1).
 
-Sources: `results/plots/23_meeting_followup_20261024/final_layer.txt` and `final_layer.json` (all numbers of Tables 8.1 and 8.2 except the 20,000-pixel shares, which come from `final_layer.npz`, arrays `bp__sol_x_network` and `sol_x_solver`, summed by shape and by centre logT); `experiments/final_layer.py`; `experiments/plot_meeting_followup.py` (Figure 8.1). The solver comparison of the ElasticNet model is omitted because the script decomposed BP solver DEMs for all three models.
+### 8.4 The final 1.5M model
+
+The sections above analyse the 409k stiff-band model. The same analysis on the final 1.5M model (width 680, clamp pixels in training) shows the same structure at slightly higher rank, with one change in the eigenvectors.
+
+Table 8.3. The final model against the 409k stiff-band model.
+
+| | Final 1.5M | 409k stiff-band | Solver |
+| --- | --- | --- | --- |
+| Weight matrix: participation ratio | 10.9 | 9.5 | |
+| Weight matrix: components for 90% / 99% | 24 / 43 | 22 / 40 | |
+| Outputs: correlation participation ratio | 8.3 | 13.5 | |
+| Last hidden layer: components for 90% / 99% | 18 / 137 of 680 | 14 / 90 of 336 | |
+| DEM shapes: components for 90% / 99% | 8 / 13 | 8 / 12 | 6 / 13 |
+| Weight by shape (spike, 0.1 dex, 0.2 dex), solver's pixels | 26%, 35%, 39% | 18%, 21%, 61% | 22%, 30%, 49% |
+| Active elements per pixel, all pixels, mean | 7.1 | 7.0 | 5.7 |
+
+Doubling the width barely changes the effective dimension of the last hidden layer (18 against 14 directions for 90% of its variance), so the extra width is not spent on more directions of the typical pixel. The final model's weight shares are closer to the solver's on either side, where the 409k model leaned on the widest Gaussian, and it no longer leaves the elements at logT 6.9 empty: its weight there is 17%, between 12% at 6.8 and 13% at 7.0. Its leading eigenvector differs: the cool elements (logT 5.6 to 6.1) lead, with the hot spikes behind them, rather than one hot block. We read this as an effect of the clamp pixels, which give the network a large faint population to represent, but we have not tested that.
+
+Sources: `results/plots/23_meeting_followup_20261024/final_layer_h680_clamp.txt` (the final model); `results/plots/23_meeting_followup_20261024/final_layer.txt` and `final_layer.json` (all numbers of Tables 8.1 and 8.2 except the 20,000-pixel shares, which come from `final_layer.npz`, arrays `bp__sol_x_network` and `sol_x_solver`, summed by shape and by centre logT); `experiments/final_layer.py`; `experiments/plot_meeting_followup.py` (Figure 8.1). The solver comparison of the ElasticNet model is omitted because the script decomposed BP solver DEMs for all three models.

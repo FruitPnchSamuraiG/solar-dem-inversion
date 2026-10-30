@@ -58,10 +58,14 @@ def find_figure(name, alt=""):
     """The caption names the source folder (style rule); honour it, since several
     result folders hold figures with the same basename."""
     local = os.path.join(FIGURES, name)
-    named = re.search(r"(results/plots/[^\s)]+/)" + re.escape(name), alt)
+    named = re.search(r"((?:results/plots|slides)/[^\s)]+/)" + re.escape(name), alt)
     if named:
         src = os.path.join(ROOT, named.group(1), name)
         if os.path.exists(src):
+            # Keep the folder in the copy's name so two figures that share a
+            # basename do not overwrite each other in report/figures/.
+            folder = os.path.basename(named.group(1).rstrip("/"))
+            local = os.path.join(FIGURES, f"{folder}__{name}")
             os.makedirs(FIGURES, exist_ok=True)
             if not (os.path.exists(local) and os.path.getsize(local) == os.path.getsize(src)):
                 shutil.copy(src, local)
@@ -90,7 +94,7 @@ def read_sections():
             if not found:
                 missing.append((os.path.basename(path), name))
                 return f"*[[missing figure: {name}]]*"
-            return f"![{alt}](figures/{name})"
+            return f"![{alt}](figures/{os.path.basename(found)})"
         body = re.sub(r"!\[([^\]]*)\]\(([^)]+)\)", repl, body)
         text.append(body.strip() + "\n")
     return "\n\n".join(text), missing

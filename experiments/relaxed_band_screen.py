@@ -42,11 +42,12 @@ def init_worker():
 
 
 def solve(job):
-    """Penalised best answer for one pixel at each mu, band half-width s = t * sigma."""
+    """Penalised best answer for one pixel at each mu: band half-width s, the
+    excess measured in units of s_norm (s itself, or the unrelaxed 1.4 sigma)."""
     from scipy.optimize import minimize
-    o, s, starts, mus = job
+    o, s, s_norm, starts, mus = job
     D = G["D"]
-    lb, ub, s2 = o - s, o + s, s ** 2 + 1e-8
+    lb, ub, s2 = o - s, o + s, s_norm ** 2 + 1e-8
     out = []
     for mu in mus:
         def f(x):
@@ -101,41 +102,49 @@ def main():
     tol, group, x_sol, x_fixed = z["tol"], z["group"], z["x_sol"], z["x_opt"]
 
     relaxed = np.flatnonzero(tol > 1)
-    jobs = []
-    for i in relaxed:
-        s = args.tolfac * float(tol[i]) * err[i]
-        jobs.append((obs[i], s, [x_sol[i]] + [x_fixed[m, i] for m in range(len(mus))], mus))
-    print(f"{len(relaxed):,} of {len(tol):,} pixels relaxed by the solver; re-solving at "
-          f"mu {mus} with its own band", flush=True)
-    with mp.Pool(args.workers, initializer=init_worker) as pool:
-        sols = pool.map(solve, jobs, chunksize=8)
+    # Two ways to widen the band: "relaxed" divides the excess by the widened
+    # half-width (what lb/ub alone give the training losses), which softens the
+    # penalty 9x or 25x in DN/s; "relaxed_noise" keeps the excess in units of the
+    # unrelaxed 1.4 sigma, so only the zero-penalty region moves.
+    variants = {}
+    for name, norm_by_band in (("relaxed", True), ("relaxed_noise", False)):
+        jobs = []
+        for i in relaxed:
+            s = args.tolfac * float(tol[i]) * err[i]
+            s_norm = s if norm_by_band else args.tolfac * err[i]
+            jobs.append((obs[i], s, s_norm,
+                         [x_sol[i]] + [x_fixed[m, i] for m in range(len(mus))], mus))
+        print(f"{name}: {len(relaxed):,} of {len(tol):,} pixels relaxed by the solver; "
+              f"re-solving at mu {mus} with its own band", flush=True)
+        with mp.Pool(args.workers, initializer=init_worker) as pool:
+            sols = pool.map(solve, jobs, chunksize=8)
+        x_var = x_fixed.copy()
+        for k, i in enumerate(relaxed):
+            x_var[:, i] = sols[k]
+        variants[name] = x_var
     init_worker()
     D, B = G["D"], G["B"]
-
-    x_relaxed = x_fixed.copy()
-    for k, i in enumerate(relaxed):
-        x_relaxed[:, i] = sols[k]
     result = {"purpose": __doc__.split("\n")[0], "npz": args.npz, "mus": mus,
               "n_pixels": int(len(tol)), "n_relaxed": int(len(relaxed)),
               "relaxed_by_band": {LABELS[g]: int(((group == g) & (tol > 1)).sum()) for g in range(9)},
               "population_per_band": dict(zip(LABELS, pop.tolist())),
-              "fixed": {}, "relaxed": {}, "runtime_s": None}
+              "fixed": {}, "relaxed": {}, "relaxed_noise": {}, "runtime_s": None}
     for m, mu in enumerate(mus):
         result["fixed"][f"{mu:g}"] = screen(x_fixed[m], dem, obs, group, pop, D, B)
-        result["relaxed"][f"{mu:g}"] = screen(x_relaxed[m], dem, obs, group, pop, D, B)
+        for name, x_var in variants.items():
+            result[name][f"{mu:g}"] = screen(x_var[m], dem, obs, group, pop, D, B)
     result["runtime_s"] = round(time.time() - t0, 1)
 
     lines = [f"Relaxed-band screen on {len(tol):,} validation pixels ({len(relaxed):,} relaxed by the "
-             f"solver); population-weighted as the mu screen",
-             f"{'mu':>6} | {'DEM error':>21} | {'Quiet MSE':>19} | {'core 94 A':>15} | {'core emission':>15}",
-             f"{'':>6} | {'fixed':>10} {'relaxed':>10} | {'fixed':>9} {'relaxed':>9} | "
-             f"{'fixed':>7} {'relax':>7} | {'fixed':>7} {'relax':>7}"]
-    for mu in mus:
-        a, b = result["fixed"][f"{mu:g}"], result["relaxed"][f"{mu:g}"]
-        lines.append(f"{mu:>6g} | {a['dem_error']:>10.3f} {b['dem_error']:>10.3f} | "
-                     f"{a['quiet_mse']:>9.4f} {b['quiet_mse']:>9.4f} | "
-                     f"{a['core_94']:>7.1%} {b['core_94']:>7.1%} | "
-                     f"{a['core_emission']:>7.1%} {b['core_emission']:>7.1%}")
+             f"solver); population-weighted as the mu screen. Columns: fixed 1.4 sigma band | "
+             f"solver's band, excess per widened half-width | solver's band, excess per 1.4 sigma"]
+    for key, title in (("dem_error", "DEM error"), ("quiet_mse", "Quiet MSE"),
+                       ("core_94", "flare-core 94 A"), ("core_emission", "flare-core emission")):
+        lines.append(f"{title}:")
+        for mu in mus:
+            vals = [result[v][f"{mu:g}"][key] for v in ("fixed", "relaxed", "relaxed_noise")]
+            fmt = (lambda v: f"{v:>9.1%}") if key.startswith("core") else (lambda v: f"{v:>9.4g}")
+            lines.append(f"  mu {mu:>6g}: " + " | ".join(fmt(v) for v in vals))
     text = "\n".join(lines)
     print(text)
     os.makedirs(os.path.dirname(os.path.abspath(args.output)), exist_ok=True)

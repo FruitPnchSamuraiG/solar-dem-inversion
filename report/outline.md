@@ -62,8 +62,8 @@ squared, per-channel normalisation by tσ); ElasticNet as the solver's objective
 per DN/s), the violation formula, the μ needed for a tolerance, and the validation check
 (fork A: `results/plots/23_meeting_followup_20261024/bp_mu_theory_val.*`). The per-pixel
 weight as the principled generalisation; the exact L1 penalty as the alternative.
-3.4 Training: 917 days, 64 random blocks per image, 512 fresh pixels per block per epoch
-(30M per epoch), AdamW with cosine schedule and warm-up, gradient clipping, 40 epochs
+3.4 Training: 917 images, 64 random blocks per image, 512 fresh pixels per block per epoch
+(30M per epoch), Adam without weight decay, cosine schedule and warm-up, gradient clipping, 40 epochs
 (BP final: 120 + 120 warm-started), the clamp floor MIN_OBS and what it excludes.
 3.5 Model selection on validation without labels: the training loss on the validation days;
 the honest exceptions (ElasticNet width and epochs chosen with test evidence).
@@ -72,7 +72,7 @@ Sources: `experiments/train_scaled.py`, `experiments/train_ablations.py:72`,
 `slides/talk_prep.md` (ElasticNet width and epochs answers).
 
 ### 4. Evaluation protocol
-The shared test set (153 days, five solver targets per day, 802M pixel DEMs), the
+The shared test set (153 images on 86 distinct days, five solver targets per image, 802M pixel DEMs), the
 Bright/Quiet thresholds, the metrics (DEM MAE/MSE, EM error, W1, AIA MAE/MSE, per-pixel
 percentiles), why percentiles. Sources: `eval_and_enet_specs/README.md`,
 `student_package/table1_dem_metrics/compute_paper_table_metrics.py`,

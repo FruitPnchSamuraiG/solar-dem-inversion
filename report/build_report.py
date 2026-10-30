@@ -54,14 +54,24 @@ def section_files():
     return sorted(glob.glob(os.path.join(SECTIONS, "*.md")))
 
 
-def find_figure(name):
+def find_figure(name, alt=""):
+    """The caption names the source folder (style rule); honour it, since several
+    result folders hold figures with the same basename."""
     local = os.path.join(FIGURES, name)
+    named = re.search(r"(results/plots/[^\s)]+/)" + re.escape(name), alt)
+    if named:
+        src = os.path.join(ROOT, named.group(1), name)
+        if os.path.exists(src):
+            os.makedirs(FIGURES, exist_ok=True)
+            if not (os.path.exists(local) and os.path.getsize(local) == os.path.getsize(src)):
+                shutil.copy(src, local)
+            return local
     if os.path.exists(local):
         return local
-    hits = glob.glob(os.path.join(ROOT, "results", "plots", "**", name), recursive=True)
+    hits = sorted(glob.glob(os.path.join(ROOT, "results", "plots", "**", name), recursive=True))
     if hits:
         os.makedirs(FIGURES, exist_ok=True)
-        shutil.copy(hits[0], local)
+        shutil.copy(hits[-1], local)   # the latest folder wins when the caption is silent
         return local
     return None
 
@@ -76,7 +86,7 @@ def read_sections():
         def repl(m):
             alt, src = m.group(1), m.group(2)
             name = os.path.basename(src)
-            found = find_figure(name)
+            found = find_figure(name, alt)
             if not found:
                 missing.append((os.path.basename(path), name))
                 return f"*[[missing figure: {name}]]*"

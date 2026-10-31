@@ -1,0 +1,22 @@
+\section{Discussion and limitations}
+\label{sec:discussion}
+
+\paragraph{What the scores mean.}
+Every score here is a distance to a regularized solution of an underdetermined problem. We have no ground-truth DEM, and we have not tested on synthetic data with a known DEM, so neither our results nor the baseline's show that a DEM is physically right. A label-free model inherits the solver's regularizer through its objective. It emulates the solver's choice of answer and makes no independent claim about the Sun.
+
+\paragraph{Coverage.}
+BP test targets are missing where the band is infeasible, which is where the loss has most trouble, so our BP headline scores say nothing about those pixels. The test window has no flare far above X1, and we did not treat saturated pixels specially, so behavior on large X-class events is untested. Training reads one solver output, the flag that drops the 0.01\% to 0.02\% of pixels the solver could not solve at all. Each configuration was trained once. Identical configurations of an earlier model agreed to within 0.4\% in validation loss, but we report no seed variance, and \cref{sec:capacity} shows one place where that matters. We treat AIA alone, without Hinode/XRT. Our output is a single DEM, whereas DEMNet also predicts a distribution per bin, which we do not attempt.
+
+\paragraph{The remaining gap.}
+Our remaining flare-core error is in the height of the tallest peaks. Above a solver peak of 3,200 units our model reaches 0.53 of the solver's peak and the baseline 0.70, and those 269 pixel-targets hold 83\% of our squared error. On the 409k model this was a training gap rather than a loss gap, since the minimizer reproduced 93\% of 94\Ang{} where the network reached 77.5\%. We have not repeated that measurement on the final model.
+
+\paragraph{Speed.}
+We timed the 1.5M and 409k networks on four CPU threads of a laptop (Intel i5-1135G7), at 65,700 and 199,000 pixels per second, or 64 and 21 seconds per $2048\times2048$ image. BP on deconvolved data solved about 1,190 pixels per second per core on the cluster, so the per-core throughput is 14 and 42 times higher. DEMNet reports 2.85M pixels per second on an L40 GPU~\cite{perezdiaz2026demnet} with fewer parameters than our BP model, and we have not yet timed ours on a GPU. Deconvolution costs both pipelines about 4 minutes per image on 16 cluster cores, so the end-to-end gain over a 9.5-minute BP job is only about a factor of two until that step is also accelerated.
+
+\paragraph{Directions.}
+\Cref{prop:law} suggests two refinements, neither trained yet. A per-pixel, per-channel weight proportional to $\lambda_c h_c$, with the single-edge price standing in for $\lambda_c$, needs only $R$, $B$ and $\sigma$ and would hold pixels to a roughly common tolerance. An $\ell_1$ exterior penalty is exact~\cite{han1979exact}: once $\mu$ exceeds $\lambda_c h_c$ in every binding channel (about 24 at the flare core of \cref{sec:law}), its minimizer solves the LP itself, at the cost of a slope that jumps at the band edge.
+
+\section{Conclusion}
+\label{sec:conclusion}
+
+Training on a solver's objective is enough to emulate it at full-disk scale. Our per-pixel models never see a solver DEM and hold their own against a supervised baseline scored on the same pixels, although that baseline keeps DEM MSE and AIA MAE on BP. The difficult part was the loss. A hard noise band turned into a penalty behaves as a price, and the LP says what that price is: \cref{eq:law} gives how far outside its band each channel settles, and \cref{prop:law} gives the weight below which that stops being true. At still lower weights hot plasma is lost, which explains a failure that training could not fix. More generally, when a network is trained on an objective rather than on labels, that objective can be solved directly on a sample of inputs, which is a cheap way to learn whether a failure lies in the loss or in the training. We recommend doing this before scaling up.

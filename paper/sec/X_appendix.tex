@@ -1,0 +1,201 @@
+\clearpage
+\appendix
+\renewcommand{\thesection}{\Alph{section}}
+
+\section{Proof of \cref{prop:law}}
+\label{app:proof}
+
+Write the LP~\eqref{eq:bp} with edges $\ell_c=o_c-h_c$ and $u_c=o_c+h_c$. Its dual variable $y\in\mathbb{R}^6$ is positive when a lower edge binds and negative when an upper edge binds, and dual feasibility reads $1-\sum_c y_c D_{ck}\ge 0$ for every $k$, with equality on the support of the primal solution.
+
+Let $b_c$ be the binding edge of channel $c\in A$. A unique primal solution makes the columns of $D_{A,S}$ independent and a unique dual solution makes its rows independent, so $D_{A,S}$ is square and invertible. Strict complementarity, which also follows from uniqueness, gives $1-\sum_c y^\star_c D_{ck}>0$ for $k\notin S$. Set $q=D_{A,S}^{-1}(y^\star_A\circ h_A^2)$, $w_{\mu,S}=w^\star_S-q/(2\mu)$ and $w_{\mu,k}=0$ for $k\notin S$. Then
+\begin{equation}
+  D_{A,S}\,w_{\mu,S}=b_A-\frac{y^\star_A\circ h_A^2}{2\mu},
+\end{equation}
+so each channel in $A$ sits outside its binding edge by $v_c=\lambda_c h_c^2/(2\mu)$. As $\mu\to\infty$, $w_{\mu,S}\to w^\star_S>0$, and the channels outside $A$, strictly inside their bands at $w^\star$, stay inside. There is therefore a finite $\mu_0$ beyond which $w_{\mu,S}>0$ and $v_c(w_\mu)=0$ for $c\notin A$. It is the largest of $q_k/(2w^\star_k)$ over $k\in S$ with $q_k>0$, and of $D_{c,S}\,q/\bigl(2((Dw^\star)_c-\ell_c)\bigr)$ or $-D_{c,S}\,q/\bigl(2(u_c-(Dw^\star)_c)\bigr)$ over $c\notin A$, according to the sign of $D_{c,S}\,q$.
+
+For $\mu\ge\mu_0$ the gradient of \cref{eq:loss-bp} at $w_\mu$ in coordinate $k$ is
+\begin{equation}
+  1-\sum_{c\in A}\operatorname{sign}(y^\star_c)\,\frac{2\mu\,v_c}{h_c^2}\,D_{ck}
+  =1-\sum_{c}y^\star_c D_{ck},
+\end{equation}
+which is zero on $S$ and positive off it. These are the optimality conditions of the convex problem $\min_{w\ge0}L_{\mathrm{BP}}$, so $w_\mu$ is a minimizer. Dividing $v_c$ by $h_c$ gives \cref{eq:law}.\hfill$\square$
+
+\paragraph{Remark.}
+The same computation shows that at any minimizer of \cref{eq:loss-bp}, for any $\mu$, the vector with entries $\pm 2\mu v_c/h_c^2$ is dual feasible for the LP. Violations are scaled dual variables, which is the content of the exact-penalty result of Mangasarian~\cite{mangasarian2004newton}. That work needs weaker assumptions and recovers the least-norm dual solution. We assume uniqueness because it gives the explicit path \eqref{eq:path} and threshold $\mu_0$, and in our sample all but 29 of 10,899 LP solutions pass the check $|S|=|A|$.
+
+\section{Basis, response and noise}
+\label{app:basis}
+
+The basis has a spike and two Gaussians $\exp(-\Delta\logT^2/a^2)$, with $a=0.1$ and $0.2$\,dex, at each of 18 bins. Weight is not plasma: one unit of weight on a spike is one unit of plasma in one bin, while one unit on the 0.2\,dex Gaussian is 3.5 units over seven bins. BP's objective therefore favors wide Gaussians over groups of spikes. Our network's basis zeroes each Gaussian below 0.04 of its peak, while the solver runs keep the tails, a difference of at most 2.1\% of an element's emission.
+
+\begin{table}[h]
+\centering
+\small
+\caption{AIA response in DN/s to one unit of plasma in a single bin. A warm unit lights the low-noise channels strongly, and a hot unit lights nothing strongly.}
+\label{tab:response}
+\setlength{\tabcolsep}{3.2pt}
+\begin{tabular}{@{}lcccccc@{}}
+\toprule
+Plasma at & 94 & 131 & 171 & 193 & 211 & 335\\
+\midrule
+\logT{} 6.0 to 6.1 & 0.2 & 0.5--1.2 & 36--95 & 29--55 & 5--7 & 0.4\\
+\logT{} 6.9 & 0.27 & 0.40 & 0.05 & 0.34 & 0.08 & 0.05\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The noise model adds shot, dark, read, quantization and onboard-compression noise in quadrature, with the calibration and atomic-data terms off. Median $\sigma/o$ is 1.12 in 94\Ang, 0.60 in 335\Ang, 0.44 in 131\Ang{} and 0.06 to 0.08 in 171, 193 and 211\Ang.
+
+\section{Model selection record}
+\label{app:selection}
+
+For a fixed loss we selected on the training loss on 131,072 pixels from the first four validation images, which needs no solver DEM. This chose the MLP over the patch CNN (2.155 against 2.248 on BP), width 336 on the original BP loss (2.148 against 2.155 at 1.43M, a tie that favors the smaller model), and the square-root Fourier input on Elastic Net (0.0533 against 0.0575 for the logarithmic input) and on the stiff BP loss (5.731 against 6.006).
+
+Different $\mu$ give different losses, so $\mu$ came from the screen of \cref{tab:screen}, on about 12,000 pixels from all 153 validation images, scored against solver DEMs. An earlier screen on test pixels gave the same choice, and its validation repeat kept $\mu=100$. The 94\Ang{} column of the screen needs no solver DEM and levels off at $\mu=100$.
+
+Test scores informed five choices. (1) On Elastic Net, validation preferred or tied every wider model, and each blew up on test, so the width stayed at 336. (2) On Elastic Net, 120 epochs reached a lower validation loss (0.0523 against 0.0533) and better DEM MAE, median, EM error, W1 and AIA MAE, but worse DEM MSE (0.362 against 0.310) and AIA MSE (188 against 161), and 40 epochs were kept. (3) Keeping clamped pixels worsened the Elastic Net model on test (DEM MSE 0.439 against 0.310), so they stay out. (4) The final BP model was chosen on test scores, because its validation loss (4.910 against 5.444) uses a different mask from the earlier runs. (5) The widened band was rejected largely on its test Quiet MSE. On the stiff BP loss validation also preferred the wider models, which blew up. At $\mu=1$ it preferred the narrower model.
+
+\section{Additional results}
+\label{app:results}
+
+\begin{table}[h]
+\centering
+\small
+\caption{DEM MSE of each label-free model divided by the supervised baseline's, by brightness relative to the Bright cutoff. Below 1 means we are closer to the solver. Pixel shares are from BP.}
+\label{tab:bands}
+\begin{tabular}{@{}lrcc@{}}
+\toprule
+Band & Pixels & BP (final) & Elastic Net\\
+\midrule
+$<0.03$ & 3.9\% & 0.64 & 1.06\\
+0.03--0.1 & 10.5\% & 0.79 & 1.02\\
+0.1--0.3 & 33.0\% & 0.83 & 0.98\\
+0.3--1 & 42.5\% & 1.01 & 0.93\\
+1--1.8 & 6.5\% & 1.04 & 0.82\\
+1.8--3.2 & 2.3\% & 0.97 & 0.76\\
+3.2--10 & 1.2\% & 0.85 & 0.51\\
+10--32 & 0.08\% & 0.98 & 0.47\\
+$\ge 32$ & 0.010\% & 1.22 & 1.28\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[h]
+\centering
+\small
+\caption{Reconstructed over observed intensity per channel, summed over flare cores (1.00 is exact).}
+\label{tab:channels}
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{@{}lcccccc@{}}
+\toprule
+ & \multicolumn{3}{c}{Basis Pursuit} & \multicolumn{3}{c}{Elastic Net}\\
+\cmidrule(lr){2-4}\cmidrule(l){5-7}
+Channel & Solver & Ours & Sup. & Solver & Ours & Sup.\\
+\midrule
+94\Ang & 0.92 & 0.88 & 0.85 & 0.55 & 0.53 & 0.48\\
+131\Ang & 1.01 & 1.00 & 0.90 & 0.78 & 0.80 & 0.68\\
+171\Ang & 0.99 & 1.00 & 0.78 & 1.00 & 0.97 & 0.70\\
+193\Ang & 1.01 & 1.00 & 0.90 & 0.98 & 0.97 & 0.76\\
+211\Ang & 0.98 & 0.99 & 0.90 & 0.98 & 0.97 & 0.76\\
+335\Ang & 1.04 & 1.04 & 0.96 & 0.94 & 0.93 & 0.76\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\Cref{tab:bands} shows where the two models differ. Our BP model is ahead on the faintest 47\% of pixels, within 4\% of the baseline from 0.3 to 1.8 times the cutoff, ahead again up to 32 times, and behind only at flare cores. \Cref{tab:channels} shows that at flare cores our models follow their solvers channel by channel, including the Elastic Net solver's own 94\Ang{} shortfall, which comes from its regularizer. Peak height is what remains on BP: the final model reaches 0.98 of the solver's peak for peaks of 32 to 100 units, 0.97 at 100 to 320, 0.92 at 320 to 1,000, 0.78 at 1,000 to 3,200 and 0.53 above that. At flare cores 83\% of its squared error lies along the solver's curve, so the shortfall is in height rather than placement, and its mean \logT{} shift is $-0.01$\,dex.
+
+\section{Architecture and size}
+\label{app:architecture}
+
+\begin{table}[h]
+\centering
+\small
+\caption{Per-pixel training loss on 5,013,504 test pixels, MLP (1.43M, center pixel) against patch CNN (1.48M, $9\times9$), both with a logarithmic input at $\mu=1$ or on the Elastic Net objective.}
+\label{tab:cnn}
+\begin{tabular}{@{}lcccc@{}}
+\toprule
+ & \multicolumn{2}{c}{Basis Pursuit} & \multicolumn{2}{c}{Elastic Net}\\
+\cmidrule(lr){2-3}\cmidrule(l){4-5}
+ & MLP & CNN & MLP & CNN\\
+\midrule
+Median & 0.98 & 1.01 & 0.020 & 0.033\\
+p90 & 4.62 & 4.74 & 0.137 & 0.154\\
+p99 & 17.9 & 18.8 & 0.47 & 0.52\\
+p99.9 & 51 & 57 & 1.19 & 1.44\\
+Worst pixel & 7,622 & 421,309 & 1,490 & 622,832\\
+AIA MAE & 4.93 & 4.73 & 0.54 & 0.82\\
+Validation loss & 2.155 & 2.248 & 0.0528 & 0.0683\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[h]
+\centering
+\small
+\caption{Width sweep on the shared test set: logarithmic input, 40 epochs, $\mu=1$ or the Elastic Net objective, clamped pixels dropped. Parameter counts are for six raw inputs.}
+\label{tab:sweep}
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{@{}rrcccc@{}}
+\toprule
+ & & \multicolumn{2}{c}{BP} & \multicolumn{2}{c}{Elastic Net}\\
+\cmidrule(lr){3-4}\cmidrule(l){5-6}
+Width & Params & Median & MSE & Median & MSE\\
+\midrule
+680 & 1.43M & 0.023 & 5.10 & 0.81 & 36.2\\
+480 & 722k & 0.025 & 5.15 & 0.85 & 3.24\\
+336 & 360k & 0.026 & 4.28 & 1.07 & 0.48\\
+232 & 176k & 0.030 & 5.28 & 1.70 & 0.79\\
+160 & 87k & 0.043 & 5.15 & 1.55 & 0.64\\
+108 & 42k & 0.047 & 4.58 & 2.24 & 0.83\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\Cref{tab:cnn} is the patch CNN comparison at scale. The CNN's one win is BP AIA MAE, and the four-fold gap in the Elastic Net mean (0.057 against 0.245) comes mostly from a few CNN pixels. Earlier, on crops from four days, the CNN looked better on pixels of days it had trained on, and that advantage disappeared on held-out days, where spatial context won only isolated comparisons.
+
+\Cref{tab:sweep} is the width sweep. A larger network helps the typical pixel a little. DEM MSE is erratic across widths because flare cores set it, and on this loss they are dominated by the failure of \cref{sec:flare}.
+
+\section{The low end of the joint distributions}
+\label{app:lowend}
+
+Joint distributions of observed against reconstructed intensity show a cluster at the low end: pixels observed below 1\,DN/s and reconstructed above ten times the observation, with both floored at 0.5\,DN/s. On the 409k model at $\mu=100$ (120+120 epochs) it holds about 50,000 of 705M pixels, and 81\% to 96\% of them have that very channel clamped.
+
+\begin{table}[h]
+\centering
+\small
+\caption{Pixels in the low cluster on BP, by whose DEM puts them there. ``Ours'' is the 409k model.}
+\label{tab:lowend}
+\begin{tabular}{@{}lrrr@{}}
+\toprule
+Channel & Ours & Supervised & Solver\\
+\midrule
+94\Ang & 0 & 1 & 0\\
+131\Ang & 18,625 & 3,792 & 152,767\\
+171\Ang & 51 & 369 & 0\\
+193\Ang & 8,073 & 460 & 123,154\\
+211\Ang & 95 & 36 & 0\\
+335\Ang & 23,370 & 63 & 102,110\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+In 131, 193 and 335\Ang{} the observation is wrong rather than the DEM. On the 409k model the solver's own DEM sits above the zero more often than ours, since no DEM that fits the other five channels can produce a zero in the sixth. In 171 and 211\Ang{} the network is at fault. There our model is far off (3.4 and 1.9\,dex above the observation, against 0.6 and 0.0 for the supervised baseline and 0.04 and 0.0 for the solver), and half of the 171\Ang{} cluster and a third of the 211\Ang{} cluster are the lone-spike inputs of \cref{sec:capacity}. With channel masking the cluster grows to about 5.5M pixels (0.8\% of the test set), many more than the solver's, because nothing now pulls a freed channel down to a zero we do not trust, and the DEM predicts roughly 15 times the floored value there. The scores barely move: AIA MSE is 148 with the cluster and 149 without it.
+
+\section{The final layer and multi-peaked DEMs}
+\label{app:network}
+
+We took the singular values of the last linear layer and the correlation of the 54 outputs over 611,947 validation pixels. The effective rank of the layer, measured by the participation ratio of its singular values, is 10.9 for the final model, 9.5 for the 409k model at $\mu=100$ and 2.9 for the $\mu=1$ model. That old model was close to rank three, and its DEMs lived in a family of four shapes where the solver's need six (components for 90\% of the variance of unit-sum DEMs). The final model needs eight. Sorting the outputs by the leading eigenvector of their correlation gives, in the 409k model, one tight block of hot elements (\logT{} 6.6 to 7.2), so its leading direction is how much hot plasma a pixel has. In the final model cool elements lead and the hot group comes second. We suspect the clamped pixels but have not tested this. Doubling the width raises the last hidden layer's components for 90\% of its variance only from 14 to 18.
+
+The solver's DEM is multi-peaked at 13.5\% of test pixels. The final model flags 12.8\% of pixels as multi-peaked, at about 63\% precision and 60\% recall, while the supervised baseline flags 41.1\% at 24\% precision and 72\% recall. An earlier test on a fixed-sample model, re-solving BP at 80 single-peaked and 80 double-peaked bright pixels under noise, put the network's distance from BP at 0.69 and 0.98 times BP's own re-solve scatter, so much of the apparent multi-peak deficit is the solver's irreproducibility.
+
+\section{Two engineering failures}
+\label{app:engineering}
+
+\paragraph{A silent collapse.}
+Our first full-disk runs exited cleanly and predicted an identically zero DEM. The architectures had been tested on crops spanning about one decade of intensity, and the full disk spans about seven. Fed raw intensities, the untrained network overshot the band about sevenfold, the loss at step 0 was $5.3\times10^{13}$, and the output softplus started so far negative (pre-activation $-139.8$) that in float32 its gradient was exactly zero. By step 60, 98\% of outputs were dead, and the runs then repeated a bit-identical epoch loss. The fix has five parts: compress the input only, leaving the loss and all metrics in DN/s; start the output layer small; warm up the learning rate; floor the softplus pre-activation at $-20$ so its gradient never vanishes; and stop any run whose sparsity is zero or whose epoch loss repeats exactly. A 64-block smoke test could not have caught this, because it never drew a flare pixel.
+
+\paragraph{A fixed sample.}
+Until October every run drew the same 512 pixels from each block in every epoch, because the draw was seeded by the block index alone. Training therefore saw one fixed sample of 30M pixels, about 0.8\% of the pixels in the training images and 3.1\% of those in the kept blocks, 40 times over. Fresh pixels are now the method, and the main results use them. Retraining with fresh pixels at first scored worse than the fixed sample, by more than run-to-run noise. Rerunning the sweep then moved the best width from 232 to 336 and removed an apparent capacity cliff at width 160.
+
+\paragraph{Viewer.}
+An interactive viewer shows both final models against the solver and the supervised baseline on eight test dates: \url{https://triborough.cs.nyu.edu/hsr3649/demdemo/webapp/compare.html}.

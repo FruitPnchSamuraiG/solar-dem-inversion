@@ -1,0 +1,28 @@
+\section{Background}
+\label{sec:background}
+
+\paragraph{Forward model.}
+At one pixel, AIA gives six intensities $o\in\mathbb{R}^6$ in DN/s, detector counts per second (the 94, 131, 171, 193, 211 and 335\Ang{} channels). A DEM $x\in\mathbb{R}^{18}_{\ge 0}$ on bins from $\logT=5.5$ to $7.2$ produces expected intensities $Rx$, where the response matrix $R\in\mathbb{R}^{6\times 18}$ comes from instrument calibration~\cite{boerner2012calibration}. Both solvers write the DEM as $x=Bw$, with 54 non-negative weights on a fixed basis $B$: at each bin one spike and two Gaussians in \logT{} of width 0.1 and 0.2\,dex (a dex is a factor of ten). With $D=RB$, the predicted intensities are $Dw$. DEM values and weights are in units of $10^{26}\,\mathrm{cm}^{-5}$.
+
+\paragraph{Noise.}
+Each reading has a noise estimate $\sigma_c$ from AIA's instrument model~\cite{barnes2020aiapy}. Shot noise dominates at bright pixels, so the relative noise falls with brightness: at the median pixel $\sigma/o$ is about 1.1 in 94\Ang{} and below 0.1 in 171, 193 and 211\Ang. We write $h_c=t\sigma_c$ for the half-width of the noise band of channel $c$, with $t=1.4$ as in BP's first attempt.
+
+\paragraph{Basis Pursuit.}
+For each pixel BP solves
+\begin{equation}
+  \min_{w\ge 0}\ \sum_{k} w_k \quad\text{s.t.}\quad o_c-h_c\le (Dw)_c\le o_c+h_c\ \ \forall c.
+  \label{eq:bp}
+\end{equation}
+Every DEM inside the band is acceptable and the smallest total weight breaks the tie. As a pixel brightens, its band narrows relative to the signal and can become tighter than the accuracy of $R$, a likely reason why some pixels have no feasible DEM. The solver retries those pixels with the band three and then five times wider.
+
+\paragraph{Elastic Net.}
+The second solver fits the same weights by
+\begin{equation}
+  \min_{w\ge 0}\ \frac{1}{2C}\sum_{c}\Bigl(\frac{(Dw)_c-o_c}{h_c}\Bigr)^2
+  +\alpha\rho\,\|w\|_1+\frac{\alpha(1-\rho)}{2}\|w\|_2^2,
+  \label{eq:enet}
+\end{equation}
+with $\alpha=0.001$, $\rho=0.5$ and $C=6$ as in the reference run. The $\ell_2$ term spreads weight over more elements, so its DEMs are broader than BP's~\cite{zou2005elastic}.
+
+\paragraph{Why hot plasma is hard to see.}
+One unit of plasma at 1 to 1.3\,MK gives 36 to 95\,DN/s in 171\Ang, but one unit at 8\,MK gives no channel more than 0.4\,DN/s. At ordinary pixels the 94\Ang{} signal comes free with warm plasma that the low-noise channels demand anyway. At flare cores most of it comes from hot plasma that only 94 and 131\Ang{} ask for, and a bright reading needs hundreds of units. How a method prices those units decides whether the hot plasma appears in the DEM at all.

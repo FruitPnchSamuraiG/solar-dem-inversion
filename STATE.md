@@ -1,5 +1,13 @@
 # DEM project state
 
+## 2026-10-31: paper draft in `paper/`
+
+Draft built from `paper/main.tex` (`latexmk -pdf main.tex` in `paper/`; figures from `paper/make_figures.py`). The BP final and
+ElasticNet final are unchanged. Read the 2026-10-31 entry in `CLAUDE.md` first: it records the corrections (the 897 was one
+unclamped flare pixel; five test-informed choices; the supplied checkpoints are not the published DEMNet) and the Torch runs still
+worth doing.
+
+
 Last updated: 2026-10-30 (Claude: BP final = 1.5M clamp-mask model; report built; website live)
 
 2026-10-30: meeting questions answered and report built (`report/`). BP final 1.5M clamp-mask, mu = 100, 120 epochs (DEM MSE 1.08); ElasticNet final unchanged. Full detail in the CLAUDE.md log. Website live on Triborough with run `bp_mlp6_h680_clamp`. Torch queue empty.

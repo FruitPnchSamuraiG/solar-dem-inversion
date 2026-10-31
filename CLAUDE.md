@@ -91,6 +91,32 @@ From the paper's "Future Work" section:
 
 ## Progress Log (most recent first)
 
+### 2026-10-31: Paper draft; the 897 was one flare pixel, not the clamp
+
+`paper/` holds a two-column draft in the CVPR template (layout only, not a submission): `main.tex`, `sec/`, `refs.bib`,
+`make_figures.py`, `main.pdf`, 15 pages with appendix. Title "Training on the Solver's Objective: Label-Free Emission Measure
+Inversion of the Full Solar Disk". Reviewed by an independent number audit and an advisor-style read. Results in
+`results/plots/24_paper_20261031/`. Bibliography checked entry by entry (`paper/refs_verification.md`); no earlier DEM network
+trains without solver labels (ADS was unreachable, so "to our knowledge").
+Baseline wording: the supplied checkpoints use DEMNet's architecture (Perez-Diaz et al. 2026, Zenodo 21113922; 1.05M parameters,
+140 epochs, resynthesis weight 0.01 from epoch 100) but are not the published models: that paper reports BP DEM MSE 0.27 / 0.40,
+resynthesis 161 / 42, against 0.91 / 157 here. DEM MSE gap unreconciled; ask the supervised side.
+New theory: Proposition 1 gives w_mu = w* - q / (2 mu) with q = D_AS^-1 (y_A h_A^2), so mu_0 is computable from the LP alone
+(after Mangasarian 2004, who has the exact-dual result). Above 1.05 mu_0, 99.4% of pixel-channels are within 5% of the law at
+mu = 1; below 0.5 mu_0, 3.7% (`experiments/law_threshold_check.py`). Median mu_0 is 37 at flare cores, and 96% of them have a hot
+element leaving above mu = 1 (median 10.6). For shot noise mu_drop ~ lambda t^2 g / 2, independent of brightness: 94 A 1.18, 335 A
+0.43, 131 A 0.08 (`experiments/check_drop_threshold.py`). The "objective gap" is the amortization gap (Cremer et al. 2018).
+Corrections to earlier notes: (1) 897 -> 1.08 is not clamp evidence: one unclamped flare-core input (131 A above 90,000 DN/s)
+holds 96.7% of the 897 and clamped pixels 2.9%; the clamp account holds for BP 10M and ENet 722k to 10M (93-99%) and for the 1.5M
+Quiet MSE (12.5 -> 0.033); why the final model survives that pixel is unknown, possibly chance. (2) ENet "ahead on all six" is
+a tie on DEM MSE (0.310 / 0.318, no seed spread) and needed test-picked 40 epochs. (3) Five choices used test scores, not three:
+ENet width, epochs and clamp treatment, the final BP model, rejecting the widened band. (4) Median law ratio 1.00 holds for
+mu >= 10 below flare cores, mu >= 30 at them. (5) Solver speed on deconvolved data is about 1,190 px/s per core, not 1,383.
+Timing: 1.5M 64 s and 409k 21 s per 2048 image on four laptop CPU threads; GPU untimed, deconvolution (4 min) limits the end-to-end
+gain to about 2x. Worth running on Torch, needs a login: `experiments/job_time_inference.sbatch`; a second seed of the 1.5M runs,
+masked and not; validation over all 153 images with clamped pixels; `mu_theory.py --models` on the final model; scoring the
+infeasible pixels against relaxed solver DEMs; a synthetic DEM test; an X-class date.
+
 ### 2026-10-30: BP final is now the 1.5M clamp-mask model; all meeting questions answered
 
 Written report: `report/` (sections, `report.html`, `report.docx`). Results in
@@ -100,7 +126,7 @@ checkpoint `output/experiments/followup/scaled_mlp6_barrier_h680_sqrt_ff12_resam
 Shared test vs supervised: DEM MAE 0.072/0.100, MSE 1.08/0.91, EM 11.0/14.3%, W1 0.070/0.133, AIA MAE
 3.54/2.95, MSE 148/157, median 0.031/0.112, flare-core emission 96.7/92%, 94 A 88/85% (solver 92%).
 Chosen with test evidence. ElasticNet final unchanged (409k, 40 epochs, no clamp pixels).
-mu theory verified: measured/predicted violation median 1.00 for mu >= 10 (Figure 3.2); band relaxation
+mu theory verified: measured/predicted violation median 1.00 for mu >= 10 below flare cores, mu >= 30 at them (Figure 3.2); band relaxation
 removes the best-answer trade-off, but mu = 300 relaxed trained worse on Quiet (0.050), so mu = 100 stays.
 Clamp-mask runs, DEM MSE excluded -> kept: BP 1.5M 897 -> 1.08, ENet 10M 2,062 -> 1.82, BP 409k 2.37 -> 2.79,
 ENet 409k 0.310 -> 0.439. Earlier "about 5% of pixels" for the training mask was wrong: it is ~40%.

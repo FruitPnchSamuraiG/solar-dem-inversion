@@ -151,7 +151,7 @@ The prices match \cref{sec:law}. At flare cores the median 94\Ang{} price is 1.4
 
 The screen in \cref{tab:screen} kept $\mu=100$ before we had the law, and the law says what that choice means. At $\mu=100$ the median solved flare core sits 0.15 half-widths outside its band and the 90th percentile 0.60 (predicted 0.17 and 0.76). The value of 120 that \cref{sec:law} obtains from $R$ and the noise alone is close to where the screen's 94\Ang{} column levels off. A single $\mu$ cannot hold every pixel to one tolerance: the hardest solved pixel in the sample, a flare core priced on 335\Ang, would need 63,801 for 0.1 half-widths.
 
-The law describes the minimizer rather than the network, and a network adds its amortization gap on top. At validation flare cores the 409k model at $\mu=100$ (120+120 epochs) has a median worst-channel violation of 0.79 half-widths against the minimizer's 0.18, with a maximum of 1,695. We have not made this measurement on the final model.
+The law describes the minimizer rather than the network, and a network adds its amortization gap on top. At validation flare cores the final model has a median worst-channel violation of 0.28 half-widths against the minimizer's 0.18, down from 0.79 for the 409k model after 120+120 epochs, although its maximum reaches 9,480.
 
 \subsection{Pixels where no DEM fits the band}
 \label{sec:infeasible}
@@ -182,7 +182,7 @@ The fixed-band columns of \cref{tab:screen} show a trade-off. Raising $\mu$ firs
 
 Widening the band where the solver widened it, while still measuring the excess in units of the original half-width, removes the trade-off. Every column in \cref{tab:screen} then improves monotonically with $\mu$, and a perfect network would simply want the largest $\mu$.
 
-A real network does not get there. We trained the 409k model for 120 epochs at $\mu=300$ on the solver's band (\cref{tab:runs}). At the targeted pixels it did what the screen predicts, with validation DEM MAE of 0.15 against 0.45 for the same recipe at $\mu=100$, and it improved test DEM MSE and flare-core 94\Ang{} (1.54 and 87\%, against 2.00 and 75\%). But test Quiet MSE rose to 0.050, far above the 0.0036 the minimizer reaches on validation, and one validation pass spiked to $4\times10^{16}$. The loss had improved and the optimization had become harder, a pattern familiar from stiff penalties in physics-informed networks~\cite{wang2021pathologies,krishnapriyan2021failure}. Widening also needs the solver's per-pixel flag, or an LP feasibility check per pixel, which gives back part of what label-free training saves. We therefore keep the fixed band at $\mu=100$, and the final model reaches the same flare-core quality that way. A 1.5M model on the widened band remains untested. Because the BP test targets are missing at these pixels, the headline scores can show neither the gain from widening nor the cost of not widening.
+A real network does not get there. We trained the 409k model for 120 epochs at $\mu=300$ on the solver's band (\cref{tab:runs}). At the targeted pixels it did what the screen predicts, with validation DEM MAE of 0.15 against 0.45 for the same recipe at $\mu=100$, and it improved test DEM MSE and flare-core 94\Ang{} (1.54 and 87\%, against 2.00 and 75\%). But test Quiet MSE rose to 0.050, far above the 0.0036 the minimizer reaches on validation, and one validation pass spiked to $4\times10^{16}$. The loss had improved and the optimization had become harder, a pattern familiar from stiff penalties in physics-informed networks~\cite{wang2021pathologies,krishnapriyan2021failure}. Widening also needs the solver's per-pixel flag, or an LP feasibility check per pixel, which gives back part of what label-free training saves. We therefore keep the fixed band at $\mu=100$, and the final model reaches the same flare-core quality that way. \Cref{sec:allpixels} scores these pixels directly.
 
 \subsection{Capacity and out-of-distribution inputs}
 \label{sec:capacity}
@@ -198,3 +198,54 @@ The 1.5M BP model's DEM MSE needs a separate explanation. It fell from 897 to 1.
 Masking did not remove the most extreme outliers. On eight full disks, 124 of 33.5M pixels are reconstructed above $10^3$\,DN/s and more than 100 times their observation. Of these, 123 have no solver DEM, because they are unsolved even at the widest band, so they enter neither training nor any score. They are mostly single-channel readings among zeros, and simple input rules isolate them poorly: no dominant-channel rule we tried catches more than 79\% of them. A direct self-check works and needs neither a solver nor a label. A DEM must reproduce what was observed, so a pixel reconstructed above $10^3$\,DN/s and more than 100 times its observation is flagged. The paper's scores do not apply this check. The one flagged pixel with a solver DEM holds 97.7\% of our error on its disk.
 
 Spatial context did not help. A patch CNN on a $9\times9$ neighborhood (1.48M parameters), matched in size to a 680-wide MLP and trained on the same data at $\mu=1$, lost to the MLP at every percentile of the training loss on test pixels (BP median 1.01 against 0.98, Elastic Net 0.033 against 0.020). \Cref{app:architecture} gives this comparison and a width sweep.
+
+\subsection{Scoring every pixel}
+\label{sec:allpixels}
+
+\begin{table}[t]
+\centering
+\small
+\caption{Every pixel of the 153 validation images (160M) under one loss, with $\mu=100$ and clamped channels freed for all models: loss percentiles, pixels flagged by the self-check, and DEM MSE against the solver's clean solutions, relaxed answers included. All label-free rows use $\mu=100$.}
+\label{tab:fullval}
+\setlength{\tabcolsep}{3.6pt}
+\begin{tabular}{@{}lcccrcc@{}}
+\toprule
+Model & p50 & p99 & p99.99 & Flag & DEM & Quiet\\
+\midrule
+\textbf{1.5M, masked} & \textbf{1.14} & \textbf{68.4} & \textbf{1,500} & 374 & 7.65 & 1.67\\
+1.5M & 1.22 & 82.2 & 2,920 & 5,541 & 6,910 & 389\\
+409k, 120+120 & 1.22 & 80.4 & 2,260 & 499 & 8.70 & 0.084\\
+409k, 120 & 1.22 & 86.1 & 2,790 & 83 & 9.55 & 0.056\\
+409k, 40, masked & 1.19 & 73.3 & 1,640 & 0 & 13.2 & 0.066\\
+10M & 1.24 & 86.1 & 2,540 & 1,086 & 884 & 47\\
+Supervised & & & & 0 & 3.26 & 0.044\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[t]
+\centering
+\small
+\caption{DEM MSE on every pixel of our own test and validation images, against the solver's clean solutions, split by whether the solver relaxed the band. ``Checked'' removes the pixels the self-check flags. The self-check flags no supervised pixels. The last column is the median pixel error, ours then supervised.}
+\label{tab:allpixels}
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{@{}llcccc@{}}
+\toprule
+ & Pixels & Ours & Checked & Sup. & Median\\
+\midrule
+Test & Feasible & 2.98 & 2.87 & 3.05 & 0.017, 0.119\\
+ & Relaxed & 118 & 13.3 & 13.6 & 4.22, 2.72\\
+\midrule
+Val. & Feasible & 3.16 & 2.66 & 1.63 & 0.014, 0.108\\
+ & Relaxed & 58.9 & 26.7 & 21.9 & 4.22, 2.72\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The headline comparison and the validation loss logged in training both leave pixels out. We therefore scored every pixel of the validation images and of our own test images, about 160M pixels each, with one loss for all models and clamped channels freed. Our stored solver DEMs include the relaxed answers that the shared test lacks, which lets us score those pixels as well.
+
+\Cref{tab:fullval} gives the validation pass. The final BP model has the lowest loss at every percentile from the median to p99.99, which supports the choice we first made on test scores. The pass also shows what the four-image loss could not: with clamped pixels dropped, the 1.5M and 10M models fail on Quiet pixels, and the self-check flags 5,541 and 1,086 of their pixels. It flags 374 for the final model and none for the 40-epoch 409k models, so masking reduces these failures without ending them.
+
+\Cref{tab:allpixels} separates feasible from relaxed pixels. At feasible test pixels the two models are level on DEM MSE and our median error is seven times lower. At relaxed pixels we fall behind, with DEM MSE 118 against 13.6 and median 4.22 against 2.72. A few pixels cause most of that mean: the self-check flags 101 of the 160M test pixels, 100 of them relaxed, and removing them brings our relaxed DEM MSE to 13.3, level with the baseline's. The median gap remains, as one would expect from a loss that keeps the $1.4\sigma$ band where the solver widened it. On validation the baseline leads on DEM MSE in both groups.
+
+On Elastic Net the pass agrees that wide models fail: the self-check flags 1,220 pixels for the 10M model and none at 409k. It prefers 120 epochs to 40 (mean loss 0.0520 against 0.0536) and prefers models trained with channel masking (0.0461). Masking changes the objective, though, by freeing zero readings that the solver fits, and against solver DEMs on test those models score worse. We keep 40 epochs and no masking on those test scores.

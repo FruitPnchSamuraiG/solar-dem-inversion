@@ -30,7 +30,8 @@ from src.zarr_data import MIN_OBS  # noqa: E402
 
 N_BINS = 18
 BRIGHT = (3.1212, 16.9986, 448.8948, 498.3444, 190.7388, 10.3326)     # eval_and_enet_specs/README.md
-GROUPS = ("all", "unclamped", "clamped", "feasible", "relaxed", "quiet", "bright", "flare_core")
+GROUPS = ("all", "unclamped", "clamped", "feasible", "relaxed", "quiet", "bright", "flare_core",
+          "checked", "feasible_checked", "relaxed_checked", "quiet_checked")   # checked: self-check passed
 LO, HI, STEP = -10.0, 16.0, 0.01
 N_HIST = int((HI - LO) / STEP)
 
@@ -170,10 +171,12 @@ def score(predict, is_sup, loader, D, B, R, args, device):
                     + 0.5 * args.enet_alpha * (1 - args.enet_lam) * (w ** 2).sum(1)
         inten = (o / thr).amax(1)
         clamped = free.any(1)
+        wild = ((rec > 1e3) & (rec > 100 * o64.clamp_min(1))).any(1)
         masks = {"all": torch.ones_like(clamped), "unclamped": ~clamped, "clamped": clamped,
                  "feasible": t == 1, "relaxed": t > 1, "quiet": inten < 1,
-                 "bright": (inten >= 1) & (inten < 32), "flare_core": inten >= 32}
-        wild = ((rec > 1e3) & (rec > 100 * o64.clamp_min(1))).any(1)
+                 "bright": (inten >= 1) & (inten < 32), "flare_core": inten >= 32,
+                 "checked": ~wild, "feasible_checked": (t == 1) & ~wild,
+                 "relaxed_checked": (t > 1) & ~wild, "quiet_checked": (inten < 1) & ~wild}
         aia_se = ((rec - o64) ** 2).sum(1)
         sse = ae = pe = re = has = None
         if args.labels:

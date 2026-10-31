@@ -2,7 +2,7 @@
 \label{sec:discussion}
 
 \paragraph{What the scores mean.}
-Every score here is a distance to a regularized solution of an underdetermined problem. We have no ground-truth DEM, and we have not tested on synthetic data with a known DEM, so neither our results nor the baseline's show that a DEM is physically right. A label-free model inherits the solver's regularizer through its objective. It emulates the solver's choice of answer and makes no independent claim about the Sun.
+Every score here is a distance to a regularized solution of an underdetermined problem. No ground-truth DEM exists for these images, so neither our results nor the baseline's show that a DEM is physically right. A label-free model inherits the solver's regularizer through its objective. It emulates the solver's choice of answer and makes no independent claim about the Sun.
 
 \paragraph{Coverage.}
 BP test targets are missing where the band is infeasible, which is where the loss has most trouble, so our BP headline scores say nothing about those pixels. The test window has no flare far above X1, and we did not treat saturated pixels specially, so behavior on large X-class events is untested. Training reads one solver output, the flag that drops the 0.01\% to 0.02\% of pixels the solver could not solve at all. Each configuration was trained once. Identical configurations of an earlier model agreed to within 0.4\% in validation loss, but we report no seed variance, and \cref{sec:capacity} shows one place where that matters. We treat AIA alone, without Hinode/XRT. Our output is a single DEM, whereas DEMNet also predicts a distribution per bin, which we do not attempt.

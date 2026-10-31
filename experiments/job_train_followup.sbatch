@@ -61,6 +61,7 @@ python3 -u experiments/train_scaled.py \
   --mu "${MU:-1.0}" \
   --l1_bright_power "${L1_BRIGHT_POWER:-0}" \
   --tag_suffix "${TAG_SUFFIX:-}" \
+  --seed "${SEED:-42}" \
   --resume \
   --max_hours "${MAX_HOURS:-1.7}" \
   "${EXTRA[@]}" \

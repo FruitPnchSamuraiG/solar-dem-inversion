@@ -100,6 +100,13 @@ pick bp_clampmask       && ACCOUNT=torch_pr_41_cilvr   run bp_clampmask bp 2 cpu
 pick bp_h680_clampmask  && ACCOUNT=torch_pr_41_courant run bp_h680_clampmask bp 5 cpu "${B}_h680_sqrt_ff12_resample_clampmask_mu100_ep120" MU=100 HIDDEN=680 EPOCHS=120 MAX_HOURS=1.85 CLAMP_MODE=mask TAG_SUFFIX=_mu100_ep120
 pick enet_clampmask     && ACCOUNT=torch_pr_718_cds    run enet_clampmask enet 2 cpu "${E}_h336_sqrt_ff12_resample_clampmask" CLAMP_MODE=mask
 pick enet_10m_clampmask && ACCOUNT=torch_pr_41_general run enet_10m_clampmask enet 5 gpu "${E}_h1800_sqrt_ff12_resample_clampmask" HIDDEN=1800 TF32=1 CLAMP_MODE=mask
+# Repeats of the 1.5M runs with and without clamp pixels: is the fall from DEM MSE 897 to 1.08
+# the masking or chance? One flare-core input held 96.7% of the 897.
+C="MU=100 HIDDEN=680 EPOCHS=120 MAX_HOURS=1.85"
+pick bp_h680_clampmask_s1 && ACCOUNT=torch_pr_41_courant run bp_h680_clampmask_s1 bp 5 cpu "${B}_h680_sqrt_ff12_resample_clampmask_mu100_ep120_s1" $C CLAMP_MODE=mask SEED=1 TAG_SUFFIX=_mu100_ep120_s1
+pick bp_h680_clampmask_s2 && ACCOUNT=torch_pr_41_cilvr   run bp_h680_clampmask_s2 bp 5 cpu "${B}_h680_sqrt_ff12_resample_clampmask_mu100_ep120_s2" $C CLAMP_MODE=mask SEED=2 TAG_SUFFIX=_mu100_ep120_s2
+pick bp_h680_s1           && ACCOUNT=torch_pr_41_courant run bp_h680_s1 bp 5 cpu "${B}_h680_sqrt_ff12_resample_mu100_ep120_s1" $C SEED=1 TAG_SUFFIX=_mu100_ep120_s1
+pick bp_h680_s2           && ACCOUNT=torch_pr_41_cilvr   run bp_h680_s2 bp 5 cpu "${B}_h680_sqrt_ff12_resample_mu100_ep120_s2" $C SEED=2 TAG_SUFFIX=_mu100_ep120_s2
 # The solver widens its band where no DEM fits 1.4 sigma; our loss did not, and on
 # validation those ~8% of pixels carry most of the stiff band's cost
 # (experiments/relaxed_band_screen.py: with the solver's own band, excess still in

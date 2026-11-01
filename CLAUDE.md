@@ -94,7 +94,7 @@ From the paper's "Future Work" section:
 ### 2026-10-31: Paper draft; the 897 was one flare pixel, not the clamp
 
 `paper/` holds a two-column draft in the CVPR template (layout only, not a submission): `main.tex`, `sec/`, `refs.bib`,
-`make_figures.py`, `main.pdf`, 15 pages with appendix. Title "Training on the Solver's Objective: Label-Free Emission Measure
+`make_figures.py`, `figures/`, 16 pages with appendix; the PDF is not tracked and Hriday keeps the paper on Overleaf from 1 Nov. Title "Training on the Solver's Objective: Label-Free Emission Measure
 Inversion of the Full Solar Disk". Reviewed by an independent number audit and an advisor-style read. Results in
 `results/plots/24_paper_20261031/`. Bibliography checked entry by entry (`paper/refs_verification.md`); no earlier DEM network
 trains without solver labels (ADS was unreachable, so "to our knowledge").

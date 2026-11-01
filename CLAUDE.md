@@ -108,14 +108,12 @@ element leaving above mu = 1 (median 10.6). For shot noise mu_drop ~ lambda t^2 
 0.43, 131 A 0.08 (`experiments/check_drop_threshold.py`). The "objective gap" is the amortization gap (Cremer et al. 2018).
 Corrections to earlier notes: (1) 897 -> 1.08 is not clamp evidence: one unclamped flare-core input (131 A above 90,000 DN/s)
 holds 96.7% of the 897 and clamped pixels 2.9%; the clamp account holds for BP 10M and ENet 722k to 10M (93-99%) and for the 1.5M
-Quiet MSE (12.5 -> 0.033); why the final model survives that pixel is unknown, possibly chance. (2) ENet "ahead on all six" is
+Quiet MSE (12.5 -> 0.033); three seeds each (31 Oct evening) settle it: masked DEM MSE 1.08, 1.35, 1.14, dropped 897, 1.75, 7.84, so masking stabilises the model and 897 was the worst draw; AIA MSE is 148, 9,540, 1,115 masked (21.7M, 33,570, 228,993 dropped), so BP leads on three of six in all seeds, not four; the self-check brings own-test AIA MSE to 113-1,083 (supervised 300) and DEM MSE to 3.53-3.77 (3.96). Full-pixel scoring (`experiments/full_validation.py`): final model lowest loss at every percentile on all 153 validation images; at relaxed pixels DEM MSE 118 vs 13.6 before the self-check, 13.3 after. GPU: 0.32 s per image (B200). (2) ENet "ahead on all six" is
 a tie on DEM MSE (0.310 / 0.318, no seed spread) and needed test-picked 40 epochs. (3) Five choices used test scores, not three:
 ENet width, epochs and clamp treatment, the final BP model, rejecting the widened band. (4) Median law ratio 1.00 holds for
 mu >= 10 below flare cores, mu >= 30 at them. (5) Solver speed on deconvolved data is about 1,190 px/s per core, not 1,383.
-Timing: 1.5M 64 s and 409k 21 s per 2048 image on four laptop CPU threads; GPU untimed, deconvolution (4 min) limits the end-to-end
-gain to about 2x. Worth running on Torch, needs a login: `experiments/job_time_inference.sbatch`; a second seed of the 1.5M runs,
-masked and not; validation over all 153 images with clamped pixels; `mu_theory.py --models` on the final model; scoring the
-infeasible pixels against relaxed solver DEMs; a synthetic DEM test; an X-class date.
+Timing: 1.5M 0.32 s and 409k 0.11 s per 2048 image on one B200 GPU, 36 s and 19 s on 16 CPU cores; deconvolution (4 min) limits the
+end-to-end gain to about 2x. Done 31 Oct: all of the Torch list except a synthetic DEM test and an X-class date, which remain worth running.
 
 ### 2026-10-30: BP final is now the 1.5M clamp-mask model; all meeting questions answered
 

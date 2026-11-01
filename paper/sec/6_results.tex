@@ -7,7 +7,7 @@
 \begin{table}[t]
 \centering
 \small
-\caption{Shared test set, same pixels and targets for both models. Bold marks the better of a pair when the two differ by 3\% or more. Smaller differences count as ties, as do pairs of percentiles one histogram bin (0.02\,dex) apart. Lower is better except in the last two rows, where the target is the solver's own value: 100\% for emission and, for 94\Ang, 92\% on BP and 55\% on Elastic Net.}
+\caption{Shared test set, same pixels and targets for both models. Bold marks the better of a pair when the two differ by 3\% or more. Smaller differences count as ties, as do pairs of percentiles one histogram bin (0.02\,dex) apart. Lower is better except in the last two rows, where the target is the solver's own value: 100\% for emission and, for 94\Ang, 92\% on BP and 55\% on Elastic Net. BP scores are for the first of three seeds. Across seeds DEM MSE spans 1.08 to 1.35 and AIA MSE 148 to 9,540, so we mark no winner on AIA MSE, and the other headline measures move by about 1\%.}
 \label{tab:headline}
 \begin{tabular}{@{}lcccc@{}}
 \toprule
@@ -20,7 +20,7 @@ DEM MSE & 1.08 & \textbf{0.91} & 0.310 & 0.318\\
 EM error (\%) & \textbf{11.0} & 14.3 & \textbf{12.2} & 18.0\\
 W1 (dex) & \textbf{0.070} & 0.133 & \textbf{0.103} & 0.121\\
 AIA MAE (DN/s) & 3.54 & \textbf{2.95} & \textbf{0.56} & 6.32\\
-AIA MSE & \textbf{148} & 157 & \textbf{161} & 598\\
+AIA MSE & 148 & 157 & \textbf{161} & 598\\
 \midrule
 Median pixel error & \textbf{0.031} & 0.112 & \textbf{0.85} & 1.12\\
 p90 & 1.86 & 1.95 & \textbf{7.76} & 8.51\\
@@ -37,7 +37,7 @@ Flare-core 94\Ang{} (\%) & 88 & 85 & \textbf{53} & 48\\
 
 \Cref{tab:headline} compares our final models with the supervised baseline. On Elastic Net our model leads on five of the six headline measures and ties on DEM MSE (0.310 against 0.318). Its AIA MAE is eleven times lower than the baseline's and also lower than the solver's own 1.41\,DN/s, though the solver's AIA MSE (134) is lower than ours. That tie depends on a test-informed choice: at 120 epochs, which the validation loss preferred, our DEM MSE is 0.362 and the baseline would lead.
 
-On BP our model leads on four of the six, and the baseline keeps DEM MSE (0.91 against 1.08) and AIA MAE (2.95 against 3.54). BP's own AIA MAE on these pixels is 4.26\,DN/s, worse than either network, because the solver only has to land inside the band, while its AIA MSE (61.9) beats both. The BP mean and median disagree because the error is heavy-tailed. On the typical pixel our model is 3.6 times closer to the solver (0.031 against 0.112), and from the 90th percentile upward the two are level within the resolution of our histograms. Flare cores, one pixel in 10,000, hold 92.0\% of our squared error and 90.0\% of the baseline's. Without them our DEM MSE is slightly lower (0.087 against 0.091), so the BP DEM MSE gap comes from flare cores, where our error is 1.22 times the baseline's.
+On BP our model leads on three of the six in all three seeds (DEM MAE, EM error and W1), and the baseline keeps DEM MSE (0.91 against 1.08 to 1.35) and AIA MAE (2.95 against 3.54). AIA MSE depends on the seed: 148, 1,115 and 9,540 against the baseline's 157, because a few pixels set that mean (\cref{sec:capacity}). BP's own AIA MAE on these pixels is 4.26\,DN/s, worse than either network, because the solver only has to land inside the band, while its AIA MSE (61.9) beats both. The BP mean and median disagree because the error is heavy-tailed. On the typical pixel our model is 3.6 times closer to the solver (0.031 against 0.112), and from the 90th percentile upward the two are level within the resolution of our histograms. Flare cores, one pixel in 10,000, hold 92.0\% of our squared error and 90.0\% of the baseline's. Without them our DEM MSE is slightly lower (0.087 against 0.091), so the BP DEM MSE gap comes from flare cores, where our error is 1.22 times the baseline's.
 
 The clearest differences between the two models are in shape, which the means hide. At BP flare cores the baseline falls 10\% to 22\% short of the observed 131 to 211\Ang, while ours stays within 1\% (\cref{tab:channels}). The baseline flags 41.1\% of pixels as multi-peaked at 24\% precision against the solver, and ours flags 12.8\% at about 63\%, with the solver itself at 13.5\%. W1, which measures where emission sits in temperature, is about half the baseline's.
 
@@ -191,9 +191,30 @@ With clamped pixels dropped from training, wider models improved the typical pix
 
 Most of these failures share a cause. In those Elastic Net models and the 10M BP model, 93\% to 99\% of the squared error sits in pixels with a clamped channel. The failing inputs are strange. In the 1.5M model's worst 100 distinct inputs a median of five of six channels read at most $10^{-3}$\,DN/s, and in 56\% a single channel has signal, always 94\Ang, at a median 3.0\,DN/s and 28 times the median of its eight neighbors. Such a lone reading looks like a residual cosmic-ray hit or a hot pixel. Our training mask had removed every pixel with a clamped channel, 40\% of pixels rather than the 5\% we first estimated from two channels, and the validation loss used the same mask, so neither had ever contained such an input. In standardized log intensity these inputs sit about 4.9 from the nearest of 2M training pixels, while test pixels above 0.3 times the cutoff sit 0.08 to 0.21 away. Near the data the loss pins the output, and far from it nothing does~\cite{hein2019relu,xu2021extrapolate}. A larger network has more room to bend there: over the 10M Elastic Net model's worst 1,000 inputs the median emission is $1.6\times10^5$ times the solver's. Distance alone does not mark failure, though, since faint pixels can sit as far out without any error.
 
-Channel masking (\cref{sec:clamp}) tests this account. It takes the 10M Elastic Net model from DEM MSE 2,062 to 1.82, though that model keeps an AIA MSE of 148,403, and it brings the 1.5M BP model's Quiet MSE from 12.5 down to 0.033. Smaller models get worse with the same change (BP 409k at 40 epochs from 2.37 to 2.79, Elastic Net 409k from 0.310 to 0.439), possibly because clamped pixels take a large share of each epoch's draws. Our Elastic Net model therefore stays at 409k with clamped pixels dropped.
+Channel masking (\cref{sec:clamp}) tests this account. It takes the 10M Elastic Net model from DEM MSE 2,062 to 1.82, though that model keeps an AIA MSE of 148,403. Smaller models get worse with the same change (BP 409k at 40 epochs from 2.37 to 2.79, Elastic Net 409k from 0.310 to 0.439), possibly because clamped pixels take a large share of each epoch's draws. Our Elastic Net model therefore stays at 409k with clamped pixels dropped.
 
-The 1.5M BP model's DEM MSE needs a separate explanation. It fell from 897 to 1.08, but clamped pixels held only 2.9\% of the 897. One unclamped flare-core input, seen through two targets, held 96.7\%, with 131\Ang{} above 90,000\,DN/s. Masking does not touch that pixel. With one run of each configuration we cannot say why the masked model does not fail on it, so this part of the improvement may be chance and needs repeating with more seeds.
+Three seeds of each 1.5M configuration show how much of this to credit to masking (\cref{tab:seeds}). All three masked runs beat all three dropped runs on DEM MSE, and they vary far less. The 897 was the unluckiest draw rather than a typical score: clamped pixels held only 2.9\% of it, and one unclamped flare-core input, seen through two targets and with 131\Ang{} above 90,000\,DN/s, held 96.7\%. Quiet MSE blew up in that seed alone. AIA MSE stays heavy-tailed even with masking, while the typical pixel barely moves across seeds.
+
+\begin{table}[t]
+\centering
+\small
+\caption{Three seeds of the 1.5M BP model at $\mu=100$ for 120 epochs, shared test set.}
+\label{tab:seeds}
+\setlength{\tabcolsep}{3.4pt}
+\begin{tabular}{@{}lccccc@{}}
+\toprule
+Clamped pixels & Seed & DEM MSE & Median & AIA MSE & Quiet\\
+\midrule
+Masked & 1 & 1.08 & 0.031 & 148 & 0.033\\
+ & 2 & 1.35 & 0.031 & 9,540 & 0.033\\
+ & 3 & 1.14 & 0.031 & 1,115 & 0.033\\
+\midrule
+Dropped & 1 & 897 & 0.034 & 21.7M & 12.5\\
+ & 2 & 1.75 & 0.034 & 33,570 & 0.032\\
+ & 3 & 7.84 & 0.036 & 228,993 & 0.032\\
+\bottomrule
+\end{tabular}
+\end{table}
 
 Masking did not remove the most extreme outliers. On eight full disks, 124 of 33.5M pixels are reconstructed above $10^3$\,DN/s and more than 100 times their observation. Of these, 123 have no solver DEM, because they are unsolved even at the widest band, so they enter neither training nor any score. They are mostly single-channel readings among zeros, and simple input rules isolate them poorly: no dominant-channel rule we tried catches more than 79\% of them. A direct self-check works and needs neither a solver nor a label. A DEM must reproduce what was observed, so a pixel reconstructed above $10^3$\,DN/s and more than 100 times its observation is flagged. The paper's scores do not apply this check. The one flagged pixel with a solver DEM holds 97.7\% of our error on its disk.
 
@@ -226,7 +247,7 @@ Supervised & & & & 0 & 3.26 & 0.044\\
 \begin{table}[t]
 \centering
 \small
-\caption{DEM MSE on every pixel of our own test and validation images, against the solver's clean solutions, split by whether the solver relaxed the band. ``Checked'' removes the pixels the self-check flags. The self-check flags no supervised pixels. The last column is the median pixel error, ours then supervised.}
+\caption{DEM MSE on every pixel of our own test and validation images, against the solver's clean solutions, split by whether the solver relaxed the band. ``Checked'' removes the pixels the self-check flags, and it flags no supervised pixels. Scores are for the first seed. The last column is the median pixel error, ours then supervised.}
 \label{tab:allpixels}
 \setlength{\tabcolsep}{4pt}
 \begin{tabular}{@{}llcccc@{}}
@@ -246,6 +267,6 @@ The headline comparison and the validation loss logged in training both leave pi
 
 \Cref{tab:fullval} gives the validation pass. The final BP model has the lowest loss at every percentile from the median to p99.99, which supports the choice we first made on test scores. The pass also shows what the four-image loss could not: with clamped pixels dropped, the 1.5M and 10M models fail on Quiet pixels, and the self-check flags 5,541 and 1,086 of their pixels. It flags 374 for the final model and none for the 40-epoch 409k models, so masking reduces these failures without ending them.
 
-\Cref{tab:allpixels} separates feasible from relaxed pixels. At feasible test pixels the two models are level on DEM MSE and our median error is seven times lower. At relaxed pixels we fall behind, with DEM MSE 118 against 13.6 and median 4.22 against 2.72. A few pixels cause most of that mean: the self-check flags 101 of the 160M test pixels, 100 of them relaxed, and removing them brings our relaxed DEM MSE to 13.3, level with the baseline's. The median gap remains, as one would expect from a loss that keeps the $1.4\sigma$ band where the solver widened it. On validation the baseline leads on DEM MSE in both groups.
+\Cref{tab:allpixels} separates feasible from relaxed pixels. At feasible test pixels the two models are level on DEM MSE and our median error is seven times lower. At relaxed pixels we fall behind, with DEM MSE 118 against 13.6 and median 4.22 against 2.72. A few pixels cause most of that mean: the self-check flags 101 of the 160M test pixels, 100 of them relaxed, and removing them brings our relaxed DEM MSE to 13.3, level with the baseline's. The median gap remains, as one would expect from a loss that keeps the $1.4\sigma$ band where the solver widened it. On validation the baseline leads on DEM MSE in both groups. The self-check also tames the variation between seeds. Across our three seeds it flags 49 to 101 of the test pixels, and removing them takes all-pixel AIA MSE from 15,000 to 142,000 down to 113 to 1,083 (baseline 300) and DEM MSE to 3.53 to 3.77 (baseline 3.96).
 
 On Elastic Net the pass agrees that wide models fail: the self-check flags 1,220 pixels for the 10M model and none at 409k. It prefers 120 epochs to 40 (mean loss 0.0520 against 0.0536) and prefers models trained with channel masking (0.0461). Masking changes the objective, though, by freeing zero readings that the solver fits, and against solver DEMs on test those models score worse. We keep 40 epochs and no masking on those test scores.

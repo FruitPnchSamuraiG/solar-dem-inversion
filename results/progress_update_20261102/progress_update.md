@@ -38,7 +38,17 @@ Here λ is the linear program's price of light in that channel, meaning the weig
 
 At μ = 1, deleting the plasma gives the lower loss, so the network was doing what the loss asked. That is why oversampling, longer training and a 10M model did not help. At μ = 100 the plasma stays, and the channel lands about 2 DN/s short of the band.
 
+![Three flare cores: solver DEM against the lowest point of the loss](img/fig_curves.png)
+
+*Three random flare cores from validation: the solver's DEM against the lowest point of the loss, with no network involved. At μ = 1 the hot peak disappears; at μ = 100 it returns.*
+
+
 **Tested.** The formula holds above a threshold μ₀ that the linear program gives for each pixel in advance. Above it, 99.4% of channels are within 5% of the prediction. Well below it, 3.7% are. Over 10,899 held-out pixels the median ratio of measured to predicted is 1.00.
+
+![The law on validation pixels](img/fig_law.png)
+
+*Left: violation falls as 1/μ once μ passes about 30. Center: measured against predicted at μ = 100, median ratio 1.00 over 45,925 channels. Right: the law predicts the flare-core 94 Å column from μ = 30 upward.*
+
 
 **What it gives us.** There is no single perfect μ for a squared penalty, because the distance outside the band only reaches zero at infinite μ. But for any tolerance ε we can compute μ = λ · 1.4σ / (2ε) from the response matrix and noise alone. For a typical flare core at 0.1 half-widths this gives about 120, close to the 100 our validation screen had chosen. Training limits how high μ can go.
 
@@ -53,6 +63,11 @@ At μ = 1, deleting the plasma gives the lower loss, so the network was doing wh
 - Deconvolution leaves at least one channel at zero in 40% of pixels. We had dropped all of those pixels from training, and validation used the same mask, so the network never saw a zero as input.
 - The worst inputs sit in that gap: typically five of six channels are zero, and in over half of them only 94 Å has signal, about 28 times brighter than the pixels around it.
 - Far from the training data nothing limits the output, and a bigger network has more freedom to give huge values there.
+
+![Distance to the nearest training pixel](img/fig3_blowup_distance.png)
+
+*Distance to the nearest of 2M training pixels. Bright test pixels sit at about 0.1 to 0.2; the worst pixels of the large models sit at about 3 to 5.*
+
 - **Fix:** keep those pixels and remove only the zeroed channel's penalty. All three masked runs beat all three unmasked runs.
 - **Caveat:** most of the 897 came from one very bright flare pixel with no zero in it, so it was the worst seed rather than a clamp effect.
 - **Self-check:** a few extreme pixels remain. We flag any pixel whose DEM predicts above 1,000 DN/s and more than 100 times the observation. This needs no solver and flags 49 to 101 of 160M test pixels.
@@ -64,6 +79,17 @@ At μ = 1, deleting the plasma gives the lower loss, so the network was doing wh
 | What they are | Deconvolution set the reading to zero | Only 94 Å has signal, far above its neighbors, and the rest are zero |
 | What is wrong | The reading. The solver's DEM sits above the zero too, more often than ours. | Probably the reading (cosmic ray or hot pixel), plus the old network guessing wildly on an input it had never seen |
 | Final model | A column at the left edge, about 0.8% of pixels; AIA MSE 148 with them, 149 without | Gone from the plots |
+
+![One lone-spike pixel](img/fig4_lone_spike_example.png)
+
+*One lone-spike pixel. The old 409k model reconstructs up to 10⁵ DN/s, while the solver and the supervised model stay near 1.*
+
+| Supervised | Old 409k model | Final 1.5M with self-check |
+|---|---|---|
+| ![](img/jpdf_sup.png) | ![](img/jpdf_409k.png) | ![](img/jpdf_final.png) |
+
+*171 Å on 23 October 2015. The extreme points are gone in the final model; the column at the left edge is the freed zero channels.*
+
 
 **Suggestion:** zeroed channels have no real observation to compare with, so they could be removed from each channel's JPDF for every model, with the number removed stated under each plot. Since the JPDF format is yours, we wanted to agree on this first.
 
@@ -78,9 +104,21 @@ At μ = 1, deleting the plasma gives the lower loss, so the network was doing wh
 
 The old model barely used its outputs, because its loss deleted hot plasma and it had no need to represent it. Sorted by the leading eigenvector, the 409k model's outputs form one block of hot elements (logT 6.6 to 7.2), so the main thing it varies is how much hot plasma a pixel has. Doubling the width barely adds directions for typical pixels (14 to 18 for 90% of the last hidden layer's variance).
 
+![Final layer](img/fig5_final_layer.png)
+
+*409k model at μ = 100. Left: singular values. Center: the 54 outputs sorted by the leading eigenvector of their correlation. Right: where the weight goes, network against solver.*
+
+
 ## 5. Relaxing the constraints
 
 At about 9% of pixels no DEM fits the 1.4σ band. The solver widens its band there, and our loss does not. We tried giving the loss the solver's wider band:
+
+![Relaxed-band screen](img/fig2_relaxed_band_screen.png)
+
+*The lowest point of the loss on validation, with no network. With the solver's band (blue), faint-pixel error keeps falling as μ grows.*
+
+With a real network:
+
 
 | 409k, 120 epochs | μ = 300, solver's band | μ = 100, fixed band |
 |---|---|---|
@@ -94,6 +132,11 @@ It fixed the targeted pixels but faint pixels got worse, it needs the solver's f
 ## Where we stand against the supervised model
 
 Shared test set, same pixels for both models. Bold marks the better model, and a difference under 3% counts as a tie.
+
+![Full disk](img/fig_disk.png)
+
+*One held-out image, 30 September 2015: mean temperature and a zoom on hot plasma for the solver, our model and the supervised model. Our model never saw a solver DEM in training.*
+
 
 | Measure | BP ours | BP supervised | ENet ours | ENet supervised |
 |---|---|---|---|---|

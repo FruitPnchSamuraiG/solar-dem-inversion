@@ -1,0 +1,52 @@
+[
+  {
+    "file": "checkpoints/BP_5_Wide_10.1M.pth",
+    "label": "DEMNet-BP Wide (10.13M, paper model)",
+    "reference_solver": "Basis Pursuit (LP)",
+    "model_name": "FreqClassNonReLUWide",
+    "n_params": 10130154,
+    "n_bins": 128,
+    "dem_bin_spacing": "sqrt",
+    "dem_vmin": 0.0,
+    "dem_vmax": 6500.0,
+    "epoch": 132,
+    "epochs_total": 140,
+    "val_loss": 0.07905030995607376,
+    "training_data": "bp_AIA_hofdeconv_full_DS",
+    "loss": "RegressionClassificationResynthLoss",
+    "source_run": "FreqClassNonReLUWide-RegressionClassificationResynthLoss_bp_hof_resynth_wide10m_bp_AIA_hofdeconv_full_ddp_sqrtbins_ebsize64_20260823_235339",
+    "test_metrics_full_disk": {
+      "dem_rmse": 0.6231804825930345,
+      "dem_mae": 0.09113948006895789,
+      "em_rel_err_pct": 12.90898250342917,
+      "w1_dex": 0.11258809835004169,
+      "resynth_rmse_dn_s": 5.073478769098399,
+      "resynth_rel_err_pct": 1.8577999215664986
+    }
+  },
+  {
+    "file": "checkpoints/EN_2_Wide_10.1M.pth",
+    "label": "DEMNet-ENet Wide (10.13M, paper model)",
+    "reference_solver": "ElasticNet",
+    "model_name": "FreqClassNonReLUWide",
+    "n_params": 10130154,
+    "n_bins": 128,
+    "dem_bin_spacing": "sqrt",
+    "dem_vmin": 0.0,
+    "dem_vmax": 1100.0,
+    "epoch": 125,
+    "epochs_total": 140,
+    "val_loss": 0.2896827459335327,
+    "training_data": "enet_AIA_hofdeconv_full_DS",
+    "loss": "RegressionClassificationResynthLoss",
+    "source_run": "FreqClassNonReLUWide-RegressionClassificationResynthLoss_en_hof_resynth_wide10m_enet_AIA_hofdeconv_full_ddp_sqrtbins_ebsize64_20260918_180116",
+    "test_metrics_full_disk": {
+      "dem_rmse": 0.4827344144689545,
+      "dem_mae": 0.15645705272451033,
+      "em_rel_err_pct": 12.610396995119949,
+      "w1_dex": 0.11168977535765127,
+      "resynth_rmse_dn_s": 12.860483133293744,
+      "resynth_rel_err_pct": 2.1022121844551163
+    }
+  }
+]

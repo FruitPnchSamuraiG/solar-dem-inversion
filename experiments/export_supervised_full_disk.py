@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Predict Samuel's checkpoints on the exact AIA grid of an existing viewer export."""
+"""Predict the supervised checkpoints on the exact AIA grid of an existing viewer export."""
 import argparse
 import os
 import sys

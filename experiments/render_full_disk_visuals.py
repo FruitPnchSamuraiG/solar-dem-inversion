@@ -33,7 +33,7 @@ def save_image(path, image, cmap="inferno", vmin=None, vmax=None):
 
 
 def jpdf(path, observed, synthesized):
-    """Match Samuel's log-log AIA/resynthesis JPDF convention."""
+    """Match the reference log-log AIA/resynthesis JPDF convention."""
     x = np.maximum(observed.ravel(), 0.5)
     y = np.maximum(synthesized.ravel(), 0.5)
     good = np.isfinite(x) & np.isfinite(y)

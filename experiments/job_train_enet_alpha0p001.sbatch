@@ -11,7 +11,7 @@
 #SBATCH --mail-type=FAIL
 #SBATCH --account=torch_pr_41_tandon_advanced
 
-# Retrain the production h232 architecture with Samuel's confirmed ENet
+# Retrain the production h232 architecture with the confirmed reference ENet
 # objective. Training remains label-free: the staged DEM is only read for the
 # validation agreement printout, never used in the optimization loss.
 set -euo pipefail

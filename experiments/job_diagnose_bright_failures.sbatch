@@ -25,7 +25,7 @@ THREADS=$(( SLURM_CPUS_PER_TASK / WORKERS ))
 (( THREADS >= 1 )) || THREADS=1
 export OMP_NUM_THREADS=$THREADS MKL_NUM_THREADS=$THREADS
 
-# MODEL_KIND=supervised runs Samuel's checkpoint through the identical analysis.
+# MODEL_KIND=supervised runs the supervised checkpoint through the identical analysis.
 case "${TRACK:?set TRACK=bp or TRACK=enet}:${MODEL_KIND:-label_free}" in
   bp:label_free) MODEL=output/experiments/sweep/scaled_mlp6_barrier_h232.pt ;;
   enet:label_free) MODEL=output/experiments/matched_enet_alpha0p001/scaled_mlp6_enet_h232.pt ;;

@@ -10,3 +10,15 @@ papers/7909_Revealing_the_3D_Cosmic_W.pdf
 results/findings_log.docx
 dem-handoff.md
 .DS_Store
+
+# Local notes: agent context, handoff log, internal planning (keep off the public repo)
+CLAUDE.md
+STATE.md
+report/
+results/advisor_presentation_plan_20260824.md
+results/eval_journey_20260803.md
+results/meeting_20260728_scaling_brief.md
+results/paper_outline_20260807.md
+results/scaling_journey_20260731.md
+results/scaling_plan_20260728.md
+results/workshop_paper_plan_20260823.md

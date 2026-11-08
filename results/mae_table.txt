@@ -1,6 +1,6 @@
 MAE + Wasserstein comparison across 4 timestamps — all losses vs BP (256×256 crop, tolfac=1.4)
 Wasserstein distance computed on the top 5% brightest pixels (by 171A channel), treating each
-DEM as a probability distribution over logT bins (Samuel's suggested metric, more robust than
+DEM as a probability distribution over logT bins (a suggested metric, more robust than
 per-bin MAE since it accounts for mass shifted to a different temperature, not just magnitude).
 
 ============================================================

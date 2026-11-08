@@ -537,7 +537,7 @@ def parse_args():
                    help="barrier weight; larger = stiffer band, closer to the solver's hard constraint")
     p.add_argument("--l1_bright_power", type=float, default=0.0,
                    help="barrier only: L1 weight divided by max(1, I)**p; 0 = off")
-    # ENet defaults mirror Samuel's confirmed solver settings, so the network
+    # ENet defaults mirror the confirmed reference solver settings, so the network
     # minimises the same objective it is scored against. fullBP's solveElasticNet is
     #   1/(2N)||Dx-y||^2 + a*l*||x||_1 + a(1-l)*0.5*||x||^2,
     # with a=0.001, l=0.5, N=n_obs,

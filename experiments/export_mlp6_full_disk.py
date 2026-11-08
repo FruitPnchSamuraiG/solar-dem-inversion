@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Export an AIA-only mlp6 checkpoint as an 18-bin full-disk DEM cube.
 
-This bridges our scaled unsupervised checkpoints to Samuel's static visualizer.
+This bridges our scaled unsupervised checkpoints to the shared static visualizer.
 The solver and training data use a stride-2 DEM grid: a 4096x4096 AIA image
 becomes a 2048x2048 DEM map.  ``mlp6`` uses only the centre six-channel AIA
 observation, so inference is a batched matrix of those grid pixels; it does not

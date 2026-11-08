@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Evaluate an mlp6 checkpoint on Samuel's full BP or ENet test set.
+"""Evaluate an mlp6 checkpoint on the full shared BP or ENet test set.
 
-Unlike this repo's staged split, Samuel's shared test roots contain only X and
+Unlike this repo's staged split, the shared test roots contain only X and
 solver Y.  They deliberately do not contain per-pixel error/tolerance arrays,
 so ``eval_sweep.py`` cannot be used.  This script evaluates the solver-labelled
 pixels directly (AIA ``[::2, ::2]`` aligned to the 128x128 DEM grid) and reports
@@ -35,7 +35,7 @@ SSE_HIST_BINS = 240_000
 def parse_args():
     p = argparse.ArgumentParser()
     p.add_argument("--model", required=True, help="scaled mlp6 checkpoint")
-    p.add_argument("--data", required=True, help="Samuel root with test_x/y.zarr")
+    p.add_argument("--data", required=True, help="shared test root with test_x/y.zarr")
     p.add_argument("--reference", required=True, help="BP or ENet label for output")
     p.add_argument("--output", required=True)
     p.add_argument("--pixel_batch", type=int, default=8192)

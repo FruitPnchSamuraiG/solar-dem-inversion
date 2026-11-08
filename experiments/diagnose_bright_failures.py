@@ -5,7 +5,7 @@ One pass over the complete shared test set (every valid pixel, no sampling)
 answers six questions, separately for each track:
 
 1. Which AIA channel thresholds make a pixel Bright, and which trigger
-   patterns carry the DEM error.  Bright is Samuel's union mask: any of the six
+   patterns carry the DEM error.  Bright is the shared protocol's union mask: any of the six
    observed AIA values at or above its fixed top-5% threshold.
 2. Whether Bright pixels are *relatively* worse or merely carry larger DEMs.
    Squared error scales with DEM amplitude, so "relative SSE" divides the
@@ -325,7 +325,7 @@ def load_predictor(path, threads):
     """Return (predict(obs[6,H,W]) -> DEM[18,H,W], description).
 
     Label-free mlp6 checkpoints come from train_scaled.py; supervised ones are
-    Samuel's .pth files, recognised by their ``model_name`` key and run exactly
+    the supplied .pth files, recognised by their ``model_name`` key and run exactly
     as the published Table-1 script does (regression branch only, AIA clamped
     at zero inside predict_regression_only).
     """

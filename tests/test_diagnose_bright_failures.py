@@ -10,8 +10,8 @@ Checks for experiments/diagnose_bright_failures.py on a synthetic shared-test se
    inputs whose five targets straddle a worker boundary.
 4. The solver-scatter split is an exact identity: mean target SSE equals
    bias + scatter.
-5. Samuel's supervised checkpoint gives the same Full/Bright/Quiet counts and
-   MSE as his published Table-1 script, compute_paper_table_metrics.py.
+5. The supervised checkpoint gives the same Full/Bright/Quiet counts and
+   MSE as the published Table-1 script, compute_paper_table_metrics.py.
 
     uv run python tests/test_diagnose_bright_failures.py
 """

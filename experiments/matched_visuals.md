@@ -13,7 +13,7 @@ sbatch --partition=cpu_short experiments/job_visuals_matched_cpu.sbatch
 
 One CPU allocation (16 cores, 64 GB, four-hour limit) sequentially processes
 the nine dates in `visualizer_dates.txt`. It uses `dataset/fullBP.py`, the
-existing Hofmeister PSFs and pointing cache, and Samuel's generation options:
+existing Hofmeister PSFs and pointing cache, and the reference generation options:
 alpha=0.001, l1_ratio=0.5, positive/no-intercept ElasticNet, clean input,
 Hofmeister deconvolution, full errors, no basis truncation, stride two, extended
 temperature storage, and `--zerochill`. Only the clean solve is needed for

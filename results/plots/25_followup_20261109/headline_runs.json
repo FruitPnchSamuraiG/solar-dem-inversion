@@ -1,0 +1,10 @@
+{"bp": [
+ {"label": "ours final 1.5M", "diag": "results/plots/23_meeting_followup_20261024/bp_bright_failure_fu_bp_h680_clampmask.json", "aia": "results/plots/25_followup_20261109/bp_aia_fit_sup10m.json"},
+ {"label": "sup 1.05M raw (as paper)", "diag": "results/plots/13_bright_diagnostic_20260928/bp_bright_failure_supervised.json"},
+ {"label": "sup 1.05M clipped", "diag": "results/plots/25_followup_20261109/bp_bright_failure_supervised_clamped.json", "aia": "results/plots/25_followup_20261109/bp_aia_fit_sup1m_clamped.json", "supervised": true},
+ {"label": "sup 10.1M clipped", "diag": "results/plots/25_followup_20261109/bp_bright_failure_supervised_sup10m.json", "aia": "results/plots/25_followup_20261109/bp_aia_fit_sup10m.json", "supervised": true}],
+ "enet": [
+ {"label": "ours final 409k", "diag": "results/plots/19_final_models_20261004/enet_bright_failure_final.json", "aia": "results/plots/25_followup_20261109/enet_aia_fit_sup10m.json"},
+ {"label": "sup 1.05M raw (as paper)", "diag": "results/plots/13_bright_diagnostic_20260928/enet_bright_failure_supervised.json"},
+ {"label": "sup 1.05M clipped", "diag": "results/plots/25_followup_20261109/enet_bright_failure_supervised_clamped.json", "aia": "results/plots/25_followup_20261109/enet_aia_fit_sup1m_clamped.json", "supervised": true},
+ {"label": "sup 10.1M clipped", "diag": "results/plots/25_followup_20261109/enet_bright_failure_supervised_sup10m.json", "aia": "results/plots/25_followup_20261109/enet_aia_fit_sup10m.json", "supervised": true}]}

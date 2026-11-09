@@ -1,0 +1,14 @@
+
+== bp
+model                                 DEM MSE    DEM MAE     median   EM err %         W1    AIA MAE    AIA MSE Bright MSE  Quiet MSE    core EM   core 94A
+ours final 1.5M                         1.082      0.072     0.0309       11.0      0.070       3.54        148      10.40     0.0331       0.97       0.88
+sup 1.05M raw (as paper)                0.906      0.100     0.1122       14.3      0.133          -          -       8.66     0.0335       0.92          -
+sup 1.05M clipped                       0.905      0.094     0.1023       14.6      0.133       3.14        153       8.65     0.0329       0.92       0.85
+sup 10.1M clipped                       0.387      0.085     0.0891       13.1      0.113       2.29         26       3.55     0.0305       1.00       0.92
+
+== enet
+model                                 DEM MSE    DEM MAE     median   EM err %         W1    AIA MAE    AIA MSE Bright MSE  Quiet MSE    core EM   core 94A
+ours final 409k                         0.310      0.151     0.8511       12.2      0.103       0.56        161       1.91     0.1224       0.99       0.53
+sup 1.05M raw (as paper)                0.318      0.188     1.1220       18.0      0.121          -          -       1.93     0.1296       0.87          -
+sup 1.05M clipped                       0.317      0.178     1.1220       17.4      0.121       6.24        569       1.92     0.1291       0.87       0.48
+sup 10.1M clipped                       0.232      0.149     0.7413       12.5      0.112       1.49        165       1.23     0.1155       1.01       0.55

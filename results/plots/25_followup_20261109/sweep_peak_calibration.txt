@@ -1,0 +1,10 @@
+Peak height of each model's DEM over the solver's, by the solver's peak (shared test, BP)
+model                    32 to 1e+02  1e+02 to 3.2e+02  3.2e+02 to 1e+03  1e+03 to 3.2e+03         >=3.2e+03
+final 1.5M mu100                0.98              0.97              0.92              0.78              0.53
+3.0M mu100                      0.98              0.97              0.93              0.85              0.73
+5.3M mu100                      0.96              0.74              0.54              0.45              0.50
+10.1M mu100                     0.96              0.75              0.55              0.47              0.44
+1.5M mu30                       0.95              0.67              0.45              0.36              0.32
+1.5M mu300                      0.99              1.01              0.97              0.81              0.61
+1.5M relaxed                    0.97              0.94              0.87              0.70              0.48
+supervised 10.1M                0.99              1.01              1.00              0.99              0.85

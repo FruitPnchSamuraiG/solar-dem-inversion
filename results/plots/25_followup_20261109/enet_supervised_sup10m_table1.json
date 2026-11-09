@@ -1,0 +1,94 @@
+{
+  "variant": "supervised_enet_wide",
+  "reference": "Elastic Net",
+  "model": "/home/hsr3649/projects/dem/paper_model/checkpoints/EN_2_Wide_10.1M.pth",
+  "data": "/projects/rps/dff6142/fouheylab/solar_dem/enet_AIA_hofdeconv_full_DS",
+  "thresholds": [
+    3.1212000846862793,
+    16.998600006103516,
+    448.8948059082031,
+    498.3443908691406,
+    190.73880004882812,
+    10.332599639892578
+  ],
+  "rows": [
+    {
+      "pixel_type": "Full",
+      "dem_mse": 0.23303251490456822,
+      "em_rel_err_pct": 12.61039698748789,
+      "mean_pixel_em_rel_err_pct": 28.651315108842514,
+      "dem_bin_rel_err_pct": 49.97309608397141,
+      "w1_dex": 0.111689775440759,
+      "n_pixels": 802160640,
+      "n_w1_pixels": 799038120,
+      "per_pixel_dem_sse_distribution": {
+        "method": "streaming_log10_histogram",
+        "bin_width_dex": 0.0001,
+        "per_pixel_dem_sse_quantiles_approx": {
+          "p50": 0.7630447348763363,
+          "p90": 7.154017530048862,
+          "p99": 26.58581632563222,
+          "p99.9": 81.5361122738877
+        },
+        "top_1_pct": {
+          "n_pixels": 8021607,
+          "min_sse_approx": 26.582755696601645,
+          "total_sse_share_pct_approx": 44.92806406853081
+        },
+        "max_per_pixel_dem_sse": 21240416.0
+      }
+    },
+    {
+      "pixel_type": "Bright",
+      "dem_mse": 1.231405150460755,
+      "em_rel_err_pct": 7.000195514543995,
+      "mean_pixel_em_rel_err_pct": 9.321771446377246,
+      "dem_bin_rel_err_pct": 53.14666862818383,
+      "w1_dex": 0.0551028829679142,
+      "n_pixels": 84192257,
+      "n_w1_pixels": 84190940,
+      "per_pixel_dem_sse_distribution": {
+        "method": "streaming_log10_histogram",
+        "bin_width_dex": 0.0001,
+        "per_pixel_dem_sse_quantiles_approx": {
+          "p50": 3.8846330430925557,
+          "p90": 20.775428977697672,
+          "p99": 77.20581289706666,
+          "p99.9": 252.02870041712947
+        },
+        "top_1_pct": {
+          "n_pixels": 841923,
+          "min_sse_approx": 77.19692476102527,
+          "total_sse_share_pct_approx": 65.91936025690131
+        },
+        "max_per_pixel_dem_sse": 21240416.0
+      }
+    },
+    {
+      "pixel_type": "Quiet",
+      "dem_mse": 0.11595877908386708,
+      "em_rel_err_pct": 16.85165010400818,
+      "mean_pixel_em_rel_err_pct": 30.917985847696443,
+      "dem_bin_rel_err_pct": 49.600948531117666,
+      "w1_dex": 0.11835428166241725,
+      "n_pixels": 717968383,
+      "n_w1_pixels": 714847180,
+      "per_pixel_dem_sse_distribution": {
+        "method": "streaming_log10_histogram",
+        "bin_width_dex": 0.0001,
+        "per_pixel_dem_sse_quantiles_approx": {
+          "p50": 0.6352577908855184,
+          "p90": 5.683946742267099,
+          "p99": 18.342139832724833,
+          "p99.9": 37.778960151980115
+        },
+        "top_1_pct": {
+          "n_pixels": 7179684,
+          "min_sse_approx": 18.340028237392744,
+          "total_sse_share_pct_approx": 12.793002713582128
+        },
+        "max_per_pixel_dem_sse": 1127.183837890625
+      }
+    }
+  ]
+}

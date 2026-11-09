@@ -34,6 +34,8 @@ esac
 # MODELS_OVERRIDE="label=ckpt label=ckpt" scores other checkpoints; MU and
 # L1_POWER set the base objective (e.g. to score stiff-band models under their own loss).
 if [ -n "${MODELS_OVERRIDE:-}" ]; then read -r -a MODELS <<< "$MODELS_OVERRIDE"; fi
+# SUP_PATH=<pth> compares another supervised checkpoint (e.g. a paper model).
+SUP=${SUP_PATH:-$SUP}
 python3 -u experiments/objective_gap.py --loss "$LOSS" --root "$ROOT" --phase "${PHASE:-test}" \
   --mu "${MU:-1}" --l1-bright-power "${L1_POWER:-0}" \
   --models "${MODELS[@]}" --supervised "$SUP" --variants "$VARIANTS" \

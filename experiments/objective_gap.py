@@ -76,6 +76,8 @@ def parse_args():
     p.add_argument("--enet-alpha", type=float, default=0.001)
     p.add_argument("--enet-lam", type=float, default=0.5)
     p.add_argument("--seed", type=int, default=0)
+    p.add_argument("--peak-min", type=float, default=3200.0,
+                   help="solver peak height above which pixels count as tall peaks")
     p.add_argument("--output", required=True)
     return p.parse_args()
 
@@ -303,6 +305,16 @@ def group_summary(ans, sol_dem, obs, err, cfg, idx):
                            for j, c in enumerate(CHANNELS)}}
     if "own_total" in ans:
         out["own_objective_mean"] = float(ans["own_total"][idx].mean())
+    # Peak height against the solver's: the answer's tallest bin, and its value in the
+    # bin where the solver peaks, each over the solver's peak.
+    sp = sol_dem[idx].max(axis=1)
+    pos = sp > 0
+    if pos.any():
+        ap = ans["dem"][idx].max(axis=1)
+        at = ans["dem"][idx][np.arange(idx.size), sol_dem[idx].argmax(axis=1)]
+        out["peak_ratio_median"] = float(np.median(ap[pos] / sp[pos]))
+        out["peak_ratio_pooled"] = float(ap[pos].sum() / sp[pos].sum())
+        out["at_solver_peak_ratio_median"] = float(np.median(at[pos] / sp[pos]))
     return out
 
 
@@ -427,6 +439,16 @@ def main():
                     (desc[f"net_{label}"]["total"][idx] - opt_total[idx]).mean())
                 band[f"net_{label}"]["pct_above_optimum_by_5pct"] = float(100 * np.mean(rel[idx] > 0.05))
         result["bands"][lab] = band
+    # The tallest solver peaks, whatever their band: does the loss's own optimum reach
+    # their height (then the shortfall is training) or not (then it is the loss)?
+    tall = np.flatnonzero(sol_dem.max(axis=1) > args.peak_min)
+    result["tall_peaks"] = {"peak_min": args.peak_min, "n": int(tall.size),
+                            **{name: group_summary(d, sol_dem, obs, err, cfg, tall) for name, d in desc.items()}}
+    for name, s in result["tall_peaks"].items():
+        if isinstance(s, dict) and "peak_ratio_median" in s:
+            print(f"tall peaks (> {args.peak_min:g}, n={tall.size}): {name:22s} peak {s['peak_ratio_median']:.3f} "
+                  f"(pooled {s['peak_ratio_pooled']:.3f}), at solver peak {s['at_solver_peak_ratio_median']:.3f}, "
+                  f"EM {s['em_ratio_vs_solver']:.3f}, 94A {s['recon_over_obs']['94']:.3f}", flush=True)
     os.makedirs(os.path.dirname(os.path.abspath(args.output)), exist_ok=True)
     with open(args.output, "w") as f:
         json.dump(result, f, indent=1)

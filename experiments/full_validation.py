@@ -134,9 +134,11 @@ def label_free(path, n_basis, device):
 def supervised(path, device):
     from student_package.table1_dem_metrics.compute_paper_table_metrics import load_model, predict_regression_only
     model, _ = load_model(path, device)
+    clamp = os.environ.get("SUP_CLAMP", "0") == "1"    # clip at zero, as the paper models' own metrics do
 
     def predict(obs):
-        return predict_regression_only(model, obs.T[None, :, None, :])[0, :N_BINS, 0, :].T
+        pred = predict_regression_only(model, obs.T[None, :, None, :])[0, :N_BINS, 0, :].T
+        return pred.clamp(min=0) if clamp else pred
     return predict
 
 

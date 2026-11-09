@@ -56,6 +56,18 @@ _MODEL_REGISTRY = {
     'BasicNetworkFreqClass': BasicNetworkFreqClass,
 }
 
+# The paper models (the same architecture at other widths, e.g. FreqClassNonReLUWide)
+# ship with standalone definitions in paper_model/models.py whose state-dict keys
+# match FreqClassNonReLU. Register the widths not already defined above.
+_paper_models_py = os.path.join(os.path.dirname(__file__), '..', '..', 'paper_model', 'models.py')
+if os.path.exists(_paper_models_py):
+    import importlib.util
+    _spec = importlib.util.spec_from_file_location('demnet_paper_models', _paper_models_py)
+    _paper_models = importlib.util.module_from_spec(_spec)
+    _spec.loader.exec_module(_paper_models)
+    for _name, _cls in _paper_models.MODELS.items():
+        _MODEL_REGISTRY.setdefault(_name, _cls)
+
 N_BINS = 18
 TOP_PCT = 5.0
 REL_FLOOR = 0.1
@@ -75,7 +87,7 @@ def load_model(ckpt_path, device):
     if hasattr(model_args, '__dict__'):
         model_args = vars(model_args)
     ModelClass = _MODEL_REGISTRY[model_name]
-    n_bins = model_args.get('n_bins', 64)
+    n_bins = model_args.get('n_bins', ckpt.get('n_bins', 64))   # paper models store it at the top level
     model = ModelClass(nIn=6, nOut=26, n_bins=n_bins)
     model.load_state_dict(ckpt['model_state_dict'])
     model.to(device).eval()

@@ -113,4 +113,19 @@ pick bp_h680_s2           && ACCOUNT=torch_pr_41_cilvr   run bp_h680_s2 bp 5 cpu
 # noise units, the best answer improves monotonically with mu). mu = 300 on the
 # fixed band trained behind mu = 100; this repeats it with the relaxed band.
 pick bp_mu300_relax     && ACCOUNT=torch_pr_718_cilvr  run bp_mu300_relax bp 4 cpu "${B}_h336_sqrt_ff12_resample_relax_mu300_ep120" MU=300 EPOCHS=120 MAX_HOURS=1.85 RELAX_BAND=1 TAG_SUFFIX=_mu300_ep120
+# 2026-11-09, after the supervised paper models arrived (10.13M parameters, 5.33M of them on
+# the path that predicts the DEM; the rest is the uncertainty head). All on the final recipe
+# (clamped channels masked, mu = 100, 120 epochs), changing one thing each. Accounts by queue estimate
+# on 9 Nov (sbatch --test-only): the pr_718 and tandon accounts were a week out.
+#   h966 / h1299 / h1803   3.0M / 5.33M / 10.13M parameters (does size keep helping?)
+#   mu30 / mu300           the band weight at the final size
+#   relax                  the solver's widened band at the final size
+# Epochs take ~150 s at every width (data-bound), so 120 epochs fit 3 segments plus a spare.
+F="EPOCHS=120 MAX_HOURS=1.85 CLAMP_MODE=mask"
+pick bp_h966_cm   && ACCOUNT=torch_pr_41_cilvr            run bp_h966_cm   bp 4 gpu "${B}_h966_sqrt_ff12_resample_clampmask_mu100_ep120"  $F MU=100 HIDDEN=966  TF32=1 TAG_SUFFIX=_mu100_ep120
+pick bp_h1299_cm  && ACCOUNT=torch_pr_41_courant          run bp_h1299_cm  bp 4 gpu "${B}_h1299_sqrt_ff12_resample_clampmask_mu100_ep120" $F MU=100 HIDDEN=1299 TF32=1 TAG_SUFFIX=_mu100_ep120
+pick bp_h1803_cm  && ACCOUNT=torch_pr_41_courant          run bp_h1803_cm  bp 4 gpu "${B}_h1803_sqrt_ff12_resample_clampmask_mu100_ep120" $F MU=100 HIDDEN=1803 TF32=1 TAG_SUFFIX=_mu100_ep120
+pick bp_h680_cm_mu30  && ACCOUNT=torch_pr_41_general run bp_h680_cm_mu30  bp 4 cpu "${B}_h680_sqrt_ff12_resample_clampmask_mu30_ep120"  $F MU=30  HIDDEN=680 TAG_SUFFIX=_mu30_ep120
+pick bp_h680_cm_mu300 && ACCOUNT=torch_pr_41_cilvr         run bp_h680_cm_mu300 bp 4 cpu "${B}_h680_sqrt_ff12_resample_clampmask_mu300_ep120" $F MU=300 HIDDEN=680 TAG_SUFFIX=_mu300_ep120
+pick bp_h680_cm_relax && ACCOUNT=torch_pr_41_general       run bp_h680_cm_relax bp 4 cpu "${B}_h680_sqrt_ff12_resample_clampmask_relax_mu100_ep120" $F MU=100 HIDDEN=680 RELAX_BAND=1 TAG_SUFFIX=_mu100_ep120
 true

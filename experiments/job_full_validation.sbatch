@@ -30,6 +30,7 @@ read -r -a M <<< "${MODELS:?}"
 args=(--root "$ROOT" --phase "${PHASE:-val}" "${LOSS[@]}" --models "${M[@]}"
       --workers 14 --output "output/experiments/diagnostics/${TRACK}_full_validation_${TAG:?}.json")
 if [ "${LABELS:-0}" = 1 ]; then args+=(--labels); fi
-if [ "${SUP:-0}" = 1 ]; then args+=(--supervised "$SUPPTH"); fi
+# SUP_PATH=<pth> scores another supervised checkpoint (e.g. paper_model/checkpoints/...)
+if [ "${SUP:-0}" = 1 ]; then args+=(--supervised "${SUP_PATH:-$SUPPTH}"); fi
 if [ -n "${MAX_BLOCKS:-}" ]; then args+=(--max_blocks "$MAX_BLOCKS"); fi
 python3 -u experiments/full_validation.py "${args[@]}"

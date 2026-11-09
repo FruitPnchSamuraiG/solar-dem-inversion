@@ -332,14 +332,18 @@ def load_predictor(path, threads):
     import torch
     torch.set_num_threads(threads)
     # DEM_EVAL_DEVICE=cuda runs label-free checkpoints on the GPU (needed for the
-    # ~10M-parameter models, ~25x the CPU cost of the 360k ones); supervised
-    # checkpoints always run on the CPU exactly as the published script does.
+    # ~10M-parameter models, ~25x the CPU cost of the 360k ones). Supervised
+    # checkpoints run on the CPU exactly as the published script does, unless
+    # SUP_DEVICE=cuda (the 10M paper models are too slow on the CPU). SUP_CLAMP=1
+    # clips their raw regression output at zero, as the paper models' own metrics do.
     device = torch.device(os.environ.get("DEM_EVAL_DEVICE", "cpu"))
     raw = torch.load(path, map_location="cpu", weights_only=False)
     if isinstance(raw, dict) and "model_name" in raw:
         from student_package.table1_dem_metrics.compute_paper_table_metrics import (
             load_model, predict_regression_only)
-        model, meta = load_model(path, torch.device("cpu"))
+        sup_device = torch.device(os.environ.get("SUP_DEVICE", "cpu"))
+        clamp = os.environ.get("SUP_CLAMP", "0") == "1"
+        model, meta = load_model(path, sup_device)
 
         def predict(obs, pixel_batch):
             C, H, W = obs.shape
@@ -348,10 +352,11 @@ def load_predictor(path, threads):
             with torch.no_grad():
                 for s in range(0, H * W, pixel_batch):
                     e = min(s + pixel_batch, H * W)
-                    batch = torch.from_numpy(points[:, s:e])[None, :, None, :]
-                    out[:, s:e] = predict_regression_only(model, batch)[0, :N_BINS, 0, :].numpy()
+                    batch = torch.from_numpy(points[:, s:e])[None, :, None, :].to(sup_device)
+                    pred = predict_regression_only(model, batch)[0, :N_BINS, 0, :]
+                    out[:, s:e] = (pred.clamp(min=0) if clamp else pred).cpu().numpy()
             return out.reshape(N_BINS, H, W)
-        return predict, {"kind": "supervised", **meta}
+        return predict, {"kind": "supervised", "device": str(sup_device), "clamped_at_zero": clamp, **meta}
 
     from experiments.train_scaled import load_operators
     from src.scaled_eval import load_scaled_model

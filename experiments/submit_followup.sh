@@ -128,4 +128,10 @@ pick bp_h1803_cm  && ACCOUNT=torch_pr_41_courant          run bp_h1803_cm  bp 4 
 pick bp_h680_cm_mu30  && ACCOUNT=torch_pr_41_general run bp_h680_cm_mu30  bp 4 cpu "${B}_h680_sqrt_ff12_resample_clampmask_mu30_ep120"  $F MU=30  HIDDEN=680 TAG_SUFFIX=_mu30_ep120
 pick bp_h680_cm_mu300 && ACCOUNT=torch_pr_41_cilvr         run bp_h680_cm_mu300 bp 4 cpu "${B}_h680_sqrt_ff12_resample_clampmask_mu300_ep120" $F MU=300 HIDDEN=680 TAG_SUFFIX=_mu300_ep120
 pick bp_h680_cm_relax && ACCOUNT=torch_pr_41_general       run bp_h680_cm_relax bp 4 cpu "${B}_h680_sqrt_ff12_resample_clampmask_relax_mu100_ep120" $F MU=100 HIDDEN=680 RELAX_BAND=1 TAG_SUFFIX=_mu100_ep120
+# 2026-11-10: is the 3M gain at the tallest peaks real (two more seeds), and did the 5.3M and 10M
+# runs fail because of the learning rate tuned on small models (peak 1e-4 instead of 3e-4)?
+pick bp_h966_cm_s1  && ACCOUNT=torch_pr_41_cilvr   run bp_h966_cm_s1  bp 4 gpu "${B}_h966_sqrt_ff12_resample_clampmask_mu100_ep120_s1" $F MU=100 HIDDEN=966 TF32=1 SEED=1 TAG_SUFFIX=_mu100_ep120_s1
+pick bp_h966_cm_s2  && ACCOUNT=torch_pr_41_general run bp_h966_cm_s2  bp 4 gpu "${B}_h966_sqrt_ff12_resample_clampmask_mu100_ep120_s2" $F MU=100 HIDDEN=966 TF32=1 SEED=2 TAG_SUFFIX=_mu100_ep120_s2
+pick bp_h1299_cm_lr1 && ACCOUNT=torch_pr_41_courant run bp_h1299_cm_lr1 bp 4 gpu "${B}_h1299_sqrt_ff12_resample_clampmask_mu100_ep120_lr1e-4" $F MU=100 HIDDEN=1299 TF32=1 LR=1e-4 TAG_SUFFIX=_mu100_ep120_lr1e-4
+pick bp_h1803_cm_lr1 && ACCOUNT=torch_pr_41_courant run bp_h1803_cm_lr1 bp 4 gpu "${B}_h1803_sqrt_ff12_resample_clampmask_mu100_ep120_lr1e-4" $F MU=100 HIDDEN=1803 TF32=1 LR=1e-4 TAG_SUFFIX=_mu100_ep120_lr1e-4
 true

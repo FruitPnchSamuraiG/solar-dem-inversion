@@ -11,10 +11,18 @@
 #SBATCH --account=torch_pr_41_general
 #SBATCH --mail-type=FAIL
 
+# Supervised predictions for the viewer. Since 2026-11-11 these are the paper models
+# (paper_model/checkpoints, 10.13M parameters) with the DEM clipped at zero, as in their
+# own metrics and figures. BP_SUP / EN_SUP choose other checkpoints; DEVICE=cuda runs the
+# model on a GPU (submit with --gres=gpu:1); CLAMP=0 keeps the raw output.
 set -euo pipefail
 cd "${SLURM_SUBMIT_DIR:?submit from the DEM repository root}"
 source env.sh
-export CUDA_VISIBLE_DEVICES=""
+DEVICE=${DEVICE:-cpu}
+if [ "$DEVICE" = cpu ]; then export CUDA_VISIBLE_DEVICES=""; fi
+BP_SUP=${BP_SUP:-paper_model/checkpoints/BP_5_Wide_10.1M.pth}
+EN_SUP=${EN_SUP:-paper_model/checkpoints/EN_2_Wide_10.1M.pth}
+CLAMP=(); if [ "${CLAMP_AT_ZERO:-1}" = 1 ]; then CLAMP=(--clamp); fi
 export OMP_NUM_THREADS="$SLURM_CPUS_PER_TASK"
 export MKL_NUM_THREADS="$SLURM_CPUS_PER_TASK"
 export OPENBLAS_NUM_THREADS=1
@@ -25,10 +33,10 @@ test "${#DATES[@]}" -gt 0
 # Reuse each track's existing, aligned AIA input. No new solver runs.
 for track in bp enet; do
   if [ "$track" = bp ]; then
-    model=eval_and_enet_specs/checkpoints/model_best_bp.pth
+    model=$BP_SUP
     input_dir="$SCRATCH/dem/visuals/exports/bp_mlp6_h232"
   else
-    model=eval_and_enet_specs/checkpoints/model_best_en.pth
+    model=$EN_SUP
     input_dir="$VIS_ROOT/exports"
   fi
   test -r "$model"
@@ -40,10 +48,10 @@ done
 
 for track in bp enet; do
   if [ "$track" = bp ]; then
-    model=eval_and_enet_specs/checkpoints/model_best_bp.pth
+    model=$BP_SUP
     input_dir="$SCRATCH/dem/visuals/exports/bp_mlp6_h232"
   else
-    model=eval_and_enet_specs/checkpoints/model_best_en.pth
+    model=$EN_SUP
     input_dir="$VIS_ROOT/exports"
   fi
   for stamp in "${DATES[@]}"; do
@@ -51,7 +59,7 @@ for track in bp enet; do
     output="$VIS_ROOT/exports/${track}_supervised/dem_$stamp.npz"
     python3 -u experiments/export_supervised_full_disk.py \
       --model "$model" --input "$input_dir/dem_$stamp.npz" \
-      --output "$output" --device cpu
+      --output "$output" --device "$DEVICE" "${CLAMP[@]}"
     python3 -u experiments/render_full_disk_visuals.py \
       --input "$output" --source model \
       --output "$VIS_ROOT/assets/${track}_supervised/$stamp"

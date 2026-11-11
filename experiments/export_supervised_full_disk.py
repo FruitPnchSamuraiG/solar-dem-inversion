@@ -49,6 +49,8 @@ def main():
     parser.add_argument("--output", required=True)
     parser.add_argument("--device", choices=("cpu", "cuda"), default="cpu")
     parser.add_argument("--pixel-batch", type=int, default=8192)
+    parser.add_argument("--clamp", action="store_true",
+                        help="clip the DEM at zero, as the paper models' own metrics and figures do")
     args = parser.parse_args()
     with np.load(args.input) as data:
         aia = np.asarray(data["aia"], dtype=np.float32)
@@ -58,6 +60,8 @@ def main():
     model, meta = load_model(args.model, torch.device(args.device))
     print(f"Checkpoint: {args.model}; metadata={meta}; AIA={aia.shape}", flush=True)
     dem = predict(model, aia, args.pixel_batch)
+    if args.clamp:
+        dem = np.clip(dem, 0, None)
     Path(args.output).parent.mkdir(parents=True, exist_ok=True)
     # Complete output replaces any previous export only after writing succeeds.
     temporary = args.output + ".tmp.npz"

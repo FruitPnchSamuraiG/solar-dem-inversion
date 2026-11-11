@@ -99,3 +99,27 @@ it over the existing site.
 ```bash
 rsync -rLt --info=progress2 torch:/scratch/hsr3649/dem/visuals/matched_enet_alpha0p001/preview/ ~/dem_preview/
 ```
+
+## Supervised paper models (2026-11-11)
+
+The supervised images and the Results numbers now use the 10.13M paper models
+(`paper_model/checkpoints`), with the DEM clipped at zero as in their own metrics.
+From the Torch repository root:
+
+```bash
+sbatch --job-name=vis_sup10m_bp --export=ALL,TRACKS=bp,NO_STAGE=1 experiments/job_visuals_supervised_cpu.sbatch
+sbatch --mem=48G --job-name=vis_sup10m_enet --export=ALL,TRACKS=enet,NO_STAGE=1 experiments/job_visuals_supervised_cpu.sbatch
+VIS_ROOT=$SCRATCH/dem/visuals/matched_enet_alpha0p001 bash experiments/stage_visualizer_preview.sh
+```
+
+Two CPU jobs of about 20 minutes each (`cpu_short` allows 120 GB per user, hence
+48 GB on the second), then one staging step. The run names `bp_supervised` and
+`enet_supervised` are kept, so the viewer needs no other change; the earlier
+1.05M renders stay on Torch under `assets/{bp,enet}_supervised_1m`. The Results
+numbers for the supervised model come from
+`results/plots/25_followup_20261109/viewer_supervised_10m_numbers.json` (the
+bright-failure diagnostic and AIA fit of the 10M models on the shared test set).
+
+Deploy: download the preview as above, then upload `webapp/` and the two
+supervised run folders. The files replaced on the public site are kept there in
+`~/demdemo_backup_20261111`.

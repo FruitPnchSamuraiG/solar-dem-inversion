@@ -14,7 +14,8 @@
 # Supervised predictions for the viewer. Since 2026-11-11 these are the paper models
 # (paper_model/checkpoints, 10.13M parameters) with the DEM clipped at zero, as in their
 # own metrics and figures. BP_SUP / EN_SUP choose other checkpoints; DEVICE=cuda runs the
-# model on a GPU (submit with --gres=gpu:1); CLAMP=0 keeps the raw output.
+# model on a GPU (submit with --gres=gpu:1); CLAMP_AT_ZERO=0 keeps the raw output;
+# TRACKS=bp or TRACKS=enet renders one track.
 set -euo pipefail
 cd "${SLURM_SUBMIT_DIR:?submit from the DEM repository root}"
 source env.sh
@@ -31,7 +32,7 @@ mapfile -t DATES < <(grep -v '^#' experiments/visualizer_dates.txt | sed '/^$/d'
 test "${#DATES[@]}" -gt 0
 
 # Reuse each track's existing, aligned AIA input. No new solver runs.
-for track in bp enet; do
+for track in ${TRACKS:-bp enet}; do
   if [ "$track" = bp ]; then
     model=$BP_SUP
     input_dir="$SCRATCH/dem/visuals/exports/bp_mlp6_h232"
@@ -46,7 +47,7 @@ for track in bp enet; do
   done
 done
 
-for track in bp enet; do
+for track in ${TRACKS:-bp enet}; do
   if [ "$track" = bp ]; then
     model=$BP_SUP
     input_dir="$SCRATCH/dem/visuals/exports/bp_mlp6_h232"
@@ -65,5 +66,6 @@ for track in bp enet; do
       --output "$VIS_ROOT/assets/${track}_supervised/$stamp"
   done
 done
-bash experiments/stage_visualizer_preview.sh
+# NO_STAGE=1 renders only (e.g. one job per track); stage once afterwards.
+if [ "${NO_STAGE:-0}" != 1 ]; then bash experiments/stage_visualizer_preview.sh; fi
 echo "Completed supervised viewer additions: $VIS_ROOT/preview"

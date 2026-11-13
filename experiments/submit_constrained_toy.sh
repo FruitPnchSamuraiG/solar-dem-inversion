@@ -38,6 +38,18 @@ declare -A RUN=(
   [mm1]="al|--mu 1 --mu-max 1 --measure p99 --al-warm 10 --outer 10 --outer-mode settled"
   [mm10]="al|--mu 10 --mu-max 10 --measure p99 --al-warm 10 --outer 10 --outer-mode settled"
   [mm100]="al|--mu 100 --mu-max 100 --measure p99 --al-warm 10 --outer 10 --outer-mode settled"
+  # Training quality on the method as it stands (multipliers, mu 10, settled rounds), one change each:
+  [tq_lr1e-3]="al|--mu 10 --mu-max 10 --measure p99 --al-warm 10 --outer 10 --outer-mode settled --lr 1e-3"
+  [tq_lr1e-4]="al|--mu 10 --mu-max 10 --measure p99 --al-warm 10 --outer 10 --outer-mode settled --lr 1e-4"
+  [tq_noclip]="al|--mu 10 --mu-max 10 --measure p99 --al-warm 10 --outer 10 --outer-mode settled --clip 0"
+  [tq_muon]="al|--mu 10 --mu-max 10 --measure p99 --al-warm 10 --outer 10 --outer-mode settled --optimizer muon --muon-lr 0.02"
+  [tq_muonrms]="al|--mu 10 --mu-max 10 --measure p99 --al-warm 10 --outer 10 --outer-mode settled --optimizer muon --muon-lr 3e-4 --muon-adjust match_rms_adamw"
+  [tq_adamw]="al|--mu 10 --mu-max 10 --measure p99 --al-warm 10 --outer 10 --outer-mode settled --optimizer adamw"
+  [tq_nadam]="al|--mu 10 --mu-max 10 --measure p99 --al-warm 10 --outer 10 --outer-mode settled --optimizer nadam"
+  [tq_radam]="al|--mu 10 --mu-max 10 --measure p99 --al-warm 10 --outer 10 --outer-mode settled --optimizer radam"
+  [tq_adafactor]="al|--mu 10 --mu-max 10 --measure p99 --al-warm 10 --outer 10 --outer-mode settled --optimizer adafactor"
+  [tq_lion]="al|--mu 10 --mu-max 10 --measure p99 --al-warm 10 --outer 10 --outer-mode settled --optimizer lion"
+  [tq_batch16k]="al|--mu 10 --mu-max 10 --measure p99 --al-warm 10 --outer 10 --outer-mode settled --batch 16384 --lr 6e-4"
 )
 SUFFIX=""
 if [ "$MODE" = warm ]; then

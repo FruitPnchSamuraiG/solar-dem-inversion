@@ -61,7 +61,16 @@ def parse_args():
     p.add_argument("--batch", type=int, default=4096)
     p.add_argument("--lr", type=float, default=3e-4)
     p.add_argument("--warmup", type=int, default=500)
-    p.add_argument("--clip", type=float, default=1.0)
+    p.add_argument("--clip", type=float, default=1.0, help="global gradient-norm clip; 0 = off")
+    p.add_argument("--optimizer", choices=["adam", "adamw", "nadam", "radam", "adafactor", "lion", "muon"],
+                   default="adam",
+                   help="muon: torch.optim.Muon on the hidden layers' weight matrices, Adam (lr --lr) on the "
+                        "first and last layers and the biases (Muon is meant for hidden 2D weights only)")
+    p.add_argument("--muon-lr", type=float, default=0.02)
+    p.add_argument("--lion-lr", type=float, default=1e-4, help="Lion takes steps of +/- lr, about 3x smaller than Adam's")
+    p.add_argument("--adafactor-lr", type=float, default=0.01, help="Adafactor's ceiling on its relative step (paper value)")
+    p.add_argument("--muon-adjust", choices=["original", "match_rms_adamw"], default="original",
+                   help="match_rms_adamw scales Muon's step to Adam's size, so --muon-lr can equal --lr")
     p.add_argument("--hidden", type=int, default=336)
     p.add_argument("--init-from", default="",
                    help="checkpoint from train_scaled.py to start from (its width replaces --hidden): "
@@ -102,6 +111,56 @@ def parse_args():
     p.add_argument("--seed", type=int, default=0)
     p.add_argument("--output", required=True)
     return p.parse_args()
+
+
+class Lion(torch.optim.Optimizer):
+    """Lion (Chen et al. 2023, Symbolic Discovery of Optimization Algorithms): each weight moves
+    by +/- lr, the sign of an interpolation of momentum and gradient."""
+
+    def __init__(self, params, lr=1e-4, betas=(0.9, 0.99), weight_decay=0.0):
+        super().__init__(params, dict(lr=lr, betas=betas, weight_decay=weight_decay))
+
+    @torch.no_grad()
+    def step(self, closure=None):
+        for group in self.param_groups:
+            b1, b2 = group["betas"]
+            for p in group["params"]:
+                if p.grad is None:
+                    continue
+                st = self.state[p]
+                if "m" not in st:
+                    st["m"] = torch.zeros_like(p)
+                m = st["m"]
+                if group["weight_decay"]:
+                    p.mul_(1 - group["lr"] * group["weight_decay"])
+                p.add_((b1 * m + (1 - b1) * p.grad).sign_(), alpha=-group["lr"])
+                m.mul_(b2).add_(p.grad, alpha=1 - b2)
+        return None
+
+
+def make_optimizers(args, model):
+    """The optimizer(s) for one run; Muon runs Adam alongside for the non-hidden parameters."""
+    params = list(model.parameters())
+    if args.optimizer == "adam":
+        return [torch.optim.Adam(params, lr=args.lr)]
+    if args.optimizer == "adamw":
+        return [torch.optim.AdamW(params, lr=args.lr, weight_decay=0.01)]
+    if args.optimizer == "nadam":
+        return [torch.optim.NAdam(params, lr=args.lr)]
+    if args.optimizer == "radam":
+        return [torch.optim.RAdam(params, lr=args.lr)]
+    if args.optimizer == "adafactor":
+        return [torch.optim.Adafactor(params, lr=args.adafactor_lr)]
+    if args.optimizer == "lion":
+        return [Lion(params, lr=args.lion_lr)]
+    linears = [m for m in model.modules() if isinstance(m, torch.nn.Linear)]
+    hidden = {id(m.weight) for m in linears[1:-1]}
+    muon_params = [p_ for p_ in params if id(p_) in hidden]
+    rest = [p_ for p_ in params if id(p_) not in hidden]
+    print(f"Muon on {len(muon_params)} hidden weight matrices ({sum(p_.numel() for p_ in muon_params):,} weights), "
+          f"Adam on the rest ({sum(p_.numel() for p_ in rest):,})", flush=True)
+    return [torch.optim.Muon(muon_params, lr=args.muon_lr, weight_decay=0.0, adjust_lr_fn=args.muon_adjust),
+            torch.optim.Adam(rest, lr=args.lr)]
 
 
 def load_set(path, device, tolfac, lam_bar, select=None, n=None, rng=None):
@@ -247,7 +306,7 @@ def main():
     if args.init_from:
         model.inner.load_state_dict(ck["model"])
         print(f"started from {args.init_from} (epoch {ck.get('epoch')}, width {args.hidden})", flush=True)
-    opt = torch.optim.Adam(model.parameters(), lr=args.lr)
+    opts = make_optimizers(args, model)
     steps_per_epoch = N // args.batch
     total = args.epochs * steps_per_epoch
     ramp_epochs = max(1, int(round(RAMP_SHARE * args.epochs)))
@@ -260,7 +319,7 @@ def main():
             return 1.0
         return 0.5 * (1.0 + math.cos(math.pi * min((step - ramp_steps) / max(total - ramp_steps, 1), 1.0)))
 
-    sched = torch.optim.lr_scheduler.LambdaLR(opt, lr_at)
+    scheds = [torch.optim.lr_scheduler.LambdaLR(o, lr_at) for o in opts]
     st = {"mu": args.mu, "eps": args.eps, "kappa": args.kappa}
     Y = dual = dual_opt = None
     if args.form == "al":
@@ -364,11 +423,15 @@ def main():
             w = x.sum(1)
             q = penalty(args.form, g_lo, g_hi, st, train["P"][i], Yb)
             loss = (w + q).mean()
-            opt.zero_grad()
+            for o in opts:
+                o.zero_grad()
             loss.backward()
-            torch.nn.utils.clip_grad_norm_(model.parameters(), args.clip)
-            opt.step()
-            sched.step()
+            if args.clip > 0:
+                torch.nn.utils.clip_grad_norm_(model.parameters(), args.clip)
+            for o in opts:
+                o.step()
+            for sc in scheds:
+                sc.step()
             step += 1
             tot += loss.item()
             l1 += w.detach().mean().item()
@@ -384,7 +447,7 @@ def main():
             if due:
                 update_multipliers(epoch)
                 round_start["epoch"] = len(epoch_losses)
-        rec = {"epoch": epoch, "step": step, "lr": sched.get_last_lr()[0], "mu": st["mu"], "eps": st["eps"],
+        rec = {"epoch": epoch, "step": step, "lr": scheds[-1].get_last_lr()[0], "mu": st["mu"], "eps": st["eps"],
                "loss": tot / steps_per_epoch, "weight_term": l1 / steps_per_epoch, "penalty_term": pen / steps_per_epoch,
                "train": score(model, train_watch, D, B),
                "hold_feasible": score(model, hold_watch, D, B, hold_watch["feasible"]),

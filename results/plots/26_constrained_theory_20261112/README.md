@@ -16,6 +16,38 @@ Scripts: `experiments/constrained_toy.py` (per pixel), `experiments/constrained_
 (network), `experiments/plot_constrained_toy.py` (figures and table), job files
 `experiments/job_constrained_toy*.sbatch`, launcher `experiments/submit_constrained_toy.sh`.
 
+## The method as it stands (13 Nov)
+
+BP solves, per pixel, a linear program: least total emission such that every channel's
+predicted light lies inside its band (reading +/- 1.4 sigma; zeroed channels keep their band
+around 0). We solve that same problem with the standard method for constrained problems that
+gradient methods can handle, the **method of multipliers** (augmented Lagrangian; Hestenes 1969,
+Powell 1969, Rockafellar 1973; Nocedal and Wright 2006, ch. 17), amortized over all pixels by one
+network as in label-free primal-dual learning (Park and Van Hentenryck 2023). It is a primal-dual
+method: the network's DEM is the primal variable, the per-pixel prices (multipliers) the dual.
+
+1. **Primal step.** Train the network on
+   L = sum(x) + sum over channel edges of [max(0, y + 2 mu g)^2 - y^2] / (4 mu),
+   with g the distance outside the band in half-widths and y >= 0 the pixel's price for that
+   edge, until the training loss has settled. Near the edge the term is y g + mu g^2; with all
+   prices 0 it is the loss used before.
+2. **Dual step.** Raise every price: y <- max(0, y + 2 mu g) (gradient ascent on the dual problem,
+   Rockafellar 1976). Prices are carried by frozen copies of the network, so they are defined
+   for the fresh pixels drawn every epoch (Park and Van Hentenryck use a second network instead).
+3. Repeat; for the last 30% of training the prices are fixed and the learning rate decays.
+
+What is chosen, and from where:
+
+| choice | value | source |
+|---|---|---|
+| problem, band, 1.4 sigma | as BP | the solver |
+| primal and dual steps | as above | the method of multipliers (textbook) |
+| mu | 10, fixed | theory: any fixed mu > 0 converges for a convex problem, mu sets only the speed (proximal point algorithm, Rockafellar 1976); value from a sweep of 1, 10, 100 on the constrained toy, like a learning rate |
+| end of a round | training loss falls under 2% over 10 epochs | the textbook asks each round to be solved; this tolerance is ours |
+| pixels BP cannot fit at 1.4 sigma | BP's own widened band (3x, 5x) | the solver's own procedure (run started 13 Nov) |
+| price ceiling | 256 x the channel's price scale | ours, a safeguard; above the price of 99.55% of solvable pixels |
+| ElasticNet | no change | its solver has no band rule; our loss already is the solver's objective |
+
 ## Terms
 
 - **feasible pixel**: some DEM fits inside all six bands (the linear program has a solution).

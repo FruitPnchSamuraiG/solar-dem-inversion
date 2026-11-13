@@ -233,6 +233,25 @@ def band_loss_batch(x, D, lb, ub, form="price", a_l1=1.0, eps=1.0, kappa=64.0, l
     return (a_l1 * torch.sum(torch.abs(x), dim=1) + pen.sum(dim=1)).mean()
 
 
+def al_loss_batch(x, D, lb, ub, mu, y=None, a_l1=1.0, half=None):
+    """sum(x) plus the augmented-Lagrangian band term (method of multipliers).
+
+    g = distance outside the band in half-widths, lower edges then upper edges [B, 2C];
+    y >= 0 the multiplier per pixel, channel and edge [B, 2C] (None = 0). Per channel
+        [relu(y + 2 mu g)^2 - y^2] / (4 mu),
+    which is mu * relu(g)^2 (barrier_loss_batch) when y = 0. At the optimum
+    y + 2 mu g = the channel's dual price, so once y equals the price the band holds
+    exactly at a finite mu (Nocedal & Wright 2006, ch. 17).
+    """
+    h = (ub - lb) / 2 if half is None else half
+    Dx = torch.matmul(x, D.T)
+    g = torch.cat([(lb - Dx) / h, (Dx - ub) / h], dim=1)
+    if y is None:
+        y = torch.zeros_like(g)
+    pen = (torch.relu(y + 2.0 * mu * g) ** 2 - y ** 2) / (4.0 * mu)
+    return (a_l1 * torch.sum(torch.abs(x), dim=1) + pen.sum(dim=1)).mean()
+
+
 def enet_loss_batch(x, D, I_obs, lb, ub, C=1.0, alpha=1.0, lam=0.9, half=None):
     # Elastic Net objective (Athiray & Winebarger 2024), unconstrained:
     #   (1/2C)||o - Dx||^2 + alpha*lam*||x||_1 + (1/2)*alpha*(1-lam)*||x||_2^2

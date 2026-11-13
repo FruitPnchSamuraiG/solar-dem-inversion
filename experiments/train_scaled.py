@@ -23,6 +23,7 @@ import sys, os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import argparse
+import copy
 import json
 import time
 
@@ -32,7 +33,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from fullBP import getBasis
-from src.losses import band_loss_batch, barrier_loss_batch, enet_loss_batch
+from src.losses import al_loss_batch, band_loss_batch, barrier_loss_batch, enet_loss_batch
 from src.zarr_data import make_loader, flatten_blocks, EpochResampler, N_AIA_BINS, MIN_OBS
 from experiments.train_neural_field import effective_sparsity, pick_device
 from experiments.train_ablations import build_model, VARIANTS
@@ -159,6 +160,11 @@ def make_scheduler(optimizer, total_steps, warmup_steps, base_lr):
 
 
 def make_loss_fn(args, thr_t=None, band_state=None):
+    if args.loss == "barrier" and args.al_mu > 0:
+        # Method of multipliers; y comes from frozen earlier copies of the network
+        # (al_multipliers in train), None (= the plain quadratic penalty) in evaluation.
+        return lambda x, D, obs, lb, ub, half=None, y=None: al_loss_batch(
+            x, D, lb, ub, args.al_mu, y=y, a_l1=args.alpha_l1, half=half)
     if args.loss == "barrier" and args.band_form != "quad":
         # The band weight from the input (price scale P_c) and the training step
         # (band_state["eps"], lowered by the training loop); see band_loss_batch.
@@ -354,6 +360,8 @@ def train(args):
         tag += f"_clamp{args.clamp_mode}"
     if args.band_form != "quad":
         tag += f"_{args.band_form}" + (f"_k{args.kappa:g}" if args.band_form == "huber" else "")
+    if args.al_mu > 0:
+        tag += f"_al{args.al_mu:g}"
     if args.relax_band:
         tag += "_relax"
     tag += args.tag_suffix
@@ -366,13 +374,46 @@ def train(args):
     # continue from the saved optimizer, schedule and sampler position.
     state_path = os.path.join(out_dir, f"{tag}_state.pt")
     start_epoch = 0
+
+    # Method of multipliers with fresh pixels: a multiplier cannot be stored per pixel,
+    # so it is recomputed from frozen copies of the network taken every al_every epochs
+    # (the first is the starting checkpoint, with --init_from): y_0 = 0 and
+    # y_k = relu(y_{k-1} + 2 mu g(x; theta_k)), the textbook update evaluated at any pixel.
+    al_snaps = []
+
+    def snapshot(state_dict=None):
+        m = copy.deepcopy(model)
+        if state_dict is not None:
+            m.inner.load_state_dict(state_dict)
+        m.eval()
+        for prm in m.parameters():
+            prm.requires_grad_(False)
+        al_snaps.append(m)
+
+    @torch.no_grad()
+    def al_multipliers(patch, lb, ub, half):
+        if not al_snaps:
+            return None
+        h = (ub - lb) / 2 if half is None else half
+        y = None
+        for snap in al_snaps:
+            Dx = snap(patch) @ D_t.T
+            g = torch.cat([(lb - Dx) / h, (Dx - ub) / h], dim=1)
+            y = torch.relu(2.0 * args.al_mu * g if y is None else y + 2.0 * args.al_mu * g)
+        return y
+
     if args.resume and os.path.exists(state_path):
         st = torch.load(state_path, map_location=device, weights_only=False)
         core.load_state_dict(st["model"])
         optimizer.load_state_dict(st["optimizer"])
         scheduler.load_state_dict(st["scheduler"])
         history, start_epoch = st["history"], st["epoch"]
-        print(f"resumed {state_path} at epoch {start_epoch}")
+        for sd in st.get("al_snaps", []):
+            snapshot(sd)
+        print(f"resumed {state_path} at epoch {start_epoch}" + (f" with {len(al_snaps)} multiplier snapshots" if al_snaps else ""))
+    elif args.al_mu > 0 and args.init_from:
+        snapshot()
+        print("multipliers start from the initial checkpoint (snapshot 0)")
     if start_epoch >= args.epochs:
         print(f"already trained to epoch {start_epoch}; nothing to do")
         return
@@ -393,7 +434,10 @@ def train(args):
             half = batch[4] if len(batch) == 5 else None
             optimizer.zero_grad()
             x = model(patch)
-            loss = loss_fn(x, D_t, obs, lb, ub, half)
+            if args.al_mu > 0:
+                loss = loss_fn(x, D_t, obs, lb, ub, half, al_multipliers(patch, lb, ub, half))
+            else:
+                loss = loss_fn(x, D_t, obs, lb, ub, half)
             loss.backward()
             gn = float(torch.nn.utils.clip_grad_norm_(model.parameters(), args.clip))
             optimizer.step()
@@ -415,7 +459,7 @@ def train(args):
                "train_sparsity": ep_sp / n, "val": val, "secs": time.time() - t0,
                "grad_norm_mean": ep_gn / n, "frac_clipped": ep_clipped / n,
                "frac_bright": ep_bright / n, "frac_core": ep_core / n,
-               "lr": scheduler.get_last_lr()[0], "band_eps": band_state["eps"]}
+               "lr": scheduler.get_last_lr()[0], "band_eps": band_state["eps"], "al_snapshots": len(al_snaps)}
         history.append(rec)
         tight = val["1"]
         print(f"Epoch {epoch+1:3d}/{args.epochs}  loss={rec['train_loss']:.4f}  "
@@ -440,9 +484,14 @@ def train(args):
                    os.path.join(out_dir, f"{tag}.pt"))
         with open(os.path.join(out_dir, f"{tag}_history.json"), "w") as f:
             json.dump(history, f, indent=2)
+        if (args.al_mu > 0 and (epoch + 1) % args.al_every == 0 and epoch + 1 < args.epochs
+                and len(al_snaps) < args.al_max):
+            snapshot()
+            print(f"multiplier snapshot {len(al_snaps)} taken after epoch {epoch+1}", flush=True)
         torch.save({"model": core.state_dict(), "optimizer": optimizer.state_dict(),
                     "scheduler": scheduler.state_dict(), "history": history,
-                    "epoch": epoch + 1}, state_path + ".tmp")
+                    "epoch": epoch + 1, "al_snaps": [m.inner.state_dict() for m in al_snaps]},
+                   state_path + ".tmp")
         os.replace(state_path + ".tmp", state_path)
 
         # Fail loudly on the 15088220 failure mode rather than logging eleven
@@ -560,6 +609,11 @@ def parse_args():
     p.add_argument("--eps_end", type=float, default=0.001, help="price/huber: tolerance at the end of the ramp")
     p.add_argument("--ramp_share", type=float, default=0.7, help="price/huber: share of training spent lowering eps")
     p.add_argument("--kappa", type=float, default=64.0, help="huber: slope cap over the price scale")
+    p.add_argument("--al_mu", type=float, default=0.0,
+                   help="barrier only: > 0 trains on the augmented Lagrangian with this mu, multipliers "
+                        "from frozen copies of the network (with --init_from the first is the start)")
+    p.add_argument("--al_every", type=int, default=20, help="epochs between multiplier snapshots")
+    p.add_argument("--al_max", type=int, default=5, help="largest number of multiplier snapshots")
     # ENet defaults mirror the confirmed reference solver settings, so the network
     # minimises the same objective it is scored against. fullBP's solveElasticNet is
     #   1/(2N)||Dx-y||^2 + a*l*||x||_1 + a(1-l)*0.5*||x||^2,

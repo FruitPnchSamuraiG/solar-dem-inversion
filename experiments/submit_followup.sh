@@ -134,4 +134,11 @@ pick bp_h966_cm_s1  && ACCOUNT=torch_pr_41_cilvr   run bp_h966_cm_s1  bp 4 gpu "
 pick bp_h966_cm_s2  && ACCOUNT=torch_pr_41_general run bp_h966_cm_s2  bp 4 gpu "${B}_h966_sqrt_ff12_resample_clampmask_mu100_ep120_s2" $F MU=100 HIDDEN=966 TF32=1 SEED=2 TAG_SUFFIX=_mu100_ep120_s2
 pick bp_h1299_cm_lr1 && ACCOUNT=torch_pr_41_courant run bp_h1299_cm_lr1 bp 4 gpu "${B}_h1299_sqrt_ff12_resample_clampmask_mu100_ep120_lr1e-4" $F MU=100 HIDDEN=1299 TF32=1 LR=1e-4 TAG_SUFFIX=_mu100_ep120_lr1e-4
 pick bp_h1803_cm_lr1 && ACCOUNT=torch_pr_41_courant run bp_h1803_cm_lr1 bp 4 gpu "${B}_h1803_sqrt_ff12_resample_clampmask_mu100_ep120_lr1e-4" $F MU=100 HIDDEN=1803 TF32=1 LR=1e-4 TAG_SUFFIX=_mu100_ep120_lr1e-4
+# 2026-11-12 advisor meeting: a zeroed channel keeps its band around zero (as the solver does)
+# instead of being freed; and the band weight set per pixel and channel from the input with a
+# tolerance lowered during training (src/losses.py:band_loss_batch). Final recipe otherwise.
+FK="EPOCHS=120 MAX_HOURS=1.85 CLAMP_MODE=keep"
+pick bp_h680_keep       && ACCOUNT=${ACCOUNT:-torch_pr_41_courant} run bp_h680_keep       bp 4 cpu "${B}_h680_sqrt_ff12_resample_clampkeep_mu100_ep120"     $FK MU=100 HIDDEN=680 TAG_SUFFIX=_mu100_ep120
+pick bp_h680_keep_price && ACCOUNT=${ACCOUNT:-torch_pr_41_courant} run bp_h680_keep_price bp 4 cpu "${B}_h680_sqrt_ff12_resample_clampkeep_price_ep120"     $FK BAND_FORM=price HIDDEN=680 TAG_SUFFIX=_ep120
+pick bp_h680_keep_huber && ACCOUNT=${ACCOUNT:-torch_pr_41_courant} run bp_h680_keep_huber bp 4 cpu "${B}_h680_sqrt_ff12_resample_clampkeep_huber_k64_ep120" $FK BAND_FORM=huber HIDDEN=680 TAG_SUFFIX=_ep120
 true

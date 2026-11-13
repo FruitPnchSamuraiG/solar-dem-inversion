@@ -46,6 +46,8 @@ if [ -n "${CLAMP_MODE:-}" ]; then EXTRA+=(--clamp_mode "$CLAMP_MODE"); fi
 if [ "${RELAX_BAND:-0}" = 1 ]; then EXTRA+=(--relax_band); fi
 # BAND_FORM=price|huber sets the band weight per pixel and channel from the input, with the
 # tolerance lowered from EPS to EPS_END over the first 70% of training (KAPPA: huber slope cap)
+# AL_MU>0: method of multipliers, multipliers from frozen copies every AL_EVERY epochs (at most AL_MAX)
+if [ -n "${AL_MU:-}" ]; then EXTRA+=(--al_mu "$AL_MU" --al_every "${AL_EVERY:-20}" --al_max "${AL_MAX:-5}"); fi
 if [ -n "${BAND_FORM:-}" ]; then
   EXTRA+=(--band_form "$BAND_FORM" --eps "${EPS:-0.1}" --eps_end "${EPS_END:-0.001}" --kappa "${KAPPA:-64}")
 fi

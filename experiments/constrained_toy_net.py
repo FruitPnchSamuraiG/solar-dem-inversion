@@ -166,6 +166,13 @@ def score(model, d, D, B, sel=None):
            | {"max": float(umax.max())},
            "below_band_share_pct": float(100 * (torch.relu(g_lo).sum() / u.sum().clamp(min=1e-30))),
            "weight_mean": float(w.mean())}
+    zc = obs <= 1e-3                                     # channels zeroed by the deconvolution clamp
+    if zc.any():                                         # their band is an upper limit only
+        gz = g_hi[zc]
+        out["zeroed_channels"] = {"n": int(zc.sum()),
+                                  "above_band_pct": {f"{e:g}": float(100 * (gz > e).float().mean()) for e in INSIDE},
+                                  "excess": {k: float(torch.quantile(gz.clamp(min=0)[:4_000_000], q))
+                                             for k, q in (("p50", 0.5), ("p90", 0.9), ("p99", 0.99))}}
     ok = torch.isfinite(obj) & (obj > 1e-6)
     if ok.any():
         ratio = w[ok] / obj[ok]
@@ -195,6 +202,7 @@ def score(model, d, D, B, sel=None):
 def main():
     args = parse_args()
     torch.manual_seed(args.seed)
+    torch.set_flush_denormal(True)      # denormal floats make CPU epochs tens of times slower
     rng = np.random.default_rng(args.seed)
     n_cpu = int(os.environ.get("SLURM_CPUS_PER_TASK", "0") or 0)
     if n_cpu:

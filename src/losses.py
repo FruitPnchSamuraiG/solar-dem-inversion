@@ -205,6 +205,34 @@ def barrier_loss_batch(x, D, I_obs, lb, ub, a_l2=0, a_l1=1.0, mu=1.0, alpha=0, m
     total_loss = l2_term + l1_term + barrier_x + barrier_lb + barrier_ub + fit
     return total_loss.mean()
 
+def band_loss_batch(x, D, lb, ub, form="price", a_l1=1.0, eps=1.0, kappa=64.0, lam_bar=None, half=None):
+    """sum(x) plus a charge for leaving the band, with the weight set from the input.
+
+    g is the distance outside the band in half-widths h (h = half, or (ub - lb) / 2) and
+    P_c = h_c * lam_bar_c the single-channel price scale: the total weight one half-width
+    of channel c is worth when that channel alone is tight (lam_bar_c = 1 / max_k D[c, k]).
+      price: P_c / (2 eps) * relu(g)^2. A quadratic penalty whose weight comes from the
+             input; at its optimum a channel with price ratio q (true price / P_c) sits
+             q * eps half-widths outside (experiments/constrained_toy.py).
+      huber: P_c * H(relu(g)), H(u) = u^2 / (2 eps) up to u = kappa * eps, then linear
+             with slope kappa: the exact (l1) penalty, smoothed. Exact once kappa exceeds
+             the pixel's price ratio and eps -> 0.
+    eps (and the schedule that lowers it) is passed by the caller.
+    """
+    h = (ub - lb) / 2 if half is None else half
+    Dx = torch.matmul(x, D.T)
+    g_lo, g_hi = (lb - Dx) / h, (Dx - ub) / h
+    u = torch.relu(g_lo) + torch.relu(g_hi)              # at most one side is positive
+    P = h * lam_bar
+    if form == "price":
+        pen = P / (2.0 * eps) * u ** 2
+    elif form == "huber":
+        pen = P * torch.where(u <= kappa * eps, u * u / (2.0 * eps), kappa * u - 0.5 * kappa * kappa * eps)
+    else:
+        raise ValueError(f"unknown band form {form!r}")
+    return (a_l1 * torch.sum(torch.abs(x), dim=1) + pen.sum(dim=1)).mean()
+
+
 def enet_loss_batch(x, D, I_obs, lb, ub, C=1.0, alpha=1.0, lam=0.9, half=None):
     # Elastic Net objective (Athiray & Winebarger 2024), unconstrained:
     #   (1/2C)||o - Dx||^2 + alpha*lam*||x||_1 + (1/2)*alpha*(1-lam)*||x||_2^2

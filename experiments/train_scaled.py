@@ -32,7 +32,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from fullBP import getBasis
-from src.losses import barrier_loss_batch, enet_loss_batch
+from src.losses import band_loss_batch, barrier_loss_batch, enet_loss_batch
 from src.zarr_data import make_loader, flatten_blocks, EpochResampler, N_AIA_BINS, MIN_OBS
 from experiments.train_neural_field import effective_sparsity, pick_device
 from experiments.train_ablations import build_model, VARIANTS
@@ -158,7 +158,13 @@ def make_scheduler(optimizer, total_steps, warmup_steps, base_lr):
     return torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda)
 
 
-def make_loss_fn(args, thr_t=None):
+def make_loss_fn(args, thr_t=None, band_state=None):
+    if args.loss == "barrier" and args.band_form != "quad":
+        # The band weight from the input (price scale P_c) and the training step
+        # (band_state["eps"], lowered by the training loop); see band_loss_batch.
+        return lambda x, D, obs, lb, ub, half=None: band_loss_batch(
+            x, D, lb, ub, form=args.band_form, a_l1=args.alpha_l1, eps=band_state["eps"],
+            kappa=args.kappa, lam_bar=band_state["lam_bar"], half=half)
     if args.loss == "barrier":
         if args.l1_bright_power:
             # L1 weight / max(1, I)**p, I = max over channels of observed / Bright
@@ -316,10 +322,16 @@ def train(args):
           f"|Dx| med={Dx0.abs().median():.3e} max={Dx0.abs().max():.3e}  "
           f"(want |Dx| comparable to obs, not orders above)")
 
-    loss_fn = make_loss_fn(args, thr_t)
+    band_state = {"eps": args.eps, "lam_bar": (1.0 / D_t.max(dim=1).values)[None, :]}
+    loss_fn = make_loss_fn(args, thr_t, band_state)
     optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
     total_steps = args.epochs * len(train_loader)
     scheduler = make_scheduler(optimizer, total_steps, args.warmup_steps, args.lr)
+    ramp_steps = max(1, int(args.ramp_share * total_steps))
+
+    def band_eps(step):
+        """Tolerance in half-widths, lowered geometrically over the first ramp_share of training."""
+        return args.eps * (args.eps_end / args.eps) ** min(step / ramp_steps, 1.0)
     print(f"{len(train_loader):,} steps/epoch, {total_steps:,} total, "
           f"{args.warmup_steps:,} warmup")
 
@@ -340,6 +352,8 @@ def train(args):
         tag += f"_bg{args.bright_gamma:g}"
     if args.clamp_mode != "exclude":
         tag += f"_clamp{args.clamp_mode}"
+    if args.band_form != "quad":
+        tag += f"_{args.band_form}" + (f"_k{args.kappa:g}" if args.band_form == "huber" else "")
     if args.relax_band:
         tag += "_relax"
     tag += args.tag_suffix
@@ -373,6 +387,7 @@ def train(args):
         ep_gn, ep_clipped, ep_core, ep_bright = 0.0, 0.0, 0.0, 0.0
 
         for batch in train_loader:
+            band_state["eps"] = band_eps(scheduler.last_epoch)
             batch = [t.to(device, non_blocking=True) for t in flatten_blocks(batch)]
             patch, obs, lb, ub = batch[:4]
             half = batch[4] if len(batch) == 5 else None
@@ -400,7 +415,7 @@ def train(args):
                "train_sparsity": ep_sp / n, "val": val, "secs": time.time() - t0,
                "grad_norm_mean": ep_gn / n, "frac_clipped": ep_clipped / n,
                "frac_bright": ep_bright / n, "frac_core": ep_core / n,
-               "lr": scheduler.get_last_lr()[0]}
+               "lr": scheduler.get_last_lr()[0], "band_eps": band_state["eps"]}
         history.append(rec)
         tight = val["1"]
         print(f"Epoch {epoch+1:3d}/{args.epochs}  loss={rec['train_loss']:.4f}  "
@@ -487,9 +502,10 @@ def parse_args():
     p.add_argument("--tolfac", type=float, default=1.4)
     p.add_argument("--min_obs", type=float, default=MIN_OBS,
                    help="drop pixels with any channel below this (deconvolution clamp)")
-    p.add_argument("--clamp_mode", choices=["exclude", "mask"], default="exclude",
+    p.add_argument("--clamp_mode", choices=["exclude", "mask", "keep"], default="exclude",
                    help="exclude: drop pixels with a clamped channel (the original runs); "
-                        "mask: keep them and free only the clamped channels from the band")
+                        "mask: keep them and free only the clamped channels from the band; "
+                        "keep: keep them with the clamped channel's band around zero")
     p.add_argument("--relax_band", action="store_true",
                    help="widen the band by the solver's tolLevel (3x, 5x) where it did, "
                         "instead of 1.4 sigma everywhere")
@@ -537,6 +553,13 @@ def parse_args():
                    help="barrier weight; larger = stiffer band, closer to the solver's hard constraint")
     p.add_argument("--l1_bright_power", type=float, default=0.0,
                    help="barrier only: L1 weight divided by max(1, I)**p; 0 = off")
+    p.add_argument("--band_form", choices=["quad", "price", "huber"], default="quad",
+                   help="barrier only: quad = mu * relu(g)^2 (every run so far); price and huber set "
+                        "the weight per pixel and channel from the input (src/losses.py:band_loss_batch)")
+    p.add_argument("--eps", type=float, default=0.1, help="price/huber: tolerance in half-widths at the start")
+    p.add_argument("--eps_end", type=float, default=0.001, help="price/huber: tolerance at the end of the ramp")
+    p.add_argument("--ramp_share", type=float, default=0.7, help="price/huber: share of training spent lowering eps")
+    p.add_argument("--kappa", type=float, default=64.0, help="huber: slope cap over the price scale")
     # ENet defaults mirror the confirmed reference solver settings, so the network
     # minimises the same objective it is scored against. fullBP's solveElasticNet is
     #   1/(2N)||Dx-y||^2 + a*l*||x||_1 + a(1-l)*0.5*||x||^2,

@@ -44,6 +44,11 @@ if [ -n "${INIT_FROM:-}" ]; then EXTRA+=(--init_from "$INIT_FROM"); fi
 # RELAX_BAND=1 widens the band by the solver's tolLevel (both add a tag suffix)
 if [ -n "${CLAMP_MODE:-}" ]; then EXTRA+=(--clamp_mode "$CLAMP_MODE"); fi
 if [ "${RELAX_BAND:-0}" = 1 ]; then EXTRA+=(--relax_band); fi
+# BAND_FORM=price|huber sets the band weight per pixel and channel from the input, with the
+# tolerance lowered from EPS to EPS_END over the first 70% of training (KAPPA: huber slope cap)
+if [ -n "${BAND_FORM:-}" ]; then
+  EXTRA+=(--band_form "$BAND_FORM" --eps "${EPS:-0.1}" --eps_end "${EPS_END:-0.001}" --kappa "${KAPPA:-64}")
+fi
 python3 -u experiments/train_scaled.py \
   --root "$ROOT" \
   --variant mlp6 \

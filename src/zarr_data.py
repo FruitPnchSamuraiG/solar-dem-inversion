@@ -85,9 +85,12 @@ class ZarrPatchBlockDataset(Dataset):
         # in that channel, ~40% of all pixels have one, nearly all faint).
         # "exclude" drops the whole pixel (every run before 2026-10-29); "mask"
         # keeps the pixel and frees only the clamped channels from the band, so
-        # the network sees such inputs in training instead of extrapolating.
-        if clamp_mode not in ("exclude", "mask"):
-            raise ValueError(f"clamp_mode must be exclude or mask, got {clamp_mode!r}")
+        # the network sees such inputs in training instead of extrapolating;
+        # "keep" keeps the pixel and the clamped channel's own band around zero
+        # (half-width 1.4 sigma at the error floor), as the solver does: a zeroed
+        # channel then admits at most that much light.
+        if clamp_mode not in ("exclude", "mask", "keep"):
+            raise ValueError(f"clamp_mode must be exclude, mask or keep, got {clamp_mode!r}")
         self.clamp_mode = clamp_mode
         # The solver widens the band to 3x and then 5x where no DEM fits 1.4
         # sigma (fullBP.py:515) and records the level in tolLevel; relax_band
@@ -152,6 +155,10 @@ class ZarrPatchBlockDataset(Dataset):
         ok = np.isfinite(obs_c) & np.isfinite(err_c)
         if self.clamp_mode == "exclude":
             ok &= obs_c > self.min_obs
+        if self.clamp_mode == "keep":
+            # registration padding at the image border carries reading 0 and error 0: a
+            # band of zero width (the other modes drop or free those channels already)
+            ok &= err_c > 0
         solved = np.isin(tol, self.tol_levels)
         return np.all(ok, axis=0) & solved
 

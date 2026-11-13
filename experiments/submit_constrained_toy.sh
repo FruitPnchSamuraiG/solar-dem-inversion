@@ -20,14 +20,20 @@ declare -A RUN=(
   [huber]="huber|--kappa 64 --eps 1 --eps-end 0.001"
   [al]="al|--mu 100 --al-warm 20 --outer 10"
   [alnet]="alnet|--mu 100 --al-warm 20 --outer 10"
+  [alfix]="al|--mu 100 --mu-max 100 --al-warm 20 --outer 10"
 )
 SUFFIX=""
 if [ "$MODE" = warm ]; then
   CPUS=${CPUS:-8}
   COMMON="--epochs ${EPOCHS:-150} --pixels $PIXELS --init-from $INIT --lr ${LR:-1e-4} ${EXTRA:-}"
   RUN[ramp]="quad_ramp|--mu 100 --mu-end 10000"
+  # the trained model already sits near violation q x 0.1 half-widths on its dear channels
+  RUN[price]="price|--eps 0.1 --eps-end 0.001"
+  RUN[huber]="huber|--kappa 64 --eps 0.1 --eps-end 0.001"
   RUN[al]="al|--mu 100 --al-warm 10 --outer 10"
   RUN[alnet]="alnet|--mu 100 --al-warm 10 --outer 10"
+  # multipliers only: the weight stays at the trained 100 (no growth rule)
+  RUN[alfix]="al|--mu 100 --mu-max 100 --al-warm 10 --outer 10"
   SUFFIX="_warm"
 else
   CPUS=${CPUS:-5}

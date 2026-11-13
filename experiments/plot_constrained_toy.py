@@ -107,7 +107,8 @@ def fig_standins(r, out):
 
 NET_ORDER = (("quad100", "fixed weight 100 (today's loss)", BLUE), ("ramp", "weight raised during training", ORANGE),
              ("al", "multipliers, stored per pixel", AQUA), ("alnet", "multipliers from a second network", YELLOW),
-             ("huber", "smoothed exact penalty", MAGENTA), ("price", "weight from noise and price scale", GREEN))
+             ("huber", "smoothed exact penalty", MAGENTA), ("price", "weight from noise and price scale", GREEN),
+             ("alfix", "multipliers per pixel, weight held at 100", "#6250d6"))
 
 
 def fig_training(runs, out, title, key="train"):
@@ -134,11 +135,91 @@ def fig_training(runs, out, title, key="train"):
     ramp = next(iter(runs.values()))["ramp_epochs"]
     for ax in axes:
         ax.axvline(ramp, color=GRID, linewidth=1.2)
-    axes[0].legend(loc="upper right", fontsize=8.5)
+    handles, labels = axes[0].get_legend_handles_labels()
+    fig.legend(handles, labels, loc="lower center", ncol=min(len(labels), 4), fontsize=9, frameon=False)
     fig.suptitle(title, x=0.012, ha="left", fontsize=11, fontweight="bold")
-    fig.tight_layout(rect=(0, 0, 1, 0.94))
+    fig.tight_layout(rect=(0, 0.11 if len(labels) > 4 else 0.07, 1, 0.94))
     fig.savefig(out)
     plt.close(fig)
+
+
+def fig_tradeoff(runs, r, out, title):
+    """Held-out band violations against total weight, epoch by epoch: the solver sits at
+    (1, 0); a network can only buy fewer violations with more weight."""
+    fig, ax = plt.subplots(figsize=(7.6, 5.0), dpi=200)
+    finals = []
+    for name, label, color in NET_ORDER:
+        if name not in runs:
+            continue
+        run = runs[name]
+        warm = bool(run["args"].get("init_from"))
+        pts = []
+        if warm and "before_training" in run:
+            b = run["before_training"]["hold_feasible"]
+            pts.append((b["weight_over_lp_median"], b["pixels_outside_pct"]["0.01"]))
+        hist = run["history"] if warm else run["history"][len(run["history"]) // 2:]
+        pts += [(h["hold_feasible"]["weight_over_lp_median"], h["hold_feasible"]["pixels_outside_pct"]["0.01"])
+                for h in hist]
+        xs, ys = zip(*pts)
+        ax.plot(xs, ys, color=color, linewidth=1.0, alpha=0.45)
+        f = run["final"]["hold_feasible"]
+        ax.plot([f["weight_over_lp_median"]], [f["pixels_outside_pct"]["0.01"]], "o", color=color, markersize=8,
+                markeredgecolor=SURFACE, markeredgewidth=1.5, label=label)
+        finals.append((f["weight_over_lp_median"], f["pixels_outside_pct"]["0.01"]))
+        finals.extend(pts[:1] if warm else [])
+    start = next((run["before_training"]["hold_feasible"] for run in runs.values() if "before_training" in run), None)
+    if start is not None and any("init_from" in run["args"] and run["args"]["init_from"] for run in runs.values()):
+        ax.plot([start["weight_over_lp_median"]], [start["pixels_outside_pct"]["0.01"]], "s", color=INK2, markersize=7)
+        ax.annotate("current final model", (start["weight_over_lp_median"], start["pixels_outside_pct"]["0.01"]),
+                    xytext=(8, 4), textcoords="offset points", fontsize=8.5, color=INK2)
+    ax.plot([1.0], [0.0], "*", color=INK, markersize=13, clip_on=False, zorder=5)
+    ax.annotate("the solver", (1.0, 0.0), xytext=(8, 6), textcoords="offset points", fontsize=9, color=INK)
+    q = 100 - r["forms"]["feasible_weighted"]["augmented_lagrangian"]["mu100"][0]["0.01"]
+    fx, fy = zip(*finals)
+    ax.set_xlim(min(0.85, min(fx) - 0.1), max(fx) * 1.15 + 0.15)
+    ax.set_ylim(0, max(max(fy), q) * 1.25 + 1)
+    ax.axhline(q, color=INK2, linewidth=1.0, linestyle=(0, (4, 3)))
+    ax.annotate(f"today's loss solved exactly per pixel: {q:.1f}% outside", (ax.get_xlim()[1], q), xytext=(-4, 5),
+                textcoords="offset points", ha="right", fontsize=8.5, color=INK2)
+    ax.set_xlabel("total weight / solver's optimum (median held-out pixel)")
+    ax.set_ylabel("held-out feasible pixels outside a band by > 0.01 half-widths (%)")
+    ax.set_title(title)
+    ax.legend(loc="upper right", fontsize=8.5)
+    fig.tight_layout()
+    fig.savefig(out)
+    plt.close(fig)
+
+
+def table(groups):
+    """One line per run: where it ended on training and held-out feasible pixels."""
+    head = (f"{'run':22s} {'epochs':>6s} | {'train outside >0.1 / 0.01 / 0.001 (%)':>38s} | "
+            f"{'held-out outside >0.1 / 0.01':>28s} | {'viol p99':>8s} | {'weight/LP pooled, median':>24s} | "
+            f"{'DEM MAE vs LP':>13s} | {'core peak/LP':>12s} | {'zeroed ch. above':>16s}")
+    lines = [head, "-" * len(head)]
+    for suffix, runs in sorted(groups.items()):
+        for name, _, _ in NET_ORDER:
+            if name not in runs:
+                continue
+            r = runs[name]
+            tr, ho = r["final"]["train"], r["final"]["hold_feasible"]
+            core = r["final"]["balanced_bands"][">=32x"]["feasible"] or {}
+            zc = ho.get("zeroed_channels", {}).get("above_band_pct", {}).get("0.01")
+            tag = name + (f"_{suffix}" if suffix else "")
+            lines.append(
+                f"{tag:22s} {len(r['history']):6d} | "
+                f"{tr['pixels_outside_pct']['0.1']:11.2f} / {tr['pixels_outside_pct']['0.01']:6.2f} / "
+                f"{tr['pixels_outside_pct']['0.001']:6.2f}      | "
+                f"{ho['pixels_outside_pct']['0.1']:13.2f} / {ho['pixels_outside_pct']['0.01']:6.2f}     | "
+                f"{tr['violation']['p99']:8.3g} | {ho.get('weight_over_lp_pooled', float('nan')):12.3f}, {ho.get('weight_over_lp_median', float('nan')):9.3f} | "
+                f"{ho.get('dem_mae_vs_lp', float('nan')):13.4g} | {core.get('peak_over_lp_median', float('nan')):12.3f} | "
+                f"{'-' if zc is None else format(zc, '.2f') + '%':>16s}")
+            mv = r["final"].get("multipliers_vs_dual_prices")
+            if mv:
+                q = mv["ratio_learned_over_true"]
+                lines.append(f"{'':22s}   multipliers vs the solver's dual prices ({mv['pixels']}): learned/true p10 {q['p10']:.2f}, "
+                             f"p50 {q['p50']:.2f}, p90 {q['p90']:.2f}; within 2x {mv['within_factor_2_pct']:.0f}%; "
+                             f"log correlation {mv['log_correlation']:.2f}")
+    return "\n".join(lines)
 
 
 def main():
@@ -159,6 +240,14 @@ def main():
     for i, (suffix, runs) in enumerate(sorted(groups.items())):
         fig_training(runs, os.path.join(folder, f"fig3_training_violations{'_' + suffix if suffix else ''}.png"),
                      titles.get(suffix, suffix))
+        fig_tradeoff(runs, r, os.path.join(folder, f"fig4_violation_vs_weight{'_' + suffix if suffix else ''}.png"),
+                     "Fewer band violations cost extra weight" + (" (from the current model)" if suffix == "warm" else
+                                                                  " (trained from scratch)" if not suffix else f" ({suffix})"))
+    if groups:
+        text = table(groups)
+        print(text)
+        with open(os.path.join(folder, "net_summary.txt"), "w") as fh:
+            fh.write(text + "\n")
     print("figures written to", folder)
 
 

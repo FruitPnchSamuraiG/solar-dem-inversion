@@ -240,7 +240,9 @@ TQ_LABELS = {"mm10": "baseline: Adam, lr 3e-4, clip 1, batch 4096", "tq_lr1e-3":
              "tq_lion": "Lion, lr 1e-4", "tq_muon": "Muon (hidden matrices), lr 0.02",
              "tq_muonrms": "Muon, Adam-matched step, lr 3e-4",
              "mm10_s1": "baseline, seed 1", "mm10_s2": "baseline, seed 2",
-             "tq_muonrms_s1": "Muon, Adam-matched step, seed 1", "tq_muonrms_s2": "Muon, Adam-matched step, seed 2"}
+             "tq_muonrms_s1": "Muon, Adam-matched step, seed 1", "tq_muonrms_s2": "Muon, Adam-matched step, seed 2",
+             "tq_ema": "EMA of weights (0.999)", "tq_ema_s1": "EMA, seed 1", "tq_ema_s2": "EMA, seed 2",
+             "tq_w680": "width 680 (1.5M parameters)", "tq_w680_s1": "width 680, seed 1", "tq_w680_s2": "width 680, seed 2"}
 
 
 def tq_table(tq):

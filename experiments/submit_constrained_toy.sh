@@ -50,6 +50,8 @@ declare -A RUN=(
   [tq_adafactor]="al|--mu 10 --mu-max 10 --measure p99 --al-warm 10 --outer 10 --outer-mode settled --optimizer adafactor"
   [tq_lion]="al|--mu 10 --mu-max 10 --measure p99 --al-warm 10 --outer 10 --outer-mode settled --optimizer lion"
   [tq_batch16k]="al|--mu 10 --mu-max 10 --measure p99 --al-warm 10 --outer 10 --outer-mode settled --batch 16384 --lr 6e-4"
+  [tq_ema]="al|--mu 10 --mu-max 10 --measure p99 --al-warm 10 --outer 10 --outer-mode settled --ema 0.999"
+  [tq_w680]="al|--mu 10 --mu-max 10 --measure p99 --al-warm 10 --outer 10 --outer-mode settled --hidden 680"
 )
 SUFFIX=""
 if [ "$MODE" = warm ]; then
@@ -76,7 +78,7 @@ for name in "${picks[@]}"; do
   spec=${RUN[$name]:?unknown run $name}
   form=${spec%%|*}
   args=${spec#*|}
-  id=$(sbatch --parsable --job-name="ctn_${name}${SUFFIX}" --cpus-per-task="$CPUS" --mem="${MEM:-20G}" \
+  id=$(sbatch --parsable --job-name="ctn_${name}${SUFFIX}" --cpus-per-task="$CPUS" --mem="${MEM:-20G}" --time="${TIME:-03:00:00}" \
        --export=ALL,FORM="$form",NAME="${name}${SUFFIX}",DATA="${DATA:-toy}",ARGS="$COMMON $args" \
        experiments/job_constrained_toy_net.sbatch)
   echo "${name}${SUFFIX} $id"

@@ -66,6 +66,9 @@ def parse_args():
                    default="adam",
                    help="muon: torch.optim.Muon on the hidden layers' weight matrices, Adam (lr --lr) on the "
                         "first and last layers and the biases (Muon is meant for hidden 2D weights only)")
+    p.add_argument("--ema", type=float, default=0.0,
+                   help="keep an exponential moving average of the weights with this decay (e.g. 0.999) and "
+                        "score that copy; training and the multiplier updates use the live weights; 0 = off")
     p.add_argument("--muon-lr", type=float, default=0.02)
     p.add_argument("--lion-lr", type=float, default=1e-4, help="Lion takes steps of +/- lr, about 3x smaller than Adam's")
     p.add_argument("--adafactor-lr", type=float, default=0.01, help="Adafactor's ceiling on its relative step (paper value)")
@@ -307,6 +310,12 @@ def main():
         model.inner.load_state_dict(ck["model"])
         print(f"started from {args.init_from} (epoch {ck.get('epoch')}, width {args.hidden})", flush=True)
     opts = make_optimizers(args, model)
+    ema = None
+    if args.ema > 0:
+        ema = copy.deepcopy(model)
+        for p_ in ema.parameters():
+            p_.requires_grad_(False)
+    scorer = model if ema is None else ema       # the weights every score below is computed with
     steps_per_epoch = N // args.batch
     total = args.epochs * steps_per_epoch
     ramp_epochs = max(1, int(round(RAMP_SHARE * args.epochs)))
@@ -396,9 +405,9 @@ def main():
 
     history, step, t0 = [], 0, time.time()
     epoch_losses, round_start = [], {"epoch": 0}
-    start = {"train": score(model, train_watch, D, B), "hold_feasible": score(model, hold_watch, D, B, hold_watch["feasible"]),
-             "bright_feasible": score(model, bal, D, B, bal["feasible"] & (bal["group"] >= 6)),
-             "core_feasible": score(model, bal, D, B, bal["feasible"] & (bal["group"] == 8))}
+    start = {"train": score(scorer, train_watch, D, B), "hold_feasible": score(scorer, hold_watch, D, B, hold_watch["feasible"]),
+             "bright_feasible": score(scorer, bal, D, B, bal["feasible"] & (bal["group"] >= 6)),
+             "core_feasible": score(scorer, bal, D, B, bal["feasible"] & (bal["group"] == 8))}
     print(f"before training: train outside>0.01 {start['train']['pixels_outside_pct']['0.01']:.2f}%, "
           f"hold w/LP {start['hold_feasible']['weight_over_lp_pooled']:.4f}", flush=True)
     for epoch in range(1, args.epochs + 1):
@@ -432,6 +441,10 @@ def main():
                 o.step()
             for sc in scheds:
                 sc.step()
+            if ema is not None:
+                with torch.no_grad():
+                    for pe, pl in zip(ema.parameters(), model.parameters()):
+                        pe.mul_(args.ema).add_(pl, alpha=1.0 - args.ema)
             step += 1
             tot += loss.item()
             l1 += w.detach().mean().item()
@@ -449,13 +462,13 @@ def main():
                 round_start["epoch"] = len(epoch_losses)
         rec = {"epoch": epoch, "step": step, "lr": scheds[-1].get_last_lr()[0], "mu": st["mu"], "eps": st["eps"],
                "loss": tot / steps_per_epoch, "weight_term": l1 / steps_per_epoch, "penalty_term": pen / steps_per_epoch,
-               "train": score(model, train_watch, D, B),
-               "hold_feasible": score(model, hold_watch, D, B, hold_watch["feasible"]),
-               "bright_feasible": score(model, bal, D, B, bal["feasible"] & (bal["group"] >= 6)),
-               "core_feasible": score(model, bal, D, B, bal["feasible"] & (bal["group"] == 8)),
+               "train": score(scorer, train_watch, D, B),
+               "hold_feasible": score(scorer, hold_watch, D, B, hold_watch["feasible"]),
+               "bright_feasible": score(scorer, bal, D, B, bal["feasible"] & (bal["group"] >= 6)),
+               "core_feasible": score(scorer, bal, D, B, bal["feasible"] & (bal["group"] == 8)),
                "secs": time.time() - t0}
         if args.pixels == "all":
-            rec["hold_all"] = score(model, hold_watch, D, B)
+            rec["hold_all"] = score(scorer, hold_watch, D, B)
         history.append(rec)
         tr, ho, co = rec["train"], rec["hold_feasible"], rec["core_feasible"]
         print(f"epoch {epoch:3d}  loss {rec['loss']:.4f} (weight {rec['weight_term']:.4f}, penalty {rec['penalty_term']:.4g})  "
@@ -463,10 +476,10 @@ def main():
               f"viol p99 {tr['violation']['p99']:.3g}  hold {ho['pixels_outside_pct']['0.01']:.2f}% w/LP {ho['weight_over_lp_pooled']:.4f}  "
               f"cores {co['pixels_outside_pct']['0.01']:.1f}% peak/LP {co['peak_over_lp_median']:.3f}  {rec['secs']:.0f}s", flush=True)
 
-    final = {"train": history[-1]["train"], "hold_feasible": score(model, hold, D, B, hold["feasible"]),
-             "hold_all": score(model, hold, D, B),
-             "balanced_bands": {lab: {"feasible": score(model, bal, D, B, bal["feasible"] & (bal["group"] == g)),
-                                      "infeasible": score(model, bal, D, B, ~bal["feasible"] & (bal["group"] == g))}
+    final = {"train": history[-1]["train"], "hold_feasible": score(scorer, hold, D, B, hold["feasible"]),
+             "hold_all": score(scorer, hold, D, B),
+             "balanced_bands": {lab: {"feasible": score(scorer, bal, D, B, bal["feasible"] & (bal["group"] == g)),
+                                      "infeasible": score(scorer, bal, D, B, ~bal["feasible"] & (bal["group"] == g))}
                                 for g, lab in enumerate(INTENSITY_LABELS)}}
     if args.form in ("al", "alnet"):
         # Theory: the multipliers converge to the linear program's dual prices, which
@@ -502,7 +515,7 @@ def main():
     os.makedirs(os.path.dirname(os.path.abspath(args.output)) or ".", exist_ok=True)
     with open(args.output, "w") as fh:
         json.dump(result, fh, indent=1)
-    torch.save({"model": model.inner.state_dict(), "args": vars(args)}, os.path.splitext(args.output)[0] + ".pt")
+    torch.save({"model": scorer.inner.state_dict(), "args": vars(args)}, os.path.splitext(args.output)[0] + ".pt")
     print(f"wrote {args.output} in {time.time() - t0:.0f}s")
 
 

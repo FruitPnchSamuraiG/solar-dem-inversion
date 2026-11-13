@@ -191,36 +191,44 @@ def fig_tradeoff(runs, r, out, title):
     plt.close(fig)
 
 
-SCHED_ORDER = (("sched1", "textbook rule, from mu = 1", BLUE), ("sched10", "textbook rule, from mu = 10", ORANGE),
-               ("sched0.1b", "textbook rule, from mu = 0.1", AQUA),
-               ("settle1", "network-aware, from mu = 1", YELLOW), ("settle10", "network-aware, from mu = 10", MAGENTA),
-               ("settle0.1", "network-aware, from mu = 0.1", GREEN),
-               ("mm1", "multipliers, mu fixed at 1", "#6250d6"), ("mm10", "multipliers, mu fixed at 10", "#e34948"),
-               ("mm100", "multipliers, mu fixed at 100", INK2))
+# One row per family; colour = the mu value (start, or the fixed value), the same in every row.
+MU_COLOR = {0.1: BLUE, 1: ORANGE, 10: AQUA, 100: YELLOW}
+SCHED_ROWS = (
+    ("textbook rule (round every 10 epochs)", (("sched0.1b", 0.1), ("sched1", 1), ("sched10", 10)), "start"),
+    ("network-aware rule (round ends when training settles)", (("settle0.1", 0.1), ("settle1", 1), ("settle10", 10)), "start"),
+    ("multipliers, mu held fixed (no schedule)", (("mm1", 1), ("mm10", 10), ("mm100", 100)), "fixed"),
+)
+SCHED_ORDER = tuple((name, "", None) for _, runs, _ in SCHED_ROWS for name, _ in runs)
 
 
 def fig_schedules(runs, out):
-    """mu chosen by the rule, not by hand: mu, violations and emission through training."""
-    fig, axes = plt.subplots(1, 3, figsize=(13.2, 4.2), dpi=200)
-    for name, label, color in SCHED_ORDER:
-        if name not in runs:
-            continue
-        hist = runs[name]["history"]
-        ep = [h["epoch"] for h in hist]
-        axes[0].plot(ep, [h["mu"] for h in hist], color=color, label=label)
-        axes[1].plot(ep, [h["hold_feasible"]["violation"]["p99"] for h in hist], color=color)
-        axes[2].plot(ep, [h["hold_feasible"]["weight_over_lp_median"] for h in hist], color=color)
-    for ax, ylabel, scale in zip(axes, ("mu set by the rule", "worst-1% violation (half-widths)",
-                                        "total weight / solver's (median pixel)"), ("log", "log", "linear")):
-        ax.set_yscale(scale)
-        ax.set_xlabel("epoch")
-        ax.set_ylabel(ylabel)
-    axes[2].axhline(1.0, color=INK2, linewidth=1.0, linestyle=(0, (4, 3)))
-    handles, labels = axes[0].get_legend_handles_labels()
-    fig.legend(handles, labels, loc="lower center", ncol=3, fontsize=9, frameon=False)
-    fig.suptitle("No mu chosen by hand: the rule sets mu, from different starting values (held-out feasible pixels)",
+    """mu chosen by a rule or held fixed with multipliers: mu, violations and emission through training."""
+    fig, axes = plt.subplots(len(SCHED_ROWS), 3, figsize=(13.2, 3.3 * len(SCHED_ROWS) + 0.8), dpi=200, sharex="col")
+    for r, (title, members, kind) in enumerate(SCHED_ROWS):
+        for name, mu0 in members:
+            if name not in runs:
+                continue
+            hist = runs[name]["history"]
+            ep = [h["epoch"] for h in hist]
+            label = f"{'from' if kind == 'start' else 'fixed at'} mu = {mu0:g}"
+            col = MU_COLOR[mu0]
+            axes[r, 0].plot(ep, [h["mu"] for h in hist], color=col, label=label)
+            axes[r, 1].plot(ep, [h["hold_feasible"]["violation"]["p99"] for h in hist], color=col)
+            axes[r, 2].plot(ep, [h["hold_feasible"]["weight_over_lp_median"] for h in hist], color=col)
+        axes[r, 0].set_title(title, fontsize=10)
+        axes[r, 0].legend(loc="best", fontsize=8.5)
+        axes[r, 0].set_yscale("log")
+        axes[r, 1].set_yscale("log")
+        axes[r, 0].set_ylabel("mu")
+        axes[r, 1].set_ylabel("worst-1% violation\n(half-widths)")
+        axes[r, 2].set_ylabel("weight / solver's\n(median pixel)")
+        axes[r, 2].axhline(1.0, color=INK2, linewidth=1.0, linestyle=(0, (4, 3)))
+        axes[r, 2].set_ylim(0.8, 6.5)
+    for c in range(3):
+        axes[-1, c].set_xlabel("epoch")
+    fig.suptitle("Setting mu without choosing it: three ways, each from three values (held-out feasible pixels, toy)",
                  x=0.012, ha="left", fontsize=11, fontweight="bold")
-    fig.tight_layout(rect=(0, 0.11, 1, 0.94))
+    fig.tight_layout(rect=(0, 0, 1, 0.97))
     fig.savefig(out)
     plt.close(fig)
 

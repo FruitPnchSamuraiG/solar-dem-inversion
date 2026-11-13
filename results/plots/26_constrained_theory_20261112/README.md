@@ -152,6 +152,28 @@ measure 2.24x, 1.96x and 1.25x in the three runs, against a threshold of 2), and
 violations back up (fig5, middle); keeping it and only stopping further raises would avoid
 that. The hand-picked mu = 100 is still slightly ahead on the overall DEM error.
 
+- **Multipliers with mu held fixed** (`mm1`, `mm10`, `mm100`, 400 epochs, rounds end when
+  training settles): for a convex problem the method of multipliers converges for any fixed mu,
+  mu setting only the speed (Rockafellar 1976). On the network the end point depends on mu:
+
+  | fixed mu | outside > 0.01 | worst-1% violation | weight / solver's | DEM error | flare-core DEM error |
+  |---|---|---|---|---|---|
+  | 1 | 42.0% | 2.19 | 1.08 | 0.305 | 467.5 |
+  | 10 | 23.8% | 0.77 | 1.16 | 0.117 | 45.8 |
+  | 100 | 9.6% | 0.36 | 1.37 | 0.221 | 67.4 |
+
+  At mu = 1 each round raises the prices by only 2 x violation, too little for bright pixels in
+  the rounds available; at mu = 100 the violations reach the network's floor (about 0.3
+  half-widths) by epoch 113 and the stiffness then only adds emission; mu = 10 is still
+  improving at the end and has the best DEM error with the flare cores. So on a network mu
+  does not drop out: it becomes the step size of price learning, too small is too slow and
+  too large is too stiff.
+
+Full-scale (shared test, `fullscale_summary.txt`): 60 more epochs from the final model with the
+zero band kept, at mu = 100: DEM MSE 1.082 -> 0.974, AIA MSE 148 -> 75, Bright MSE 10.40 -> 9.34,
+Quiet 0.0331 -> 0.0317, median 0.031 unchanged; with multipliers at mu = 100 instead: DEM MSE
+0.932, AIA MSE 51, flare-core 94 A fit 0.88 -> 0.94 (solver 0.92), median 0.041.
+
 Full-scale follow-up (all pixels, fresh pixels every epoch), queued 12 Nov on Torch:
 `bp_h680_keep` (final recipe from scratch, zero band kept), `bp_h680_keep_warm` and
 `bp_h680_keep_al` (60 epochs from the final model, loss used so far against multipliers

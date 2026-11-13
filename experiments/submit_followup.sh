@@ -158,4 +158,10 @@ pick bp_h680_keep_sched && ACCOUNT=${ACCOUNT:-torch_pr_41_general} run bp_h680_k
 # settled (fell under 2% over 10 epochs), and mu stops rising once a 10x raise cut the violation
 # measure by under 2x (the raise is undone). From mu = 1, no mu chosen; 200 epochs for the rounds.
 pick bp_h680_keep_settle && ACCOUNT=${ACCOUNT:-torch_pr_41_general} run bp_h680_keep_settle bp 8 cpu "${B}_h680_sqrt_ff12_resample_clampkeep_al1_sched_settled_ep200" EPOCHS=200 MAX_HOURS=1.85 CLAMP_MODE=keep HIDDEN=680 AL_MU=1 AL_RULE=adaptive AL_OUTER=settled AL_FLOOR=2 AL_EVERY=10 AL_MAX=12 AL_STOP=0.1 AL_CAP=256 TAG_SUFFIX=_settled_ep200
+# Multipliers with mu held at 10 (the constrained toy's best DEM error and flare cores, 13 Nov):
+# rounds end when training settles, no mu growth, no stop, multipliers capped at 256 x price scale.
+pick bp_h680_keep_mm10 && ACCOUNT=${ACCOUNT:-torch_pr_41_general} run bp_h680_keep_mm10 bp 8 cpu "${B}_h680_sqrt_ff12_resample_clampkeep_al10_sched_fixed_ep200" EPOCHS=200 MAX_HOURS=1.85 CLAMP_MODE=keep HIDDEN=680 AL_MU=10 AL_RULE=adaptive AL_GROWTH=1 AL_OUTER=settled AL_FLOOR=0 AL_EVERY=10 AL_MAX=12 AL_STOP=0 AL_CAP=256 TAG_SUFFIX=_fixed_ep200
+# The same with BP's own widened band at the 9% of pixels BP could not fit at 1.4 sigma (3x or 5x,
+# from the solver's flag): the multipliers then push towards a band that exists (13 Nov).
+pick bp_h680_keep_mm10_relax && ACCOUNT=${ACCOUNT:-torch_pr_41_general} run bp_h680_keep_mm10_relax bp 8 cpu "${B}_h680_sqrt_ff12_resample_clampkeep_al10_sched_relax_fixed_ep200" EPOCHS=200 MAX_HOURS=1.85 CLAMP_MODE=keep HIDDEN=680 AL_MU=10 AL_RULE=adaptive AL_GROWTH=1 AL_OUTER=settled AL_FLOOR=0 AL_EVERY=10 AL_MAX=12 AL_STOP=0 AL_CAP=256 RELAX_BAND=1 TAG_SUFFIX=_fixed_ep200
 true

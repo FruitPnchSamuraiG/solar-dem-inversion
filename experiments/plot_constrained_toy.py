@@ -191,6 +191,38 @@ def fig_tradeoff(runs, r, out, title):
     plt.close(fig)
 
 
+SCHED_ORDER = (("sched1", "textbook rule, from mu = 1", BLUE), ("sched10", "textbook rule, from mu = 10", ORANGE),
+               ("sched0.1b", "textbook rule, from mu = 0.1", AQUA),
+               ("settle1", "network-aware, from mu = 1", YELLOW), ("settle10", "network-aware, from mu = 10", MAGENTA),
+               ("settle0.1", "network-aware, from mu = 0.1", GREEN))
+
+
+def fig_schedules(runs, out):
+    """mu chosen by the rule, not by hand: mu, violations and emission through training."""
+    fig, axes = plt.subplots(1, 3, figsize=(13.2, 4.2), dpi=200)
+    for name, label, color in SCHED_ORDER:
+        if name not in runs:
+            continue
+        hist = runs[name]["history"]
+        ep = [h["epoch"] for h in hist]
+        axes[0].plot(ep, [h["mu"] for h in hist], color=color, label=label)
+        axes[1].plot(ep, [h["hold_feasible"]["violation"]["p99"] for h in hist], color=color)
+        axes[2].plot(ep, [h["hold_feasible"]["weight_over_lp_median"] for h in hist], color=color)
+    for ax, ylabel, scale in zip(axes, ("mu set by the rule", "worst-1% violation (half-widths)",
+                                        "total weight / solver's (median pixel)"), ("log", "log", "linear")):
+        ax.set_yscale(scale)
+        ax.set_xlabel("epoch")
+        ax.set_ylabel(ylabel)
+    axes[2].axhline(1.0, color=INK2, linewidth=1.0, linestyle=(0, (4, 3)))
+    handles, labels = axes[0].get_legend_handles_labels()
+    fig.legend(handles, labels, loc="lower center", ncol=3, fontsize=9, frameon=False)
+    fig.suptitle("No mu chosen by hand: the rule sets mu, from different starting values (held-out feasible pixels)",
+                 x=0.012, ha="left", fontsize=11, fontweight="bold")
+    fig.tight_layout(rect=(0, 0.11, 1, 0.94))
+    fig.savefig(out)
+    plt.close(fig)
+
+
 def table(groups):
     """One line per run: where it ended on training and held-out feasible pixels."""
     head = (f"{'run':22s} {'epochs':>6s} | {'train outside >0.1 / 0.01 / 0.001 (%)':>38s} | "
@@ -244,6 +276,15 @@ def main():
         fig_tradeoff(runs, r, os.path.join(folder, f"fig4_violation_vs_weight{'_' + suffix if suffix else ''}.png"),
                      "Fewer band violations cost extra weight" + (" (from the current model)" if suffix == "warm" else
                                                                   " (trained from scratch)" if not suffix else f" ({suffix})"))
+    sched = {name: groups.get("", {}).get(name) for name, _, _ in SCHED_ORDER}
+    sched = {k: v for k, v in sched.items() if v is not None}
+    for path in sorted(glob.glob(os.path.join(folder, "net_*.json"))):
+        name = os.path.basename(path)[4:-5]
+        if name in dict((n, 1) for n, _, _ in SCHED_ORDER) and name not in sched:
+            with open(path) as fh:
+                sched[name] = json.load(fh)
+    if sched:
+        fig_schedules(sched, os.path.join(folder, "fig5_schedules.png"))
     if groups:
         text = table(groups)
         print(text)

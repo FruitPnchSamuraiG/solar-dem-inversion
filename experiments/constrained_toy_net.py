@@ -80,6 +80,20 @@ def parse_args():
     p.add_argument("--mu-growth", type=float, default=2.0)
     p.add_argument("--mu-max", type=float, default=1e3)
     p.add_argument("--y-max", type=float, default=1e5, help="al, alnet: safeguard on the multipliers (per half-width)")
+    p.add_argument("--measure", choices=["mean", "p99"], default="mean",
+                   help="al, alnet: violation measure for the mu rule and the stop: mean or 99th percentile, over "
+                        "training pixels, of each pixel's largest violation (half-widths)")
+    p.add_argument("--outer-mode", choices=["fixed", "settled"], default="fixed",
+                   help="al, alnet: fixed = an outer step every --outer epochs; settled = an outer step once the "
+                        "training loss has settled (relative fall under --settle over the last --outer epochs), the "
+                        "textbook's condition that each round be solved before the multipliers or mu change")
+    p.add_argument("--settle", type=float, default=0.02)
+    p.add_argument("--floor-gain", type=float, default=0.0,
+                   help="al, alnet: stop raising mu once a raise cut the violation measure by less than this factor "
+                        "(theory predicts the factor of the raise itself, --mu-growth); the last raise is undone; 0 = off")
+    p.add_argument("--stop-viol", type=float, default=0.0,
+                   help="al, alnet: once the measure is at or below this (half-widths), mu and the multipliers "
+                        "stop changing (the method's stopping test); 0 = never")
     p.add_argument("--dual-step", type=float, default=1.0,
                    help="al, alnet: fraction of the textbook multiplier step taken (y <- relu(y + step * 2 mu g))")
     p.add_argument("--dual-epochs", type=int, default=2, help="alnet: passes fitting the multiplier network per update")
@@ -261,12 +275,25 @@ def main():
     def mean_violation():
         x = predict(model, train["obs"])
         g_lo, g_hi = gaps(x, D, train["obs"], train["h"])
-        return x, g_lo, g_hi, float(torch.maximum(torch.relu(g_lo), torch.relu(g_hi)).max(1).values.mean())
+        umax = torch.maximum(torch.relu(g_lo), torch.relu(g_hi)).max(1).values
+        v = float(umax.mean()) if args.measure == "mean" else float(torch.quantile(umax[::max(1, len(umax) // 2_000_000)], 0.99))
+        return x, g_lo, g_hi, v
+
+    converged = {"epoch": None}
+    floor = {"reached": None, "before_raise": None, "mu_before": None}
 
     def update_multipliers(epoch):
         """The outer step: y <- relu(y + 2 mu g), then the textbook rule for mu."""
         nonlocal Y, prev_v
         x, g_lo, g_hi, v = mean_violation()
+        if converged["epoch"] is not None:
+            return
+        if args.stop_viol > 0 and v <= args.stop_viol:
+            converged["epoch"] = epoch
+            updates.append({"epoch": epoch, "measure": v, "mu_after": st["mu"], "stopped": True})
+            print(f"   stopping test met after epoch {epoch}: violation measure {v:.4g} <= {args.stop_viol:g}; "
+                  f"mu stays {st['mu']:g}", flush=True)
+            return
         g = torch.cat([g_lo, g_hi], dim=1)
         if args.form == "al":
             Y = torch.relu(Y + args.dual_step * 2.0 * st["mu"] * g).clamp(max=args.y_max)
@@ -289,8 +316,18 @@ def main():
                     dual_opt.step()
                     fit = loss_d.item()
             y_mean = float(torch.expm1(target).mean())
-        grew = prev_v is not None and v > args.tau * prev_v and st["mu"] < args.mu_max
+        if args.floor_gain > 0 and floor["before_raise"] is not None and floor["reached"] is None:
+            # the round after a raise: did the raise buy the reduction theory predicts?
+            if floor["before_raise"] / max(v, 1e-12) < args.floor_gain:
+                floor["reached"] = epoch
+                st["mu"] = floor["mu_before"]
+                print(f"   network floor reached after epoch {epoch}: the raise cut the measure only "
+                      f"{floor['before_raise'] / max(v, 1e-12):.2f}x; mu back to {st['mu']:g}, no further raises", flush=True)
+            floor["before_raise"] = None
+        grew = (prev_v is not None and v > args.tau * prev_v and st["mu"] < args.mu_max
+                and floor["reached"] is None)
         if grew:
+            floor["before_raise"], floor["mu_before"] = v, st["mu"]
             st["mu"] = min(st["mu"] * args.mu_growth, args.mu_max)
         prev_v = v
         updates.append({"epoch": epoch, "mean_violation": v, "mu_after": st["mu"], "multiplier_mean": y_mean}
@@ -299,6 +336,7 @@ def main():
               f"mean multiplier {y_mean:.4g}", flush=True)
 
     history, step, t0 = [], 0, time.time()
+    epoch_losses, round_start = [], {"epoch": 0}
     start = {"train": score(model, train_watch, D, B), "hold_feasible": score(model, hold_watch, D, B, hold_watch["feasible"]),
              "bright_feasible": score(model, bal, D, B, bal["feasible"] & (bal["group"] >= 6)),
              "core_feasible": score(model, bal, D, B, bal["feasible"] & (bal["group"] == 8))}
@@ -335,9 +373,17 @@ def main():
             tot += loss.item()
             l1 += w.detach().mean().item()
             pen += q.detach().mean().item()
-        if (args.form in ("al", "alnet") and args.al_warm <= epoch <= ramp_epochs
-                and (epoch - args.al_warm) % args.outer == 0):
-            update_multipliers(epoch)
+        epoch_losses.append(tot / steps_per_epoch)
+        if args.form in ("al", "alnet") and args.al_warm <= epoch <= ramp_epochs:
+            if args.outer_mode == "fixed":
+                due = (epoch - args.al_warm) % args.outer == 0
+            else:
+                # settled: the loss fell by less than --settle over the last --outer epochs of this round
+                w = epoch_losses[round_start["epoch"]:]
+                due = len(w) > args.outer and (w[-args.outer - 1] - w[-1]) <= args.settle * abs(w[-args.outer - 1])
+            if due:
+                update_multipliers(epoch)
+                round_start["epoch"] = len(epoch_losses)
         rec = {"epoch": epoch, "step": step, "lr": sched.get_last_lr()[0], "mu": st["mu"], "eps": st["eps"],
                "loss": tot / steps_per_epoch, "weight_term": l1 / steps_per_epoch, "penalty_term": pen / steps_per_epoch,
                "train": score(model, train_watch, D, B),
@@ -386,7 +432,9 @@ def main():
     result = {"purpose": "band violations through training on pixels where the linear program is feasible",
               "args": vars(args), "device": str(device), "n_train": N, "steps_per_epoch": steps_per_epoch,
               "ramp_epochs": ramp_epochs, "params": sum(p.numel() for p in model.parameters()),
-              "multiplier_updates": updates, "before_training": start, "history": history, "final": final,
+              "multiplier_updates": updates, "mu_final": st["mu"], "stopped_at_epoch": converged["epoch"],
+              "floor_reached_at_epoch": floor["reached"],
+              "before_training": start, "history": history, "final": final,
               "runtime_s": round(time.time() - t0, 1)}
     os.makedirs(os.path.dirname(os.path.abspath(args.output)) or ".", exist_ok=True)
     with open(args.output, "w") as fh:

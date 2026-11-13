@@ -164,7 +164,7 @@ def make_loss_fn(args, thr_t=None, band_state=None):
         # Method of multipliers; y comes from frozen earlier copies of the network
         # (al_multipliers in train), None (= the plain quadratic penalty) in evaluation.
         return lambda x, D, obs, lb, ub, half=None, y=None: al_loss_batch(
-            x, D, lb, ub, args.al_mu, y=y, a_l1=args.alpha_l1, half=half)
+            x, D, lb, ub, band_state["al_mu"], y=y, a_l1=args.alpha_l1, half=half)
     if args.loss == "barrier" and args.band_form != "quad":
         # The band weight from the input (price scale P_c) and the training step
         # (band_state["eps"], lowered by the training loop); see band_loss_batch.
@@ -328,7 +328,7 @@ def train(args):
           f"|Dx| med={Dx0.abs().median():.3e} max={Dx0.abs().max():.3e}  "
           f"(want |Dx| comparable to obs, not orders above)")
 
-    band_state = {"eps": args.eps, "lam_bar": (1.0 / D_t.max(dim=1).values)[None, :]}
+    band_state = {"eps": args.eps, "lam_bar": (1.0 / D_t.max(dim=1).values)[None, :], "al_mu": args.al_mu}
     loss_fn = make_loss_fn(args, thr_t, band_state)
     optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
     total_steps = args.epochs * len(train_loader)
@@ -361,7 +361,7 @@ def train(args):
     if args.band_form != "quad":
         tag += f"_{args.band_form}" + (f"_k{args.kappa:g}" if args.band_form == "huber" else "")
     if args.al_mu > 0:
-        tag += f"_al{args.al_mu:g}"
+        tag += f"_al{args.al_mu:g}" + ("_sched" if args.al_rule == "adaptive" else "")
     if args.relax_band:
         tag += "_relax"
     tag += args.tag_suffix
@@ -379,9 +379,20 @@ def train(args):
     # so it is recomputed from frozen copies of the network taken every al_every epochs
     # (the first is the starting checkpoint, with --init_from): y_0 = 0 and
     # y_k = relu(y_{k-1} + 2 mu g(x; theta_k)), the textbook update evaluated at any pixel.
-    al_snaps = []
+    # With --al_rule adaptive the weight follows the textbook rule instead of staying at
+    # al_mu: every al_every epochs (during the first ramp_share of training) a copy is
+    # taken (a multiplier update with the current mu) and mu is multiplied by al_growth
+    # if the violation measure did not fall below al_tau times its last value (Park and
+    # Van Hentenryck 2023; Nocedal and Wright 2006, Algorithm 17.4). Updates stop once the
+    # measure (99th percentile, over validation pixels the solver could fit, of each
+    # pixel's largest violation in half-widths) is at or below al_stop. --al_cap kappa
+    # bounds each multiplier by kappa * P_c (P_c = h_c / max_k D[c,k]): no bound where
+    # the pixel's price is lower (99.55% of feasible pixels at kappa 256), a finite push
+    # where no DEM fits the band (elastic mode).
+    al_snaps, al_mus = [], []
+    al_rule = {"prev": None, "stopped_at": None, "log": []}
 
-    def snapshot(state_dict=None):
+    def snapshot(state_dict=None, mu=None):
         m = copy.deepcopy(model)
         if state_dict is not None:
             m.inner.load_state_dict(state_dict)
@@ -389,18 +400,42 @@ def train(args):
         for prm in m.parameters():
             prm.requires_grad_(False)
         al_snaps.append(m)
+        al_mus.append(band_state["al_mu"] if mu is None else mu)
 
     @torch.no_grad()
     def al_multipliers(patch, lb, ub, half):
         if not al_snaps:
             return None
         h = (ub - lb) / 2 if half is None else half
+        cap = None
+        if args.al_cap > 0:
+            cap = (args.al_cap * h * band_state["lam_bar"]).repeat(1, 2)
         y = None
-        for snap in al_snaps:
+        for snap, mu_k in zip(al_snaps, al_mus):
             Dx = snap(patch) @ D_t.T
             g = torch.cat([(lb - Dx) / h, (Dx - ub) / h], dim=1)
-            y = torch.relu(2.0 * args.al_mu * g if y is None else y + 2.0 * args.al_mu * g)
+            y = torch.relu(2.0 * mu_k * g if y is None else y + 2.0 * mu_k * g)
+            if cap is not None:
+                y = torch.minimum(y, cap)
         return y
+
+    @torch.no_grad()
+    def violation_measure():
+        """99th percentile, over validation pixels the solver fit at the tight band, of each
+        pixel's largest violation (half-widths) under the current network."""
+        model.eval()
+        worst = []
+        for batch in val_loader:
+            batch = [t.to(device) for t in flatten_blocks(batch)]
+            half_v = batch.pop(4) if len(batch) == 7 else None
+            patch_v, obs_v, lb_v, ub_v, dem_v, tol_v = batch
+            h = (ub_v - lb_v) / 2 if half_v is None else half_v
+            Dx = model(patch_v) @ D_t.T
+            u = torch.maximum(torch.relu(lb_v - Dx), torch.relu(Dx - ub_v)) / h
+            worst.append(u.max(dim=1).values[tol_v == 1])
+        model.train()
+        w = torch.cat(worst)
+        return float(torch.quantile(w[::max(1, len(w) // 1_000_000)], 0.99)) if len(w) else float("nan")
 
     if args.resume and os.path.exists(state_path):
         st = torch.load(state_path, map_location=device, weights_only=False)
@@ -408,8 +443,10 @@ def train(args):
         optimizer.load_state_dict(st["optimizer"])
         scheduler.load_state_dict(st["scheduler"])
         history, start_epoch = st["history"], st["epoch"]
-        for sd in st.get("al_snaps", []):
-            snapshot(sd)
+        band_state["al_mu"] = st.get("al_mu_current", args.al_mu)
+        for k, sd in enumerate(st.get("al_snaps", [])):
+            snapshot(sd, mu=st.get("al_mus", [args.al_mu] * (k + 1))[k])
+        al_rule.update(st.get("al_rule", {}))
         print(f"resumed {state_path} at epoch {start_epoch}" + (f" with {len(al_snaps)} multiplier snapshots" if al_snaps else ""))
     elif args.al_mu > 0 and args.init_from:
         snapshot()
@@ -459,7 +496,8 @@ def train(args):
                "train_sparsity": ep_sp / n, "val": val, "secs": time.time() - t0,
                "grad_norm_mean": ep_gn / n, "frac_clipped": ep_clipped / n,
                "frac_bright": ep_bright / n, "frac_core": ep_core / n,
-               "lr": scheduler.get_last_lr()[0], "band_eps": band_state["eps"], "al_snapshots": len(al_snaps)}
+               "lr": scheduler.get_last_lr()[0], "band_eps": band_state["eps"], "al_snapshots": len(al_snaps),
+               "al_mu": band_state["al_mu"]}
         history.append(rec)
         tight = val["1"]
         print(f"Epoch {epoch+1:3d}/{args.epochs}  loss={rec['train_loss']:.4f}  "
@@ -484,13 +522,60 @@ def train(args):
                    os.path.join(out_dir, f"{tag}.pt"))
         with open(os.path.join(out_dir, f"{tag}_history.json"), "w") as f:
             json.dump(history, f, indent=2)
-        if (args.al_mu > 0 and (epoch + 1) % args.al_every == 0 and epoch + 1 < args.epochs
-                and len(al_snaps) < args.al_max):
+        if (args.al_mu > 0 and args.al_rule == "fixed" and (epoch + 1) % args.al_every == 0
+                and epoch + 1 < args.epochs and len(al_snaps) < args.al_max):
             snapshot()
             print(f"multiplier snapshot {len(al_snaps)} taken after epoch {epoch+1}", flush=True)
+        if args.al_mu > 0 and args.al_rule == "adaptive":
+            al_rule.setdefault("losses", []).append(rec["train_loss"])
+            al_rule.setdefault("round_start", 0)
+            if args.al_outer_mode == "fixed":
+                due = (epoch + 1) % args.al_every == 0
+            else:
+                # the round has settled: the training loss fell by less than al_settle over the
+                # last al_every epochs (the textbook's condition that each round be solved first)
+                w = al_rule["losses"][al_rule["round_start"]:]
+                due = len(w) > args.al_every and (w[-args.al_every - 1] - w[-1]) <= args.al_settle * abs(w[-args.al_every - 1])
+        else:
+            due = False
+        if (due and epoch + 1 <= args.ramp_share * args.epochs and al_rule["stopped_at"] is None):
+            al_rule["round_start"] = len(al_rule["losses"])
+            v = violation_measure()
+            entry = {"epoch": epoch + 1, "measure": v, "mu": band_state["al_mu"]}
+            if v <= args.al_stop:
+                al_rule["stopped_at"] = epoch + 1
+                print(f"stopping test met after epoch {epoch+1}: measure {v:.4g} <= {args.al_stop:g}; "
+                      f"mu stays {band_state['al_mu']:g}", flush=True)
+            else:
+                if len(al_snaps) < args.al_max:
+                    snapshot()
+                if (args.al_floor_gain > 0 and al_rule.get("before_raise") is not None
+                        and al_rule.get("floor_at") is None):
+                    # the round after a raise: did it buy the reduction theory predicts?
+                    if al_rule["before_raise"] / max(v, 1e-12) < args.al_floor_gain:
+                        al_rule["floor_at"] = epoch + 1
+                        band_state["al_mu"] = al_rule["mu_before"]
+                        print(f"network floor after epoch {epoch+1}: the raise cut the measure only "
+                              f"{al_rule['before_raise'] / max(v, 1e-12):.2f}x; mu back to {band_state['al_mu']:g}",
+                              flush=True)
+                    al_rule["before_raise"] = None
+                grow = (al_rule["prev"] is not None and v > args.al_tau * al_rule["prev"]
+                        and al_rule.get("floor_at") is None)
+                if grow:
+                    al_rule["before_raise"], al_rule["mu_before"] = v, band_state["al_mu"]
+                    band_state["al_mu"] = min(band_state["al_mu"] * args.al_growth, args.al_mu_max)
+                al_rule["prev"] = v
+                print(f"outer step after epoch {epoch+1}: measure {v:.4g}, {len(al_snaps)} multiplier copies, "
+                      f"mu -> {band_state['al_mu']:g}", flush=True)
+            entry["mu_after"] = band_state["al_mu"]
+            al_rule["log"].append(entry)
+            history[-1]["al_rule"] = entry
+            with open(os.path.join(out_dir, f"{tag}_history.json"), "w") as f:
+                json.dump(history, f, indent=2)
         torch.save({"model": core.state_dict(), "optimizer": optimizer.state_dict(),
                     "scheduler": scheduler.state_dict(), "history": history,
-                    "epoch": epoch + 1, "al_snaps": [m.inner.state_dict() for m in al_snaps]},
+                    "epoch": epoch + 1, "al_snaps": [m.inner.state_dict() for m in al_snaps],
+                    "al_mus": al_mus, "al_mu_current": band_state["al_mu"], "al_rule": al_rule},
                    state_path + ".tmp")
         os.replace(state_path + ".tmp", state_path)
 
@@ -614,6 +699,23 @@ def parse_args():
                         "from frozen copies of the network (with --init_from the first is the start)")
     p.add_argument("--al_every", type=int, default=20, help="epochs between multiplier snapshots")
     p.add_argument("--al_max", type=int, default=5, help="largest number of multiplier snapshots")
+    p.add_argument("--al_rule", choices=["fixed", "adaptive"], default="fixed",
+                   help="fixed: mu stays al_mu, a copy every al_every epochs; adaptive: the textbook rule "
+                        "(mu x al_growth when the violation measure stalls, stop at al_stop)")
+    p.add_argument("--al_growth", type=float, default=10.0)
+    p.add_argument("--al_tau", type=float, default=0.8)
+    p.add_argument("--al_mu_max", type=float, default=1e4)
+    p.add_argument("--al_stop", type=float, default=0.1,
+                   help="adaptive: stop once 99%% of solver-feasible validation pixels are within this many half-widths")
+    p.add_argument("--al_outer_mode", choices=["fixed", "settled"], default="fixed",
+                   help="adaptive: an outer step every al_every epochs, or once the training loss has settled "
+                        "(fell under al_settle over the last al_every epochs)")
+    p.add_argument("--al_settle", type=float, default=0.02)
+    p.add_argument("--al_floor_gain", type=float, default=0.0,
+                   help="adaptive: stop raising mu once a raise cut the violation measure by less than this factor "
+                        "(the raise is undone); 0 = off")
+    p.add_argument("--al_cap", type=float, default=0.0,
+                   help="cap each multiplier at this many times the single-channel price scale (0 = no cap)")
     # ENet defaults mirror the confirmed reference solver settings, so the network
     # minimises the same objective it is scored against. fullBP's solveElasticNet is
     #   1/(2N)||Dx-y||^2 + a*l*||x||_1 + a(1-l)*0.5*||x||^2,

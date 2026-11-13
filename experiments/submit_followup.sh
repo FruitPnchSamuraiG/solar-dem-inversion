@@ -141,4 +141,21 @@ FK="EPOCHS=120 MAX_HOURS=1.85 CLAMP_MODE=keep"
 pick bp_h680_keep       && ACCOUNT=${ACCOUNT:-torch_pr_41_courant} run bp_h680_keep       bp 4 cpu "${B}_h680_sqrt_ff12_resample_clampkeep_mu100_ep120"     $FK MU=100 HIDDEN=680 TAG_SUFFIX=_mu100_ep120
 pick bp_h680_keep_price && ACCOUNT=${ACCOUNT:-torch_pr_41_courant} run bp_h680_keep_price bp 4 cpu "${B}_h680_sqrt_ff12_resample_clampkeep_price_ep120"     $FK BAND_FORM=price HIDDEN=680 TAG_SUFFIX=_ep120
 pick bp_h680_keep_huber && ACCOUNT=${ACCOUNT:-torch_pr_41_courant} run bp_h680_keep_huber bp 4 cpu "${B}_h680_sqrt_ff12_resample_clampkeep_huber_k64_ep120" $FK BAND_FORM=huber HIDDEN=680 TAG_SUFFIX=_ep120
+# Warm start from the final model, 60 more epochs with zeroed channels keeping their band: today's
+# loss against the method of multipliers (copies every 20 epochs), the full-scale version of the
+# constrained toy's warm-start pair (results/plots/26_constrained_theory_20261112).
+FINAL=output/experiments/followup/${B}_h680_sqrt_ff12_resample_clampmask_mu100_ep120.pt
+FW="EPOCHS=60 MAX_HOURS=1.85 CLAMP_MODE=keep MU=100 HIDDEN=680 LR=1e-4 INIT_FROM=$FINAL"
+pick bp_h680_keep_warm && ACCOUNT=${ACCOUNT:-torch_pr_41_general} run bp_h680_keep_warm bp 3 cpu "${B}_h680_sqrt_ff12_resample_clampkeep_mu100_warm_ep60" $FW TAG_SUFFIX=_mu100_warm_ep60
+pick bp_h680_keep_al   && ACCOUNT=${ACCOUNT:-torch_pr_41_general} run bp_h680_keep_al   bp 3 cpu "${B}_h680_sqrt_ff12_resample_clampkeep_al100_warm_ep60"   $FW AL_MU=100 AL_EVERY=20 AL_MAX=3 TAG_SUFFIX=_warm_ep60
+# No mu chosen (advisor, 12 Nov): the method of multipliers from mu = 1 with the textbook rule
+# (mu x10 when the violation measure fails to fall below 0.8 of its last value), a multiplier copy
+# every 10 epochs, stop once 99% of solver-feasible validation pixels are within 0.1 half-widths,
+# multipliers capped at 256 x the price scale (elastic at infeasible pixels). Zero band kept.
+FS="EPOCHS=120 MAX_HOURS=1.85 CLAMP_MODE=keep HIDDEN=680"
+pick bp_h680_keep_sched && ACCOUNT=${ACCOUNT:-torch_pr_41_general} run bp_h680_keep_sched bp 6 cpu "${B}_h680_sqrt_ff12_resample_clampkeep_al1_sched_ep120" $FS AL_MU=1 AL_RULE=adaptive AL_EVERY=10 AL_MAX=8 AL_STOP=0.1 AL_CAP=256 TAG_SUFFIX=_ep120
+# The network-aware version (constrained toy, 12 Nov): a round ends when the training loss has
+# settled (fell under 2% over 10 epochs), and mu stops rising once a 10x raise cut the violation
+# measure by under 2x (the raise is undone). From mu = 1, no mu chosen; 200 epochs for the rounds.
+pick bp_h680_keep_settle && ACCOUNT=${ACCOUNT:-torch_pr_41_general} run bp_h680_keep_settle bp 8 cpu "${B}_h680_sqrt_ff12_resample_clampkeep_al1_sched_settled_ep200" EPOCHS=200 MAX_HOURS=1.85 CLAMP_MODE=keep HIDDEN=680 AL_MU=1 AL_RULE=adaptive AL_OUTER=settled AL_FLOOR=2 AL_EVERY=10 AL_MAX=12 AL_STOP=0.1 AL_CAP=256 TAG_SUFFIX=_settled_ep200
 true

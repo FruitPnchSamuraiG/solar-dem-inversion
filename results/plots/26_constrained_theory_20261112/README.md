@@ -114,7 +114,47 @@ What this shows:
   network is far from any optimum) but works from the warm start: fewer violations than `al` at a smaller DEM error, and
   half the violations of `alfix` at the same error.
 
+## No mu chosen by hand (`net_sched*.json`, `net_settle*.json`, `fig5_schedules.png`)
+
+BP has no mu: it enforces the band exactly. mu exists only because training replaces the
+rule by a charge. The method of multipliers takes the charge back to the rule: each pixel's
+price is learned (price <- price + 2 mu x violation, gradient ascent on the dual), and mu is
+raised by 10 only when a round fails to cut the violation measure (99th percentile of the
+largest violation per training pixel) below 0.8 of its last value (Park and Van Hentenryck
+2023; Nocedal and Wright 2006, Algorithm 17.4). All runs here start from scratch.
+
+- **Textbook rule, a round every 10 epochs** (`sched0.1b`, `sched1`, `sched10`): the start does
+  not matter (from 1 and 10 the same mu steps from epoch 40, from 0.1 one step later), but mu
+  never stops rising: the network's violations level off near 0.2 half-widths (99th
+  percentile) whatever mu is, so the rule keeps raising it to the ceiling (1e5 to 1e6). Held-out
+  feasible pixels outside a band by > 0.01: 3.1 to 4.4%; weight 3.7 to 5.1x the solver's; DEM
+  error 0.36 to 0.50. Nearly all the extra emission sits at logT 7.2, where AIA sees least
+  (115x the solver's mean DEM there, against about 0.9x at logT 6.2 to 6.3).
+- **Network-aware rule** (`settle0.1`, `settle1`, `settle10`, 400 epochs): a round ends once the
+  training loss has settled (fell under 2% over 10 epochs), the textbook's condition that each
+  round be solved first; mu stops rising once a 10x raise cut the measure by under 2x (theory
+  predicts 10x), and that raise is undone. mu ended at 10, 10 and 100 (paths 0.1 -> 1 -> 10 ->
+  100 -> 10; 1 -> 10 -> 100 -> 10; 10 -> 100 -> 1000 -> 100):
+
+  | start | mu at the end | outside > 0.01 | weight / solver's | DEM error | flare-core DEM error |
+  |---|---|---|---|---|---|
+  | 0.1 | 10 | 19.5% | 1.18 | 0.190 | 100.9 |
+  | 1 | 10 | 26.8% | 1.19 | 0.420 | 82.4 |
+  | 10 | 100 | 9.9% | 1.37 | 0.146 | 44.6 |
+  | fixed mu = 100 (by hand, 200 epochs) | 100 | 9.9% | 1.28 | 0.118 | 68.4 |
+
+What this shows: the rule finds mu in the range validation had picked (10 to 100) without
+being told. The reason is the violation law: the penalty's own drift is price / (2 mu) and
+falls as 1/mu, while the network cannot resolve violations below its floor; mu of 10 to 100 is
+where the drift drops below that floor, and past it a stiffer band only adds emission. Where
+exactly the rule stops depends on one noisy comparison (the same 10 -> 100 raise cut the
+measure 2.24x, 1.96x and 1.25x in the three runs, against a threshold of 2), and undoing the last raise brings
+violations back up (fig5, middle); keeping it and only stopping further raises would avoid
+that. The hand-picked mu = 100 is still slightly ahead on the overall DEM error.
+
 Full-scale follow-up (all pixels, fresh pixels every epoch), queued 12 Nov on Torch:
 `bp_h680_keep` (final recipe from scratch, zero band kept), `bp_h680_keep_warm` and
 `bp_h680_keep_al` (60 epochs from the final model, loss used so far against multipliers
-from frozen copies of the network); see `experiments/submit_followup.sh`.
+from frozen copies of the network), and `bp_h680_keep_settle` (the network-aware rule from
+mu = 1, 200 epochs, multipliers capped at 256 x the price scale so that pixels with no DEM
+inside the band get a finite push); see `experiments/submit_followup.sh`.

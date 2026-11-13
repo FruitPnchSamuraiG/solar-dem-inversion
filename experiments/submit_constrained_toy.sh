@@ -21,6 +21,18 @@ declare -A RUN=(
   [al]="al|--mu 100 --al-warm 20 --outer 10"
   [alnet]="alnet|--mu 100 --al-warm 20 --outer 10"
   [alfix]="al|--mu 100 --mu-max 100 --al-warm 20 --outer 10"
+  # No mu chosen: the method of multipliers with the published primal-dual-learning rule (Park &
+  # Van Hentenryck 2023: mu x10 when the violation measure fails to fall below 0.8 of its last value),
+  # started from a small mu, stopping once 99% of pixels are within 0.1 half-widths of their band.
+  [sched0.1]="al|--mu 0.1 --mu-growth 10 --tau 0.8 --mu-max 1e6 --measure p99 --stop-viol 0.1 --al-warm 10 --outer 10"
+  [sched1]="al|--mu 1 --mu-growth 10 --tau 0.8 --mu-max 1e6 --measure p99 --stop-viol 0.1 --al-warm 10 --outer 10"
+  [sched10]="al|--mu 10 --mu-growth 10 --tau 0.8 --mu-max 1e6 --measure p99 --stop-viol 0.1 --al-warm 10 --outer 10"
+  [sched1tight]="al|--mu 1 --mu-growth 10 --tau 0.8 --mu-max 1e6 --measure p99 --stop-viol 0.01 --al-warm 10 --outer 10"
+  # The same rule made network-aware: a round ends when the training loss has settled (fell
+  # under 2% over 10 epochs), and mu stops rising once a 10x raise cut the measure by under 2x.
+  [settle0.1]="al|--mu 0.1 --mu-growth 10 --tau 0.8 --mu-max 1e6 --measure p99 --stop-viol 0.1 --al-warm 10 --outer 10 --outer-mode settled --floor-gain 2"
+  [settle1]="al|--mu 1 --mu-growth 10 --tau 0.8 --mu-max 1e6 --measure p99 --stop-viol 0.1 --al-warm 10 --outer 10 --outer-mode settled --floor-gain 2"
+  [settle10]="al|--mu 10 --mu-growth 10 --tau 0.8 --mu-max 1e6 --measure p99 --stop-viol 0.1 --al-warm 10 --outer 10 --outer-mode settled --floor-gain 2"
 )
 SUFFIX=""
 if [ "$MODE" = warm ]; then

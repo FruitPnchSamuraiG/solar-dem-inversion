@@ -1,0 +1,133 @@
+Constrained problem vs its unconstrained stand-ins (t = 1.4, zeroed channels keep their band); 75.4 s
+
+== uniform_train: 2,000,000 pixels
+   a DEM fits all six bands (LP feasible): 90.29%   none fits: 9.71%
+   pixels with a zeroed channel: 38.7% (171 or 193 A: 9.8%); per channel 94 16.3%, 131 12.3%, 171 8.6%, 193 7.4%, 211 6.0%, 335 14.8%
+   feasible share: no zeroed channel 92.58%, a zeroed channel 86.66%, 171 or 193 A zeroed 91.33%
+   solver flag (share of pixels -> LP feasible at 1.4 sigma): 1: 90.29% -> 100.0%, 3: 9.61% -> 0.0%, 5: 0.10% -> 0.0%, 0: 0.01% -> 0.0%
+   by brightness (share, feasible, zeroed channel): <0.03x 3.28% 99% 96%; 0.03-0.1x 9.84% 97% 81%; 0.1-0.3x 28.3% 96% 57%; 0.3-1x 44.5% 86% 25%; 1-1.8x 8.99% 83% 5%; 1.8-3.2x 3.32% 89% 1%; 3.2-10x 1.66% 97% 0%; 10-32x 0.114% 98% 0%; >=32x 0.0101% 96% 0%
+   dual price over the single-channel scale, largest channel: p50 1.72, p90 9.64, p99 142.1, p99.9 1492, max 74647; no channel at its edge: 7.5%
+   exact penalty would be exact at price kappa x scale for: kappa 1: 25.64%, kappa 2: 50.67%, kappa 4: 73.44%, kappa 16: 95.28%, kappa 64: 98.30%, kappa 256: 99.55%, kappa 1024: 99.76%
+   channel at its lower / upper edge: 94 1/5%, 131 24/6%, 171 28/45%, 193 48/22%, 211 48/17%, 335 19/4%
+   infeasible pixels (194,194): band multiple needed p10 1.04x, p50 1.27x, p90 1.94x, p99 3.0x, max 13x
+   feasible once the band is widened to: 1.05x 12.4%, 1.1x 23.1%, 1.25x 47.5%, 1.5x 71.8%, 2x 91.4%, 3x 98.9%, 5x 99.9%
+   least-squares violation (half-widths): p10 0.050, p50 0.343, p90 1.21, p99 2.8, max 17; worst channel 94 30%, 131 32%, 171 4%, 193 4%, 211 4%, 335 26%; below its band 10%; with a zeroed channel 53%
+   by solver flag (n, band multiple needed p50 / p90 / max): 0: 125, 5.92x / 7.82x / 13.10x; 1: 0, - / - / -; 3: 192,111, 1.27x / 1.90x / 3.00x; 5: 1,958, 3.35x / 4.20x / 5.00x
+
+== uniform_val: 300,000 pixels
+   a DEM fits all six bands (LP feasible): 92.06%   none fits: 7.94%
+   pixels with a zeroed channel: 43.3% (171 or 193 A: 11.0%); per channel 94 18.2%, 131 13.4%, 171 9.2%, 193 7.8%, 211 5.2%, 335 17.2%
+   feasible share: no zeroed channel 94.08%, a zeroed channel 89.41%, 171 or 193 A zeroed 91.52%
+   solver flag (share of pixels -> LP feasible at 1.4 sigma): 1: 92.06% -> 100.0%, 3: 7.87% -> 0.0%, 5: 0.07% -> 0.0%, 0: 0.00% -> 0.0%
+   by brightness (share, feasible, zeroed channel): <0.03x 3.38% 99% 97%; 0.03-0.1x 9.54% 98% 83%; 0.1-0.3x 30.3% 97% 60%; 0.3-1x 45.1% 89% 29%; 1-1.8x 8.02% 83% 8%; 1.8-3.2x 2.59% 89% 2%; 3.2-10x 0.97% 96% 0%; 10-32x 0.068% 100% 0%; >=32x 0.00733% 82% 0%
+   dual price over the single-channel scale, largest channel: p50 1.29, p90 8.60, p99 135.2, p99.9 1492, max 51792; no channel at its edge: 8.4%
+   exact penalty would be exact at price kappa x scale for: kappa 1: 28.48%, kappa 2: 55.71%, kappa 4: 75.47%, kappa 16: 95.56%, kappa 64: 98.45%, kappa 256: 99.51%, kappa 1024: 99.73%
+   channel at its lower / upper edge: 94 1/4%, 131 21/6%, 171 29/41%, 193 44/22%, 211 51/15%, 335 17/3%
+   infeasible pixels (23,823): band multiple needed p10 1.04x, p50 1.25x, p90 1.89x, p99 3.0x, max 8x
+   feasible once the band is widened to: 1.05x 12.5%, 1.1x 23.8%, 1.25x 49.7%, 1.5x 74.0%, 2x 92.3%, 3x 99.1%, 5x 100.0%
+   least-squares violation (half-widths): p10 0.050, p50 0.320, p90 1.15, p99 2.6, max 11; worst channel 94 25%, 131 35%, 171 6%, 193 4%, 211 3%, 335 26%; below its band 15%; with a zeroed channel 58%
+   by solver flag (n, band multiple needed p50 / p90 / max): 0: 9, 5.79x / 7.18x / 8.34x; 1: 0, - / - / -; 3: 23,608, 1.25x / 1.85x / 3.00x; 5: 206, 3.31x / 4.06x / 4.70x
+
+== stand-ins at their exact optimum, balanced validation sample; share of FEASIBLE pixels inside every band (within 0.1 / 0.01 / 0.001 half-widths), weighted to the population
+   exact penalty, price = kappa x single-channel scale:
+      kappa     1: 31.82 / 28.25 / 27.76%
+      kappa     2: 57.02 / 55.24 / 54.91%
+      kappa     4: 77.78 / 76.05 / 75.86%
+      kappa    16: 97.51 / 96.79 / 96.53%
+      kappa    64: 99.15 / 98.80 / 98.69%
+      kappa   256: 99.69 / 99.40 / 99.33%
+      kappa  1024: 99.83 / 99.75 / 99.75%
+   augmented Lagrangian, by outer iteration (iteration 1 is the plain quadratic penalty):
+         mu10: [1] 87.3/48.4/12.6  [2] 97.1/85.0/80.3  [3] 98.7/91.4/88.2  [4] 98.9/93.9/91.5  [5] 99.3/95.2/93.1  [6] 99.6/95.9/94.3  [7] 99.7/96.5/95.0  [8] 99.7/96.8/95.6
+        mu100: [1] 99.5/83.4/48.0  [2] 100.0/97.8/95.2  [3] 100.0/99.0/97.9  [4] 100.0/99.3/98.4  [5] 100.0/99.6/98.9  [6] 100.0/99.8/99.2  [7] 100.0/99.9/99.4  [8] 100.0/99.9/99.5
+        ada10: [1] 87.3/48.4/12.6  [2] 97.1/85.0/80.3  [3] 99.8/94.8/89.6  [4] 100.0/99.4/96.4  [5] 100.0/99.9/99.2  [6] 100.0/100.0/99.9  [7] 100.0/100.0/100.0  [8] 100.0/100.0/100.0
+
+   -- <0.03x: 990 feasible, 10 infeasible
+      exact penalty, feasible inside within 0.001 (max violation p99; weight / LP): k1 61% (1.5; 0.000), k2 85% (1.2; 0.504), k4 92% (1.9; 0.816), k16 98% (0.27; 1.000), k64 100% (0; 1.000), k256 100% (0; 1.000), k1024 100% (0; 1.000)
+      AL    mu10, feasible inside within 0.001 by iteration: 62% 100% 100% 100% 100% 100% 100% 100%; p99 violation 0.026 4e-15 3.7e-16 2.3e-16 4.7e-17 2.9e-17 1.4e-17 2.9e-18; weight / LP 1.0000; unconverged solves 0
+      AL   mu100, feasible inside within 0.001 by iteration: 96% 100% 100% 100% 100% 100% 100% 100%; p99 violation 0.0026 4.5e-16 8.6e-17 6.6e-18 5.2e-18 1.3e-18 2.1e-19 1.1e-19; weight / LP 1.0000; unconverged solves 0
+      AL   ada10, feasible inside within 0.001 by iteration: 62% 100% 100% 100% 100% 100% 100% 100%; p99 violation 0.026 4e-15 3.7e-16 1.7e-16 3.1e-17 1.5e-17 1.4e-17 9.2e-19; weight / LP 1.0000; unconverged solves 0
+      infeasible, exact penalty max violation p50: k1 1.42, k2 1.23, k4 3.62, k16 1.24, k64 0.183, k256 0.183, k1024 0.183
+      infeasible, AL    mu10 max violation p50 by iteration: 0.102 0.108 0.108 0.108 0.108 0.108 0.108 0.108
+      infeasible, AL   mu100 max violation p50 by iteration: 0.107 0.108 0.108 0.108 0.108 0.108 0.108 0.108
+      infeasible, AL   ada10 max violation p50 by iteration: 0.102 0.108 0.108 0.108 0.108 0.108 0.108 0.108
+
+   -- 0.03-0.1x: 983 feasible, 17 infeasible
+      exact penalty, feasible inside within 0.001 (max violation p99; weight / LP): k1 41% (2.9; 0.326), k2 68% (3.5; 0.828), k4 80% (2.7; 1.000), k16 97% (0.35; 1.000), k64 99% (0; 1.000), k256 100% (0; 1.000), k1024 100% (0; 1.000)
+      AL    mu10, feasible inside within 0.001 by iteration: 35% 99% 99% 100% 100% 100% 100% 100%; p99 violation 0.028 0.00069 9.2e-15 5.9e-15 5.2e-15 1.4e-15 2.8e-16 2.3e-16; weight / LP 1.0000; unconverged solves 0
+      AL   mu100, feasible inside within 0.001 by iteration: 89% 100% 100% 100% 100% 100% 100% 100%; p99 violation 0.0034 2.4e-15 1e-15 3.1e-16 1.1e-16 2.2e-17 3.9e-17 7.2e-18; weight / LP 1.0000; unconverged solves 0
+      AL   ada10, feasible inside within 0.001 by iteration: 35% 99% 99% 100% 100% 100% 100% 100%; p99 violation 0.028 0.00069 9.2e-15 3.6e-15 1e-15 7.5e-16 1.4e-16 8.7e-17; weight / LP 1.0000; unconverged solves 0
+      infeasible, exact penalty max violation p50: k1 2.58, k2 2.06, k4 5.08, k16 1.63, k64 0.754, k256 0.691, k1024 0.691
+      infeasible, AL    mu10 max violation p50 by iteration: 0.369 0.323 0.323 0.323 0.323 0.323 0.323 0.323
+      infeasible, AL   mu100 max violation p50 by iteration: 0.327 0.323 0.323 0.323 0.323 0.323 0.323 0.323
+      infeasible, AL   ada10 max violation p50 by iteration: 0.369 0.323 0.323 0.323 0.323 0.323 0.323 0.323
+
+   -- 0.1-0.3x: 972 feasible, 28 infeasible
+      exact penalty, feasible inside within 0.001 (max violation p99; weight / LP): k1 28% (5.1; 0.581), k2 57% (6.4; 0.889), k4 77% (5.7; 1.000), k16 98% (0.53; 1.000), k64 99% (0; 1.000), k256 100% (0; 1.000), k1024 100% (0; 1.000)
+      AL    mu10, feasible inside within 0.001 by iteration: 19% 94% 97% 98% 99% 99% 99% 99%; p99 violation 0.085 0.04 0.02 0.01 0.0034 0.0023 0.0013 2.1e-14; weight / LP 1.0000; unconverged solves 0
+      AL   mu100, feasible inside within 0.001 by iteration: 70% 99% 99% 100% 100% 100% 100% 100%; p99 violation 0.016 0.0005 1.7e-14 1e-14 5.5e-15 2.2e-15 8e-16 4.5e-16; weight / LP 1.0000; unconverged solves 0
+      AL   ada10, feasible inside within 0.001 by iteration: 19% 94% 98% 99% 100% 100% 100% 100%; p99 violation 0.085 0.04 0.0052 0.00023 6.5e-15 2.6e-15 3.3e-15 1.9e-15; weight / LP 1.0000; unconverged solves 0
+      infeasible, exact penalty max violation p50: k1 2.44, k2 2.7, k4 2.41, k16 1.21, k64 0.671, k256 0.528, k1024 0.528
+      infeasible, AL    mu10 max violation p50 by iteration: 0.376 0.321 0.32 0.32 0.318 0.317 0.317 0.302
+      infeasible, AL   mu100 max violation p50 by iteration: 0.302 0.302 0.302 0.302 0.302 0.302 0.302 0.302
+      infeasible, AL   ada10 max violation p50 by iteration: 0.376 0.321 0.302 0.302 0.302 0.302 0.302 0.302
+
+   -- 0.3-1x: 891 feasible, 109 infeasible
+      exact penalty, feasible inside within 0.001 (max violation p99; weight / LP): k1 25% (7.8; 0.799), k2 52% (7.5; 1.000), k4 74% (5.1; 1.000), k16 96% (0.59; 1.000), k64 98% (0.18; 1.000), k256 99% (0.0023; 1.000), k1024 100% (0; 1.000)
+      AL    mu10, feasible inside within 0.001 by iteration: 2% 70% 81% 87% 89% 91% 92% 93%; p99 violation 0.31 0.16 0.13 0.11 0.092 0.077 0.069 0.069; weight / LP 1.0000; unconverged solves 0
+      AL   mu100, feasible inside within 0.001 by iteration: 30% 93% 97% 98% 98% 99% 99% 99%; p99 violation 0.077 0.027 0.011 0.005 0.0019 0.0013 0.0005 0.00049; weight / LP 1.0000; unconverged solves 0
+      AL   ada10, feasible inside within 0.001 by iteration: 2% 70% 84% 95% 99% 100% 100% 100%; p99 violation 0.31 0.16 0.07 0.0092 0.001 1.8e-05 3.2e-14 1.7e-14; weight / LP 1.0000; unconverged solves 0
+      infeasible, exact penalty max violation p50: k1 1.65, k2 1.87, k4 1.54, k16 0.623, k64 0.487, k256 0.431, k1024 0.4
+      infeasible, AL    mu10 max violation p50 by iteration: 0.376 0.341 0.327 0.297 0.275 0.267 0.253 0.253
+      infeasible, AL   mu100 max violation p50 by iteration: 0.268 0.249 0.249 0.249 0.249 0.249 0.249 0.249
+      infeasible, AL   ada10 max violation p50 by iteration: 0.376 0.341 0.255 0.249 0.249 0.249 0.249 0.249
+
+   -- 1-1.8x: 843 feasible, 157 infeasible
+      exact penalty, feasible inside within 0.001 (max violation p99; weight / LP): k1 15% (11; 0.742), k2 37% (11; 0.903), k4 70% (7.5; 1.000), k16 95% (0.41; 1.000), k64 98% (0.023; 1.000), k256 100% (0; 1.000), k1024 100% (0; 1.000)
+      AL    mu10, feasible inside within 0.001 by iteration: 0% 57% 75% 81% 84% 86% 88% 89%; p99 violation 0.5 0.24 0.2 0.17 0.15 0.13 0.11 0.11; weight / LP 1.0000; unconverged solves 0
+      AL   mu100, feasible inside within 0.001 by iteration: 4% 87% 94% 95% 97% 98% 98% 98%; p99 violation 0.12 0.063 0.039 0.035 0.018 0.0092 0.0051 0.0046; weight / LP 1.0000; unconverged solves 0
+      AL   ada10, feasible inside within 0.001 by iteration: 0% 57% 76% 91% 97% 99% 100% 100%; p99 violation 0.5 0.24 0.098 0.025 0.0043 0.00041 1.4e-13 2.8e-14; weight / LP 1.0000; unconverged solves 0
+      infeasible, exact penalty max violation p50: k1 2.78, k2 2.75, k4 1.5, k16 0.659, k64 0.515, k256 0.485, k1024 0.48
+      infeasible, AL    mu10 max violation p50 by iteration: 0.618 0.51 0.482 0.463 0.449 0.426 0.416 0.411
+      infeasible, AL   mu100 max violation p50 by iteration: 0.407 0.397 0.397 0.397 0.397 0.397 0.397 0.397
+      infeasible, AL   ada10 max violation p50 by iteration: 0.618 0.51 0.397 0.397 0.397 0.397 0.397 0.397
+
+   -- 1.8-3.2x: 895 feasible, 105 infeasible
+      exact penalty, feasible inside within 0.001 (max violation p99; weight / LP): k1 12% (13; 0.757), k2 35% (14; 0.916), k4 71% (9.1; 1.000), k16 96% (0.26; 1.000), k64 99% (0; 1.000), k256 100% (0; 1.000), k1024 100% (0; 1.000)
+      AL    mu10, feasible inside within 0.001 by iteration: 0% 57% 76% 81% 84% 87% 89% 90%; p99 violation 0.57 0.3 0.26 0.25 0.19 0.17 0.16 0.14; weight / LP 1.0000; unconverged solves 0
+      AL   mu100, feasible inside within 0.001 by iteration: 1% 88% 94% 95% 96% 97% 98% 98%; p99 violation 0.16 0.088 0.056 0.045 0.028 0.016 0.0091 0.0058; weight / LP 1.0000; unconverged solves 0
+      AL   ada10, feasible inside within 0.001 by iteration: 0% 57% 77% 90% 97% 99% 100% 100%; p99 violation 0.57 0.3 0.12 0.026 0.0052 0.00035 8.7e-13 1.1e-13; weight / LP 1.0000; unconverged solves 0
+      infeasible, exact penalty max violation p50: k1 3.7, k2 3.46, k4 1.78, k16 0.859, k64 0.68, k256 0.676, k1024 0.676
+      infeasible, AL    mu10 max violation p50 by iteration: 0.839 0.778 0.706 0.66 0.643 0.625 0.622 0.617
+      infeasible, AL   mu100 max violation p50 by iteration: 0.607 0.61 0.605 0.602 0.602 0.602 0.602 0.602
+      infeasible, AL   ada10 max violation p50 by iteration: 0.839 0.778 0.609 0.602 0.602 0.602 0.602 0.602
+
+   -- 3.2-10x: 965 feasible, 35 infeasible
+      exact penalty, feasible inside within 0.001 (max violation p99; weight / LP): k1 16% (18; 0.808), k2 42% (15; 0.971), k4 67% (11; 1.000), k16 98% (0.17; 1.000), k64 100% (0; 1.000), k256 100% (0; 1.000), k1024 100% (0; 1.000)
+      AL    mu10, feasible inside within 0.001 by iteration: 0% 48% 77% 83% 86% 88% 90% 91%; p99 violation 0.74 0.36 0.29 0.26 0.21 0.18 0.15 0.13; weight / LP 1.0000; unconverged solves 0
+      AL   mu100, feasible inside within 0.001 by iteration: 0% 88% 95% 97% 98% 98% 98% 99%; p99 violation 0.18 0.071 0.047 0.017 0.01 0.0081 0.0023 0.0016; weight / LP 1.0000; unconverged solves 0
+      AL   ada10, feasible inside within 0.001 by iteration: 0% 48% 77% 90% 98% 100% 100% 100%; p99 violation 0.74 0.36 0.13 0.026 0.006 0.00011 9.6e-13 1.6e-13; weight / LP 1.0000; unconverged solves 1
+      infeasible, exact penalty max violation p50: k1 3.15, k2 3.28, k4 1.64, k16 0.632, k64 0.454, k256 0.431, k1024 0.424
+      infeasible, AL    mu10 max violation p50 by iteration: 0.827 0.718 0.582 0.574 0.544 0.503 0.498 0.5
+      infeasible, AL   mu100 max violation p50 by iteration: 0.497 0.444 0.436 0.431 0.431 0.418 0.418 0.409
+      infeasible, AL   ada10 max violation p50 by iteration: 0.827 0.718 0.448 0.409 0.408 0.408 0.408 0.408
+
+   -- 10-32x: 988 feasible, 12 infeasible
+      exact penalty, feasible inside within 0.001 (max violation p99; weight / LP): k1 11% (54; 0.872), k2 37% (35; 0.972), k4 53% (33; 1.000), k16 98% (0.39; 1.000), k64 100% (0; 1.000), k256 100% (0; 1.000), k1024 100% (0; 1.000)
+      AL    mu10, feasible inside within 0.001 by iteration: 0% 40% 74% 83% 87% 89% 91% 93%; p99 violation 1.4 0.51 0.3 0.21 0.13 0.09 0.08 0.072; weight / LP 1.0000; unconverged solves 0
+      AL   mu100, feasible inside within 0.001 by iteration: 0% 90% 96% 98% 98% 99% 99% 99%; p99 violation 0.2 0.043 0.017 0.0082 0.003 0.0013 0.00054 0.00047; weight / LP 1.0000; unconverged solves 2
+      AL   ada10, feasible inside within 0.001 by iteration: 0% 40% 75% 88% 97% 100% 100% 100%; p99 violation 1.4 0.51 0.12 0.039 0.0038 0.0001 4.4e-12 9.6e-13; weight / LP 1.0000; unconverged solves 1
+      infeasible, exact penalty max violation p50: k1 8.48, k2 11.9, k4 41.4, k16 33.2, k64 33.2, k256 33.2, k1024 33.2
+      infeasible, AL    mu10 max violation p50 by iteration: 3.67 3.05 3.05 3.05 3.05 3.05 3.05 3.05
+      infeasible, AL   mu100 max violation p50 by iteration: 3.05 3.05 3.05 3.05 3.05 3.05 3.05 3.05
+      infeasible, AL   ada10 max violation p50 by iteration: 3.67 3.05 3.05 3.05 3.05 3.05 3.05 3.05
+
+   -- >=32x: 2438 feasible, 562 infeasible
+      exact penalty, feasible inside within 0.001 (max violation p99; weight / LP): k1 11% (4.3e+02; 0.877), k2 22% (3.3e+02; 0.939), k4 37% (2e+02; 0.969), k16 92% (19; 1.000), k64 97% (5.4; 1.000), k256 100% (0; 1.000), k1024 100% (0; 1.000)
+      AL    mu10, feasible inside within 0.001 by iteration: 0% 17% 45% 62% 70% 75% 78% 81%; p99 violation 9.2 3.7 2.6 2.4 2.2 1.8 1.7 1.4; weight / LP 1.0000; unconverged solves 0
+      AL   mu100, feasible inside within 0.001 by iteration: 0% 74% 89% 93% 95% 96% 97% 97%; p99 violation 2.1 0.88 0.35 0.19 0.14 0.11 0.055 0.03; weight / LP 1.0000; unconverged solves 0
+      AL   ada10, feasible inside within 0.001 by iteration: 0% 17% 46% 75% 91% 98% 99% 100%; p99 violation 9.2 3.7 1.5 0.53 0.074 0.01 9.7e-05 9.5e-13; weight / LP 1.0000; unconverged solves 2
+      infeasible, exact penalty max violation p50: k1 18, k2 20.6, k4 16.8, k16 10.7, k64 7.81, k256 6.95, k1024 6.46
+      infeasible, AL    mu10 max violation p50 by iteration: 7.86 5.99 5.78 5.48 4.94 4.76 4.59 4.57
+      infeasible, AL   mu100 max violation p50 by iteration: 4.5 4.43 4.45 4.46 4.39 4.37 4.35 4.35
+      infeasible, AL   ada10 max violation p50 by iteration: 7.86 5.99 4.47 4.29 4.29 4.29 4.29 4.29

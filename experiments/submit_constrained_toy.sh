@@ -33,6 +33,11 @@ declare -A RUN=(
   [settle0.1]="al|--mu 0.1 --mu-growth 10 --tau 0.8 --mu-max 1e6 --measure p99 --stop-viol 0.1 --al-warm 10 --outer 10 --outer-mode settled --floor-gain 2"
   [settle1]="al|--mu 1 --mu-growth 10 --tau 0.8 --mu-max 1e6 --measure p99 --stop-viol 0.1 --al-warm 10 --outer 10 --outer-mode settled --floor-gain 2"
   [settle10]="al|--mu 10 --mu-growth 10 --tau 0.8 --mu-max 1e6 --measure p99 --stop-viol 0.1 --al-warm 10 --outer 10 --outer-mode settled --floor-gain 2"
+  # The method of multipliers with mu held fixed (no schedule): for convex problems it converges
+  # for any fixed mu > 0, mu sets only the speed (Rockafellar 1976). Same answer from 1, 10, 100?
+  [mm1]="al|--mu 1 --mu-max 1 --measure p99 --al-warm 10 --outer 10 --outer-mode settled"
+  [mm10]="al|--mu 10 --mu-max 10 --measure p99 --al-warm 10 --outer 10 --outer-mode settled"
+  [mm100]="al|--mu 100 --mu-max 100 --measure p99 --al-warm 10 --outer 10 --outer-mode settled"
 )
 SUFFIX=""
 if [ "$MODE" = warm ]; then

@@ -1,0 +1,5 @@
+{"bp": [
+ {"label": "final 1.5M (zero channels freed)", "diag": "results/plots/23_meeting_followup_20261024/bp_bright_failure_fu_bp_h680_clampmask.json", "aia": "results/plots/25_followup_20261109/bp_aia_fit_sup10m.json"},
+ {"label": "+60 ep, zero band kept, mu 100", "diag": "results/plots/26_constrained_theory_20261112/bp_bright_failure_fu_bp_h680_keep_warm.json", "aia": "results/plots/26_constrained_theory_20261112/bp_aia_fit_fu_bp_h680_keep_warm.json"},
+ {"label": "+60 ep, zero band kept, multipliers", "diag": "results/plots/26_constrained_theory_20261112/bp_bright_failure_fu_bp_h680_keep_al.json", "aia": "results/plots/26_constrained_theory_20261112/bp_aia_fit_fu_bp_h680_keep_al.json"},
+ {"label": "supervised 10.1M clipped", "diag": "results/plots/25_followup_20261109/bp_bright_failure_supervised_sup10m.json", "aia": "results/plots/25_followup_20261109/bp_aia_fit_sup10m.json", "supervised": true}]}

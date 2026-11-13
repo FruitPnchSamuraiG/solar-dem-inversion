@@ -194,7 +194,9 @@ def fig_tradeoff(runs, r, out, title):
 SCHED_ORDER = (("sched1", "textbook rule, from mu = 1", BLUE), ("sched10", "textbook rule, from mu = 10", ORANGE),
                ("sched0.1b", "textbook rule, from mu = 0.1", AQUA),
                ("settle1", "network-aware, from mu = 1", YELLOW), ("settle10", "network-aware, from mu = 10", MAGENTA),
-               ("settle0.1", "network-aware, from mu = 0.1", GREEN))
+               ("settle0.1", "network-aware, from mu = 0.1", GREEN),
+               ("mm1", "multipliers, mu fixed at 1", "#6250d6"), ("mm10", "multipliers, mu fixed at 10", "#e34948"),
+               ("mm100", "multipliers, mu fixed at 100", INK2))
 
 
 def fig_schedules(runs, out):

@@ -233,6 +233,36 @@ def fig_schedules(runs, out):
     plt.close(fig)
 
 
+TQ_LABELS = {"mm10": "baseline: Adam, lr 3e-4, clip 1, batch 4096", "tq_lr1e-3": "Adam, lr 1e-3",
+             "tq_lr1e-4": "Adam, lr 1e-4", "tq_noclip": "Adam, no gradient clipping",
+             "tq_batch16k": "Adam, batch 16384, lr 6e-4", "tq_adamw": "AdamW (weight decay 0.01)",
+             "tq_nadam": "NAdam", "tq_radam": "RAdam", "tq_adafactor": "Adafactor",
+             "tq_lion": "Lion, lr 1e-4", "tq_muon": "Muon (hidden matrices), lr 0.02",
+             "tq_muonrms": "Muon, Adam-matched step, lr 3e-4",
+             "mm10_s1": "baseline, seed 1", "mm10_s2": "baseline, seed 2",
+             "tq_muonrms_s1": "Muon, Adam-matched step, seed 1", "tq_muonrms_s2": "Muon, Adam-matched step, seed 2"}
+
+
+def tq_table(tq):
+    """Training quality on the method as it stands (multipliers, mu 10): how close each run gets to
+    perfect training (no violations at solvable pixels, the solver's weight and DEM)."""
+    rows = []
+    for name, r in tq.items():
+        f = r["final"]["hold_feasible"]
+        c = (r["final"]["balanced_bands"].get(">=32x") or {}).get("feasible") or {}
+        rows.append((f["dem_mae_vs_lp"], name, len(r["history"]), f["pixels_outside_pct"]["0.01"],
+                     f["violation"]["p99"], f["weight_over_lp_median"], c.get("dem_mae_vs_lp", float("nan")),
+                     r.get("runtime_s", float("nan"))))
+    head = (f"{'run':44s} {'epochs':>6s} | {'outside >0.01':>13s} | {'worst-1% viol':>13s} | "
+            f"{'weight/solver':>13s} | {'DEM error':>9s} | {'flare-core DEM error':>20s} | {'minutes':>7s}")
+    lines = ["Held-out solvable pixels, toy (1M training pixels, 400 epochs from scratch); sorted by DEM error",
+             head, "-" * len(head)]
+    for dem, name, ep, out, p99, w, core, rt in sorted(rows):
+        lines.append(f"{TQ_LABELS.get(name, name):44s} {ep:6d} | {out:12.2f}% | {p99:13.3f} | {w:13.3f} | "
+                     f"{dem:9.4f} | {core:20.1f} | {rt / 60:7.0f}")
+    return "\n".join(lines)
+
+
 def table(groups):
     """One line per run: where it ended on training and held-out feasible pixels."""
     head = (f"{'run':22s} {'epochs':>6s} | {'train outside >0.1 / 0.01 / 0.001 (%)':>38s} | "
@@ -272,11 +302,17 @@ def main():
     fig_infeasible(r, os.path.join(folder, "fig1_infeasible_band_multiple.png"))
     fig_standins(r, os.path.join(folder, "fig2_standins_per_pixel.png"))
     groups = {}
+    tq = {}
     for path in sorted(glob.glob(os.path.join(folder, "net_*.json"))):
         name = os.path.basename(path)[4:-5]
-        base, _, suffix = name.partition("_")
         with open(path) as fh:
-            groups.setdefault(suffix, {})[base] = json.load(fh)
+            run = json.load(fh)
+        if name.startswith("tq_") or name.startswith("mm10"):
+            tq[name] = run                    # training-quality runs: their own table
+            if name != "mm10":
+                continue
+        base, _, suffix = name.partition("_")
+        groups.setdefault(suffix, {})[base] = run
     titles = {"": "Trained from scratch on feasible pixels: band violations through training",
               "warm": "Starting from the current model, feasible pixels: band violations through training",
               "warmall": "Starting from the current model, every pixel: band violations through training"}
@@ -295,6 +331,11 @@ def main():
                 sched[name] = json.load(fh)
     if sched:
         fig_schedules(sched, os.path.join(folder, "fig5_schedules.png"))
+    if len(tq) > 1:
+        text = tq_table(tq)
+        print(text)
+        with open(os.path.join(folder, "training_quality.txt"), "w") as fh:
+            fh.write(text + "\n")
     if groups:
         text = table(groups)
         print(text)

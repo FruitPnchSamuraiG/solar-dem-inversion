@@ -330,9 +330,23 @@ def train(args):
 
     band_state = {"eps": args.eps, "lam_bar": (1.0 / D_t.max(dim=1).values)[None, :], "al_mu": args.al_mu}
     loss_fn = make_loss_fn(args, thr_t, band_state)
-    optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
+    if args.optimizer == "muon":
+        # Muon is meant for hidden layers' 2D weights; the first and last layers and the
+        # biases stay on Adam (torch.optim.Muon docs; Jordan et al. 2024).
+        linears = [m for m in core.modules() if isinstance(m, nn.Linear)]
+        hidden = {id(m.weight) for m in linears[1:-1]}
+        muon_params = [p_ for p_ in model.parameters() if id(p_) in hidden]
+        rest = [p_ for p_ in model.parameters() if id(p_) not in hidden]
+        optimizers = [torch.optim.Muon(muon_params, lr=args.muon_lr, weight_decay=0.0,
+                                       adjust_lr_fn=args.muon_adjust),
+                      torch.optim.Adam(rest, lr=args.lr)]
+        print(f"Muon on {len(muon_params)} hidden weight matrices ({sum(p_.numel() for p_ in muon_params):,}), "
+              f"Adam on the rest ({sum(p_.numel() for p_ in rest):,})")
+    else:
+        optimizers = [torch.optim.Adam(model.parameters(), lr=args.lr)]
     total_steps = args.epochs * len(train_loader)
-    scheduler = make_scheduler(optimizer, total_steps, args.warmup_steps, args.lr)
+    schedulers = [make_scheduler(o, total_steps, args.warmup_steps, args.lr) for o in optimizers]
+    optimizer, scheduler = optimizers[-1], schedulers[-1]     # the Adam one: lr and step count
     ramp_steps = max(1, int(args.ramp_share * total_steps))
 
     def band_eps(step):
@@ -362,6 +376,8 @@ def train(args):
         tag += f"_{args.band_form}" + (f"_k{args.kappa:g}" if args.band_form == "huber" else "")
     if args.al_mu > 0:
         tag += f"_al{args.al_mu:g}" + ("_sched" if args.al_rule == "adaptive" else "")
+    if args.optimizer != "adam":
+        tag += f"_{args.optimizer}"
     if args.relax_band:
         tag += "_relax"
     tag += args.tag_suffix
@@ -440,8 +456,14 @@ def train(args):
     if args.resume and os.path.exists(state_path):
         st = torch.load(state_path, map_location=device, weights_only=False)
         core.load_state_dict(st["model"])
-        optimizer.load_state_dict(st["optimizer"])
-        scheduler.load_state_dict(st["scheduler"])
+        if len(optimizers) == 1:
+            optimizer.load_state_dict(st["optimizer"])
+            scheduler.load_state_dict(st["scheduler"])
+        else:
+            for o, sd in zip(optimizers, st["optimizers"]):
+                o.load_state_dict(sd)
+            for sc, sd in zip(schedulers, st["schedulers"]):
+                sc.load_state_dict(sd)
         history, start_epoch = st["history"], st["epoch"]
         band_state["al_mu"] = st.get("al_mu_current", args.al_mu)
         for k, sd in enumerate(st.get("al_snaps", [])):
@@ -469,7 +491,8 @@ def train(args):
             batch = [t.to(device, non_blocking=True) for t in flatten_blocks(batch)]
             patch, obs, lb, ub = batch[:4]
             half = batch[4] if len(batch) == 5 else None
-            optimizer.zero_grad()
+            for o in optimizers:
+                o.zero_grad()
             x = model(patch)
             if args.al_mu > 0:
                 loss = loss_fn(x, D_t, obs, lb, ub, half, al_multipliers(patch, lb, ub, half))
@@ -477,8 +500,10 @@ def train(args):
                 loss = loss_fn(x, D_t, obs, lb, ub, half)
             loss.backward()
             gn = float(torch.nn.utils.clip_grad_norm_(model.parameters(), args.clip))
-            optimizer.step()
-            scheduler.step()
+            for o in optimizers:
+                o.step()
+            for sc in schedulers:
+                sc.step()
             ep_loss += loss.item()
             ep_gn += gn
             ep_clipped += float(gn > args.clip)
@@ -572,8 +597,11 @@ def train(args):
             history[-1]["al_rule"] = entry
             with open(os.path.join(out_dir, f"{tag}_history.json"), "w") as f:
                 json.dump(history, f, indent=2)
-        torch.save({"model": core.state_dict(), "optimizer": optimizer.state_dict(),
-                    "scheduler": scheduler.state_dict(), "history": history,
+        opt_state = ({"optimizer": optimizer.state_dict(), "scheduler": scheduler.state_dict()}
+                     if len(optimizers) == 1 else
+                     {"optimizers": [o.state_dict() for o in optimizers],
+                      "schedulers": [sc.state_dict() for sc in schedulers]})
+        torch.save({"model": core.state_dict(), **opt_state, "history": history,
                     "epoch": epoch + 1, "al_snaps": [m.inner.state_dict() for m in al_snaps],
                     "al_mus": al_mus, "al_mu_current": band_state["al_mu"], "al_rule": al_rule},
                    state_path + ".tmp")
@@ -674,6 +702,11 @@ def parse_args():
     p.add_argument("--max_hours", type=float, default=0.0,
                    help="stop (resumably) before this wall time; 0 = no limit")
     p.add_argument("--tf32", action="store_true", help="TF32 matmuls (large models)")
+    p.add_argument("--optimizer", choices=["adam", "muon"], default="adam",
+                   help="muon: torch.optim.Muon on the hidden weight matrices, Adam on the rest")
+    p.add_argument("--muon_lr", type=float, default=3e-4)
+    p.add_argument("--muon_adjust", choices=["original", "match_rms_adamw"], default="match_rms_adamw",
+                   help="match_rms_adamw: Muon's step scaled to Adam's size, so muon_lr can equal lr")
     p.add_argument("--softplus_floor", type=float, default=-20.0,
                    help="clamp on the output pre-activation, guards against dead units")
     p.add_argument("--init_bias", type=float, default=-3.0,

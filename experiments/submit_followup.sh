@@ -164,4 +164,7 @@ pick bp_h680_keep_mm10 && ACCOUNT=${ACCOUNT:-torch_pr_41_general} run bp_h680_ke
 # The same with BP's own widened band at the 9% of pixels BP could not fit at 1.4 sigma (3x or 5x,
 # from the solver's flag): the multipliers then push towards a band that exists (13 Nov).
 pick bp_h680_keep_mm10_relax && ACCOUNT=${ACCOUNT:-torch_pr_41_general} run bp_h680_keep_mm10_relax bp 8 cpu "${B}_h680_sqrt_ff12_resample_clampkeep_al10_sched_relax_fixed_ep200" EPOCHS=200 MAX_HOURS=1.85 CLAMP_MODE=keep HIDDEN=680 AL_MU=10 AL_RULE=adaptive AL_GROWTH=1 AL_OUTER=settled AL_FLOOR=0 AL_EVERY=10 AL_MAX=12 AL_STOP=0 AL_CAP=256 RELAX_BAND=1 TAG_SUFFIX=_fixed_ep200
+# Muon (hidden weight matrices; Adam on the rest, Adam-matched step 3e-4), otherwise the run
+# bp_h680_keep_mm10: the constrained toy's best training change (DEM error 0.091 vs 0.117, 13 Nov).
+pick bp_h680_keep_mm10_muon && ACCOUNT=${ACCOUNT:-torch_pr_41_general} run bp_h680_keep_mm10_muon bp 8 cpu "${B}_h680_sqrt_ff12_resample_clampkeep_al10_sched_muon_fixed_ep200" EPOCHS=200 MAX_HOURS=1.85 CLAMP_MODE=keep HIDDEN=680 AL_MU=10 AL_RULE=adaptive AL_GROWTH=1 AL_OUTER=settled AL_FLOOR=0 AL_EVERY=10 AL_MAX=12 AL_STOP=0 AL_CAP=256 OPTIMIZER=muon MUON_LR=3e-4 TAG_SUFFIX=_fixed_ep200
 true

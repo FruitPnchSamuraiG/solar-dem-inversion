@@ -116,7 +116,7 @@ def fig_training(runs, out, title, key="train"):
     fig, axes = plt.subplots(1, 3, figsize=(13.2, 4.2), dpi=200)
     panels = ((lambda h: h[key]["pixels_outside_pct"]["0.1"], "pixels outside a band by > 0.1 half-widths (%)", "log"),
               (lambda h: h[key]["violation_mean"], "mean violation (half-widths)", "log"),
-              (lambda h: h["hold_feasible"]["weight_over_lp_pooled"], "total weight / solver's optimum (held-out)", "linear"))
+              (lambda h: h["hold_feasible"]["weight_over_lp_median"], "total weight / solver's optimum (median held-out pixel)", "linear"))
     for ax, (get, ylabel, scale) in zip(axes, panels):
         for name, label, color in NET_ORDER:
             if name not in runs:
@@ -146,7 +146,7 @@ def fig_training(runs, out, title, key="train"):
 def fig_tradeoff(runs, r, out, title):
     """Held-out band violations against total weight, epoch by epoch: the solver sits at
     (1, 0); a network can only buy fewer violations with more weight."""
-    fig, ax = plt.subplots(figsize=(7.6, 5.0), dpi=200)
+    fig, ax = plt.subplots(figsize=(7.6, 5.6), dpi=200)
     finals = []
     for name, label, color in NET_ORDER:
         if name not in runs:
@@ -184,8 +184,9 @@ def fig_tradeoff(runs, r, out, title):
     ax.set_xlabel("total weight / solver's optimum (median held-out pixel)")
     ax.set_ylabel("held-out feasible pixels outside a band by > 0.01 half-widths (%)")
     ax.set_title(title)
-    ax.legend(loc="upper right", fontsize=8.5)
-    fig.tight_layout()
+    handles, labels = ax.get_legend_handles_labels()
+    fig.legend(handles, labels, loc="lower center", ncol=2, fontsize=8.5, frameon=False)
+    fig.tight_layout(rect=(0, 0.12 if len(labels) > 4 else 0.08, 1, 1))
     fig.savefig(out)
     plt.close(fig)
 

@@ -56,6 +56,65 @@ Scripts: `experiments/constrained_toy.py` (per pixel), `experiments/constrained_
   cores. (The multiplier method drives the squared violation down, not the largest one, so
   it does not hit the minimum exactly.)
 
-## With a network (`net_*.json`, `net_summary.txt`, `fig3_training_violations*.png`)
+## With a network (`net_*.json`, `net_summary.txt`, `fig3_training_violations*.png`, `fig4_violation_vs_weight*.png`)
 
-Filled in below once the runs finished.
+Setup: the final model's architecture (centre-pixel MLP, square root + 12 Fourier frequencies)
+trained on one fixed set of 1,000,000 feasible training pixels under each stand-in, scored
+on 276,177 held-out feasible validation pixels. Schedules and multiplier updates run over
+the first 70% of training, then the learning rate decays to zero.
+
+- **From scratch** (`net_<run>.json`): 336 wide (408,630 parameters), 200 epochs, LR 3e-4.
+- **Warm start** (`net_<run>_warm.json`): from the final model (680 wide, 1,528,694 parameters,
+  trained with zeroed channels free), 150 epochs, LR 1e-4. Every run here keeps the band at
+  zero for zeroed channels.
+
+Runs: `quad100` the loss used so far (mu = 100); `ramp` mu raised geometrically (1 or 100
+to 10,000); `al` multipliers stored per pixel, mu doubled when the violation stalls (to
+1,000); `alfix` the same with mu held at 100; `alnet` multipliers predicted by a second
+network (primal-dual learning); `price` weight P_c / (2 eps) per pixel and channel with eps
+lowered to 0.001; `huber` the exact penalty smoothed, slope 64 P_c, eps lowered to 0.001.
+
+Warm start, held-out feasible pixels (DEM error: mean absolute difference from the
+solver's own DEM, per bin):
+
+| run | outside a band by > 0.01 half-widths | total weight / solver's (median) | DEM error |
+|---|---|---|---|
+| current final model, before training | 10.3% | 1.066 | 0.069 |
+| `quad100` (loss used so far, zero band kept) | 7.7% | 1.075 | **0.060** |
+| `price` (weight from the input, eps lowered) | 11.3% | 1.078 | 0.071 |
+| `huber` (smoothed exact penalty) | 12.2% | 1.075 | 0.071 |
+| `alfix` (multipliers, mu 100) | 5.3% | 1.118 | 0.080 |
+| `alnet` (multiplier network, mu to 1,000) | 2.6% | 1.133 | 0.081 |
+| `al` (multipliers, mu to 1,000) | 3.0% | 1.147 | 0.088 |
+| `ramp` (mu 100 to 10,000) | **1.7%** | 1.171 | 0.092 |
+
+From scratch the same order holds with larger costs: `quad100` 9.9%, 1.28x, 0.118;
+`ramp` 3.7%, 3.33x, 0.389; `al` 5.7%, 3.55x, 0.460; `price` 13.3%, 1.31x, 0.118; `huber`
+22.1%, 1.18x, 0.114; `alnet` diverged (67% outside).
+
+What this shows:
+
+- **A network does not reach zero violations on feasible pixels.** Violations fall during
+  training and level off. Every way of pushing them lower moves the network along one
+  trade-off: more total weight and a DEM further from the solver's (fig4). The solver's
+  point (weight 1, no violation) is reached per pixel (fig2) but not by any network.
+- **Why**: one network serves every pixel and cannot land exactly on each pixel's answer
+  (the amortization gap). Pushed hard, it stays just inside the bands with a margin, and
+  the margin costs weight. The learned multipliers show it: at the bands where the solver
+  sits on the edge, the network's multipliers are zero (median learned / dual price 0 in
+  every multiplier run that converged), so the multipliers never become the solver's dual prices.
+- **Most accurate**: the loss used so far with zeroed channels keeping their band.
+- **Zeroed channels**: the final model, trained with them free, gives 9.3% of zeroed
+  channels more light than their band allows by over 0.1 half-widths (worst 1%: 5.4
+  half-widths); keeping the band brings that to 0.2% and the DEM error to the solver's DEM
+  from 0.064 to 0.056.
+- **The weight from the input** (`price`, `huber`) is soft on the bright channels, whose
+  price scale is tiny, and ends behind the fixed mu = 100 on both measures.
+- **The multiplier network** diverges from scratch (multipliers overshoot while the
+  network is far from any optimum) but works from the warm start: fewer violations than `al` at a smaller DEM error, and
+  half the violations of `alfix` at the same error.
+
+Full-scale follow-up (all pixels, fresh pixels every epoch), queued 12 Nov on Torch:
+`bp_h680_keep` (final recipe from scratch, zero band kept), `bp_h680_keep_warm` and
+`bp_h680_keep_al` (60 epochs from the final model, loss used so far against multipliers
+from frozen copies of the network); see `experiments/submit_followup.sh`.

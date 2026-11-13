@@ -174,6 +174,22 @@ zero band kept, at mu = 100: DEM MSE 1.082 -> 0.974, AIA MSE 148 -> 75, Bright M
 Quiet 0.0331 -> 0.0317, median 0.031 unchanged; with multipliers at mu = 100 instead: DEM MSE
 0.932, AIA MSE 51, flare-core 94 A fit 0.88 -> 0.94 (solver 0.92), median 0.041.
 
+Every test pixel (160,417,169, `bp_full_validation_constrained_test.json`; "wild" = the self-check's
+flag, predicted light above 1,000 DN/s and 100x the reading):
+
+| model | wild pixels (of them, solver-relaxed) | AIA MSE checked | at solver-feasible | at solver-relaxed |
+|---|---|---|---|---|
+| final 1.5M | 101 (100) | 437 | 305 | 1,834 |
+| multipliers, mu 10, from scratch | 105 (103) | 764 | 67 | 8,166 |
+| network-aware rule (mu 1), from scratch | 193 (193) | 285 | 274 | 400 |
+| warm, zero band, mu 100 | 120 (120) | 763 | 705 | 1,378 |
+| warm, zero band, multipliers | 110 (110) | 673 | 637 | 1,056 |
+
+The multipliers at mu 10 fit the observations of the pixels the solver can fit 4.5x better than
+the final model, and those it cannot fit (9% of pixels) 4.5x worse; its shared-test AIA MSE of
+7,351 comes from a few of the wild pixels inside the shared test's mask (6 at flare cores,
+against 4 for the final model).
+
 Full-scale follow-up (all pixels, fresh pixels every epoch), queued 12 Nov on Torch:
 `bp_h680_keep` (final recipe from scratch, zero band kept), `bp_h680_keep_warm` and
 `bp_h680_keep_al` (60 epochs from the final model, loss used so far against multipliers

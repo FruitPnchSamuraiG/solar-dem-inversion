@@ -4,4 +4,6 @@ model                                 DEM MSE    DEM MAE     median   EM err %  
 final 1.5M (zero channels freed)        1.082      0.072     0.0309       11.0      0.070       3.54        148      10.40     0.0331       0.97       0.88
 +60 ep, zero band kept, mu 100          0.974      0.071     0.0309       10.7      0.067       3.55         75       9.34     0.0317       0.97       0.88
 +60 ep, zero band kept, multipliers      0.932      0.080     0.0407       11.6      0.075       3.41         51       8.85     0.0400       0.99       0.94
+from scratch, network-aware rule (mu 1)      1.592      0.068     0.0204       10.6      0.063       3.92        200      15.44     0.0320       0.97       0.83
+from scratch, multipliers, mu fixed 10      1.096      0.071     0.0282       10.8      0.066       3.76       7351      10.53     0.0338       1.01       0.94
 supervised 10.1M clipped                0.387      0.085     0.0891       13.1      0.113       2.29         26       3.55     0.0305       1.00       0.92

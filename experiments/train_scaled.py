@@ -527,7 +527,7 @@ def train(args):
 
     print(f"\nSaved {os.path.join(out_dir, tag)}.pt")
     final = history[-1]["val"]
-    print(f"Final val — tol1: {final['1']}\n           relaxed: {final['relaxed']}")
+    print(f"Final val: tol1: {final['1']}\n           relaxed: {final['relaxed']}")
 
 
 def parse_args():

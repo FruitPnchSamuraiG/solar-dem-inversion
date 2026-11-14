@@ -34,7 +34,7 @@ import torch.nn.functional as F
 
 from fullBP import getBasis
 from src.losses import al_loss_batch, band_loss_batch, barrier_loss_batch, enet_loss_batch
-from src.zarr_data import make_loader, flatten_blocks, EpochResampler, N_AIA_BINS, MIN_OBS
+from src.zarr_data import make_loader, flatten_blocks, EpochResampler, CachedPixelLoader, N_AIA_BINS, MIN_OBS
 from experiments.train_neural_field import effective_sparsity, pick_device
 from experiments.train_ablations import build_model, VARIANTS
 
@@ -285,13 +285,24 @@ def train(args):
                    pixels_per_block=args.pixels_per_block, n_bins=args.n_bins,
                    min_obs=args.min_obs, clamp_mode=args.clamp_mode,
                    relax_band=args.relax_band)
-    _, train_loader = make_loader(args.root, 'train', batch_blocks=args.batch_blocks,
-                                  num_workers=args.num_workers, shuffle=True,
-                                  resample=args.resample_pixels,
-                                  max_blocks=args.max_train_blocks,
-                                  with_labels=False, seed=args.seed,
-                                  bright_gamma=args.bright_gamma, thresholds=thresholds,
-                                  bright_cap=args.bright_cap, **data_kw)
+    if args.pixel_cache:
+        # Training pixels from RAM (experiments/build_pixel_cache.py) instead of decompressing
+        # zarr blocks every epoch: the same draw per epoch, so the GPU stops waiting on data.
+        if args.variant != "mlp6" or args.bright_gamma > 0 or not args.resample_pixels:
+            raise ValueError("--pixel_cache supports mlp6 with fresh pixels and no brightness weighting")
+        train_loader = CachedPixelLoader(args.pixel_cache, args.batch_blocks, args.pixels_per_block,
+                                         tolfac=args.tolfac, clamp_mode=args.clamp_mode,
+                                         relax_band=args.relax_band, min_obs=args.min_obs,
+                                         patch_size=args.patch_size, seed=args.seed, device=device,
+                                         max_blocks=args.max_train_blocks)
+    else:
+        _, train_loader = make_loader(args.root, 'train', batch_blocks=args.batch_blocks,
+                                      num_workers=args.num_workers, shuffle=True,
+                                      resample=args.resample_pixels,
+                                      max_blocks=args.max_train_blocks,
+                                      with_labels=False, seed=args.seed,
+                                      bright_gamma=args.bright_gamma, thresholds=thresholds,
+                                      bright_cap=args.bright_cap, **data_kw)
     _, val_loader = make_loader(args.root, 'val', batch_blocks=args.batch_blocks,
                                 num_workers=args.num_workers, shuffle=False,
                                 max_blocks=args.max_val_blocks,
@@ -476,7 +487,9 @@ def train(args):
     if start_epoch >= args.epochs:
         print(f"already trained to epoch {start_epoch}; nothing to do")
         return
-    if isinstance(train_loader.sampler, EpochResampler):
+    if isinstance(train_loader, CachedPixelLoader):
+        train_loader.epoch = start_epoch                # fresh pixels continue, not restart
+    elif isinstance(train_loader.sampler, EpochResampler):
         train_loader.sampler.epoch = start_epoch       # fresh pixels continue, not restart
     t_start = time.time()
 
@@ -488,7 +501,10 @@ def train(args):
 
         for batch in train_loader:
             band_state["eps"] = band_eps(scheduler.last_epoch)
-            batch = [t.to(device, non_blocking=True) for t in flatten_blocks(batch)]
+            if isinstance(train_loader, CachedPixelLoader):
+                batch = list(batch)                    # already flat and on the device
+            else:
+                batch = [t.to(device, non_blocking=True) for t in flatten_blocks(batch)]
             patch, obs, lb, ub = batch[:4]
             half = batch[4] if len(batch) == 5 else None
             for o in optimizers:
@@ -516,7 +532,11 @@ def train(args):
                 ep_core += float((inten >= 32).float().mean())
             n += 1
 
-        val = evaluate(model, val_loader, D_t, B_t, loss_fn, device, args.n_bins)
+        if (epoch + 1) % args.eval_every == 0 or epoch + 1 == args.epochs or not history:
+            val = evaluate(model, val_loader, D_t, B_t, loss_fn, device, args.n_bins)
+            val["evaluated_at"] = epoch + 1
+        else:
+            val = history[-1]["val"]                   # carried over; evaluated_at says from when
         rec = {"epoch": epoch + 1, "train_loss": ep_loss / n,
                "train_sparsity": ep_sp / n, "val": val, "secs": time.time() - t0,
                "grad_norm_mean": ep_gn / n, "frac_clipped": ep_clipped / n,
@@ -672,6 +692,11 @@ def parse_args():
                    help="widen the band by the solver's tolLevel (3x, 5x) where it did, "
                         "instead of 1.4 sigma everywhere")
     p.add_argument("--max_train_blocks", type=int, default=None)
+    p.add_argument("--eval_every", type=int, default=1,
+                   help="validate every N epochs (and at the last); in between the last validation is carried over")
+    p.add_argument("--pixel_cache", default="",
+                   help="per-pixel training cache (experiments/build_pixel_cache.py) to draw from instead of "
+                        "decompressing zarr blocks every epoch; mlp6 with fresh pixels only")
     p.add_argument("--max_val_blocks", type=int, default=256)
     p.add_argument("--num_workers", type=int, default=8)
     # model / optim

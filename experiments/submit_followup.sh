@@ -23,7 +23,7 @@ run() {  # name track segments eval(cpu|gpu) checkpoint-tag env...
   local prev="${AFTER:-}" ids=()
   for _ in $(seq 1 "$segs"); do
     # ACCOUNT spreads chains over the accounts we hold (each has its own GPU quota).
-    prev=$(sbatch --parsable ${prev:+--dependency=afterany:$prev} --job-name="fu_$name" \
+    prev=$(sbatch --parsable ${prev:+--dependency=afterany:$prev} --job-name="fu_$name" ${SBATCH_EXTRA:-} \
            ${ACCOUNT:+--account="$ACCOUNT"} \
            --export="$env" experiments/job_train_followup.sbatch)
     ids+=("$prev")
@@ -177,4 +177,8 @@ pick bp_h966_keep_mm10      && ACCOUNT=${ACCOUNT:-torch_pr_41_cilvr}   run bp_h9
 pick bp_h966_keep_mm10_lr1  && ACCOUNT=${ACCOUNT:-torch_pr_41_general} run bp_h966_keep_mm10_lr1  bp 8 gpu "${B}_h966_sqrt_ff12_resample_clampkeep_al10_sched_fixed_ep200_lr1e-4" $FM HIDDEN=966 TF32=1 LR=1e-4 TAG_SUFFIX=_fixed_ep200_lr1e-4
 pick bp_h1299_keep_mm10     && ACCOUNT=${ACCOUNT:-torch_pr_41_cilvr}   run bp_h1299_keep_mm10     bp 8 gpu "${B}_h1299_sqrt_ff12_resample_clampkeep_al10_sched_fixed_ep200" $FM HIDDEN=1299 TF32=1 TAG_SUFFIX=_fixed_ep200
 pick bp_h1299_keep_mm10_lr1 && ACCOUNT=${ACCOUNT:-torch_pr_41_cilvr}   run bp_h1299_keep_mm10_lr1 bp 8 gpu "${B}_h1299_sqrt_ff12_resample_clampkeep_al10_sched_fixed_ep200_lr1e-4" $FM HIDDEN=1299 TF32=1 LR=1e-4 TAG_SUFFIX=_fixed_ep200_lr1e-4
+# One-shot form (14 Nov on): training pixels from the RAM cache, one job start to end on one GPU,
+# GPU utilization logged. Same settings as bp_h680_keep_mm10, so it also checks the cache path.
+CACHE=$SCRATCH/dem/cache/lp_train_keep
+pick bp_h680_keep_mm10_cache && ACCOUNT=${ACCOUNT:-torch_pr_41_general} SBATCH_EXTRA="--time=12:00:00" run bp_h680_keep_mm10_cache bp 1 cpu "${B}_h680_sqrt_ff12_resample_clampkeep_al10_sched_fixed_ep200_cache" EPOCHS=200 MAX_HOURS=0 CLAMP_MODE=keep HIDDEN=680 AL_MU=10 AL_RULE=adaptive AL_GROWTH=1 AL_OUTER=settled AL_FLOOR=0 AL_EVERY=10 AL_MAX=12 AL_STOP=0 AL_CAP=256 PIXEL_CACHE=$CACHE EVAL_EVERY=5 TAG_SUFFIX=_fixed_ep200_cache
 true

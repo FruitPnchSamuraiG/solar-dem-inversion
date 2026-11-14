@@ -29,6 +29,10 @@ cd "${SLURM_SUBMIT_DIR:-$HOME/projects/dem}"
 source env.sh
 mkdir -p logs/scaled output/experiments/followup
 echo "### git HEAD: $(git rev-parse --short HEAD)"
+# GPU utilization every 30 s for the whole job (logs/scaled/gpu_util_<jobid>.csv)
+if command -v nvidia-smi >/dev/null 2>&1; then
+  nvidia-smi --query-gpu=timestamp,utilization.gpu,memory.used --format=csv -l 30 > "logs/scaled/gpu_util_${SLURM_JOB_ID:-local}.csv" 2>/dev/null &
+fi
 case "${TRACK:?set TRACK=bp or TRACK=enet}" in
   bp)   ROOT=$SCRATCH/dem/data/lp_AIA_hofdeconv_full_DS
         LOSS_ARGS=(--loss barrier); WU=500 ;;
@@ -52,6 +56,11 @@ if [ -n "${AL_MU:-}" ]; then EXTRA+=(--al_mu "$AL_MU" --al_every "${AL_EVERY:-20
 # half-widths (99% of solver-feasible validation pixels); AL_CAP caps multipliers at AL_CAP x price scale
 if [ -n "${AL_RULE:-}" ]; then EXTRA+=(--al_rule "$AL_RULE" --al_stop "${AL_STOP:-0.1}" --al_cap "${AL_CAP:-0}"
   --al_outer_mode "${AL_OUTER:-fixed}" --al_floor_gain "${AL_FLOOR:-0}" --al_growth "${AL_GROWTH:-10}"); fi
+# PIXEL_CACHE=<dir>: draw training pixels from a per-pixel cache in RAM (experiments/build_pixel_cache.py)
+# so the GPU stays busy; with it, submit one job per run (--time 12:00:00, MAX_HOURS=0).
+# EVAL_EVERY=N validates every N epochs.
+if [ -n "${PIXEL_CACHE:-}" ]; then EXTRA+=(--pixel_cache "$PIXEL_CACHE"); fi
+if [ -n "${EVAL_EVERY:-}" ]; then EXTRA+=(--eval_every "$EVAL_EVERY"); fi
 # OPTIMIZER=muon: Muon on the hidden weight matrices (MUON_LR, Adam-matched step), Adam on the rest
 if [ -n "${OPTIMIZER:-}" ]; then EXTRA+=(--optimizer "$OPTIMIZER" --muon_lr "${MUON_LR:-3e-4}"); fi
 if [ -n "${BAND_FORM:-}" ]; then

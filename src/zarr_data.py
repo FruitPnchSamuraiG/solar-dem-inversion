@@ -319,3 +319,79 @@ if __name__ == '__main__':
     p.add_argument('--phase', default='val')
     _a = p.parse_args()
     _self_test(_a.root, _a.phase)
+
+
+class CachedPixelLoader:
+    """Training batches from a per-pixel cache (experiments/build_pixel_cache.py).
+
+    Draws as ZarrPatchBlockDataset + EpochResampler do with resample=True: every epoch the
+    blocks in a fresh random order, pixels_per_block fresh pixels from each (with replacement
+    here; the block loader draws without replacement when a block has enough pixels, which
+    differs in about 2% duplicate draws), batch_blocks blocks per batch, the last partial
+    batch dropped. The bands follow ZarrPatchBlockDataset.__getitem__ for the cache's
+    clamp_mode. Only the centre pixel is real: the patch is zero except at its centre, which
+    is all the centre-pixel MLP reads. The whole cache sits in RAM, so a batch is one gather.
+    Yields flat, device-resident tuples (patch, obs, lb, ub[, half]) as flatten_blocks does.
+    """
+
+    def __init__(self, cache_dir, batch_blocks, pixels_per_block, tolfac=1.4, clamp_mode="keep",
+                 relax_band=False, min_obs=MIN_OBS, patch_size=9, seed=0, device="cpu", max_blocks=None):
+        import json
+        with open(os.path.join(cache_dir, "meta.json")) as fh:
+            meta = json.load(fh)
+        if meta["clamp_mode"] != clamp_mode:
+            raise ValueError(f"cache built for clamp_mode {meta['clamp_mode']}, not {clamp_mode}")
+        self.obs = torch.from_numpy(np.load(os.path.join(cache_dir, "obs.npy")))
+        self.err = torch.from_numpy(np.load(os.path.join(cache_dir, "err.npy")))
+        self.tol = torch.from_numpy(np.load(os.path.join(cache_dir, "tol.npy")))
+        offsets = np.load(os.path.join(cache_dir, "offsets.npy"))
+        n_blocks = len(offsets) - 1 if max_blocks is None else min(len(offsets) - 1, max_blocks)
+        counts = offsets[1:n_blocks + 1] - offsets[:n_blocks]
+        self.n_blocks = n_blocks
+        self.blocks = torch.from_numpy(np.flatnonzero(counts > 0))
+        self.offsets = torch.from_numpy(offsets[:n_blocks]).long()
+        self.counts = torch.from_numpy(counts).long()
+        self.bb, self.ppb = batch_blocks, pixels_per_block
+        self.tolfac, self.clamp_mode, self.relax_band = tolfac, clamp_mode, relax_band
+        self.min_obs, self.k = min_obs, patch_size
+        self.seed, self.epoch, self.device = seed, 0, torch.device(device)
+        print(f"[cache] {len(self.obs):,} pixels in {n_blocks:,} blocks ({int((counts == 0).sum())} empty) from "
+              f"{cache_dir}; {len(self)} batches of {batch_blocks} x {pixels_per_block}")
+
+    def __len__(self):
+        return len(self.blocks) // self.bb         # as DataLoader(drop_last=True) over the blocks
+
+    def batch(self, obs, err, tol):
+        """Bands for a batch of pixels, as ZarrPatchBlockDataset.__getitem__ builds them."""
+        half = self.tolfac * err
+        wide = half
+        if self.relax_band:
+            wide = half * torch.clamp(tol.float(), min=1.0)[:, None]
+        lb, ub = obs - wide, obs + wide
+        if self.clamp_mode == "mask":
+            clamped = obs <= self.min_obs
+            lb = torch.where(clamped, torch.full_like(lb, -UNCONSTRAINED), lb)
+            ub = torch.where(clamped, torch.full_like(ub, UNCONSTRAINED), ub)
+            half = torch.where(clamped, torch.full_like(half, UNCONSTRAINED), half)
+        patch = torch.zeros(len(obs), 6, self.k, self.k, device=obs.device)
+        patch[:, :, self.k // 2, self.k // 2] = obs
+        out = (patch, obs, lb, ub)
+        return out + ((half,) if self.relax_band else ())
+
+    def __iter__(self):
+        g = torch.Generator()
+        g.manual_seed(self.seed * 1_000_003 + self.epoch)
+        self.epoch += 1
+        order = self.blocks[torch.randperm(len(self.blocks), generator=g)]
+        n_batches = len(self)
+        for k in range(n_batches):
+            bl = order[k * self.bb:(k + 1) * self.bb]
+            if len(bl) == 0:
+                break
+            start = self.offsets[bl].repeat_interleave(self.ppb)
+            cnt = self.counts[bl].repeat_interleave(self.ppb)
+            idx = start + (torch.rand(len(start), generator=g) * cnt).long().clamp(max=cnt - 1)
+            obs = self.obs[idx].to(self.device, non_blocking=True)
+            err = self.err[idx].to(self.device, non_blocking=True)
+            tol = self.tol[idx].to(self.device, non_blocking=True)
+            yield self.batch(obs, err, tol)

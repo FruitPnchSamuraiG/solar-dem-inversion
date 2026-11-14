@@ -311,6 +311,10 @@ def train(args):
     perm = None
     if args.variant == "cnn_shuffled":
         perm = np.random.default_rng(args.seed).permutation(args.patch_size ** 2)
+    if args.init_seed is not None:
+        # Without it the weights start from PyTorch's fixed default seed, the same in every run,
+        # so runs differ only in the pixels drawn; a seed study varies the starting weights too.
+        torch.manual_seed(args.init_seed)
     core = build_model(args.variant, n_basis, args.patch_size, args.channels,
                        perm=perm, hidden=args.hidden, fourier_freqs=args.fourier_freqs)
     n_sp = harden_softplus(core, args.softplus_floor)
@@ -704,6 +708,8 @@ def parse_args():
     p.add_argument("--epochs", type=int, default=30)
     p.add_argument("--lr", type=float, default=3e-4)
     p.add_argument("--seed", type=int, default=42)
+    p.add_argument("--init_seed", type=int, default=None,
+                   help="seed for the starting weights (default: PyTorch's fixed default seed, as in every run so far)")
     p.add_argument("--input_transform", choices=["none", "log1p", "sqrt"], default="log1p",
                    help="'none' reproduces the crop runs; full-disk data spans ~6 "
                         "decades and needs compressing (see NormalizedInput)")

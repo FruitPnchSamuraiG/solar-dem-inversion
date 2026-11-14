@@ -5,8 +5,10 @@
 #          (I = max over channels of observed / Bright cutoff)
 #   ep120  train three times longer (120 epochs, cosine over all 120)
 #   10m    ~10M parameters (1800 wide)
-# Each run is a chain of resumable <2 h GPU segments, then the full shared-test
-# bright-failure diagnostic and AIA fit (on the GPU for the 10M models).
+# Until 13 Nov each run was a chain of resumable <2 h GPU segments (plus spares), then the
+# shared-test evaluation. From 14 Nov a run is ONE job: training start to end on one GPU from
+# the per-pixel cache (high GPU use), then the evaluation on the same GPU (one()). run() now
+# refuses more than one segment.
 # Baselines for comparison: input_encoding/scaled_mlp6_{barrier,enet}_h336_sqrt_ff12_resample.pt.
 #
 #   bash experiments/submit_followup.sh bp_bg1 enet_bg1   # the named runs, in order
@@ -15,8 +17,36 @@ mkdir -p logs/scaled logs/eval
 OUT=output/experiments/followup
 JOBS=logs/followup_jobs.txt
 
-run() {  # name track segments eval(cpu|gpu) checkpoint-tag env...
+# Accounts: the advisor's torch_pr_41_general / _courant / _tandon_advanced. The cilvr and cds
+# accounts belong to another group: use them only when those three are full, and only with
+# ALLOW_CILVR_CDS=1. Each job goes to one account, chosen before submitting (sbatch --test-only
+# shows start estimates); no copies raced across accounts, no spare segments.
+acct_ok() {
+  case "$1" in
+    *cilvr*|*cds*) [ "${ALLOW_CILVR_CDS:-0}" = 1 ] || {
+      echo "refusing account $1: cilvr/cds only when the advisor's accounts are full (ALLOW_CILVR_CDS=1)" >&2
+      return 1; } ;;
+  esac
+}
+
+# one name track checkpoint-tag env...: one GPU job that trains start to end (MAX_HOURS=0) and
+# then evaluates on the same GPU. ACCOUNT (default torch_pr_41_general), TIME (default 12 h),
+# AFTER=<job id> (start once that job has ended), SBATCH_EXTRA (e.g. a GPU-type constraint).
+one() {
+  local name=$1 track=$2 tag=$3; shift 3
+  local acct=${ACCOUNT:-torch_pr_41_general} env="ALL,TRACK=$track" kv id
+  acct_ok "$acct" || return 1
+  for kv in "$@"; do case $kv in MAX_HOURS=*) ;; *) env+=",$kv" ;; esac; done
+  env+=",MAX_HOURS=0,EVAL_MODEL=$OUT/$tag.pt,EVAL_TAG=fu_$name"
+  id=$(sbatch --parsable ${AFTER:+--dependency=afterany:$AFTER} --job-name="fu_$name" --account="$acct" \
+       --time="${TIME:-12:00:00}" ${SBATCH_EXTRA:-} --export="$env" experiments/job_train_followup.sbatch)
+  echo "$name one job $id ($acct, ${TIME:-12:00:00}) ckpt $OUT/$tag.pt" | tee -a "$JOBS"
+}
+
+run() {  # name track segments eval(cpu|gpu) checkpoint-tag env...   (historical; one segment only)
   local name=$1 track=$2 segs=$3 ev=$4 tag=$5; shift 5
+  [ "$segs" = 1 ] || { echo "$name: one job per run (use one()); no segment chains" >&2; return 1; }
+  acct_ok "${ACCOUNT:-torch_pr_41_tandon_advanced}" || return 1
   local env="ALL,TRACK=$track"
   for kv in "$@"; do env+=",$kv"; done
   # AFTER=<job id>: the first segment waits for that job (to order chains).
@@ -181,4 +211,19 @@ pick bp_h1299_keep_mm10_lr1 && ACCOUNT=${ACCOUNT:-torch_pr_41_cilvr}   run bp_h1
 # GPU utilization logged. Same settings as bp_h680_keep_mm10, so it also checks the cache path.
 CACHE=$SCRATCH/dem/cache/lp_train_keep
 pick bp_h680_keep_mm10_cache && ACCOUNT=${ACCOUNT:-torch_pr_41_general} SBATCH_EXTRA="--time=12:00:00" run bp_h680_keep_mm10_cache bp 1 cpu "${B}_h680_sqrt_ff12_resample_clampkeep_al10_sched_fixed_ep200_cache" EPOCHS=200 MAX_HOURS=0 CLAMP_MODE=keep HIDDEN=680 AL_MU=10 AL_RULE=adaptive AL_GROWTH=1 AL_OUTER=settled AL_FLOOR=0 AL_EVERY=10 AL_MAX=12 AL_STOP=0 AL_CAP=256 PIXEL_CACHE=$CACHE EVAL_EVERY=5 TAG_SUFFIX=_fixed_ep200_cache
+# 14 Nov: the two lr 1e-4 size runs, until then chains on the zarr loader, finish in one job
+# each from their saved state (epochs 129-200 and ~191-200 draw from the cache: the same draw
+# per epoch, ~2% repeats within a block), evaluation in the same job.
+L1E4="EPOCHS=200 CLAMP_MODE=keep AL_MU=10 AL_RULE=adaptive AL_GROWTH=1 AL_OUTER=settled AL_FLOOR=0 AL_EVERY=10 AL_MAX=12 AL_STOP=0 AL_CAP=256 TF32=1 LR=1e-4 PIXEL_CACHE=$CACHE EVAL_EVERY=5 TAG_SUFFIX=_fixed_ep200_lr1e-4"
+pick bp_h966_keep_mm10_lr1_finish  && TIME=${TIME:-06:00:00} one bp_h966_keep_mm10_lr1  bp "${B}_h966_sqrt_ff12_resample_clampkeep_al10_sched_fixed_ep200_lr1e-4"  $L1E4 HIDDEN=966
+pick bp_h1299_keep_mm10_lr1_finish && TIME=${TIME:-04:00:00} one bp_h1299_keep_mm10_lr1 bp "${B}_h1299_sqrt_ff12_resample_clampkeep_al10_sched_fixed_ep200_lr1e-4" $L1E4 HIDDEN=1299
+# Seed study for the network size (14 Nov): the full recipe (multipliers at mu 10, zero band kept,
+# BP's widened band at the pixels it cannot fit), 1.5M and 3.0M, three seeds each (pixels drawn
+# and starting weights), exact float32 matmuls as in the 1.5M recipe (no TF32), on L40S / H100 /
+# H200 (float32 on an A100 is several times slower).
+FULL="EPOCHS=200 CLAMP_MODE=keep RELAX_BAND=1 AL_MU=10 AL_RULE=adaptive AL_GROWTH=1 AL_OUTER=settled AL_FLOOR=0 AL_EVERY=10 AL_MAX=12 AL_STOP=0 AL_CAP=256 PIXEL_CACHE=$CACHE EVAL_EVERY=5"
+for sd in 1 2 3; do  # not s: pick() sets s
+  pick bp_full_h680_s$sd && TIME=${TIME:-09:00:00} SBATCH_EXTRA="--constraint=l40s|h100|h200" one bp_full_h680_s$sd bp "${B}_h680_sqrt_ff12_resample_clampkeep_al10_sched_relax_full_ep200_s$sd" $FULL HIDDEN=680 SEED=$sd INIT_SEED=$sd TAG_SUFFIX=_full_ep200_s$sd
+  pick bp_full_h966_s$sd && TIME=${TIME:-16:00:00} SBATCH_EXTRA="--constraint=l40s|h100|h200" one bp_full_h966_s$sd bp "${B}_h966_sqrt_ff12_resample_clampkeep_al10_sched_relax_full_ep200_s$sd" $FULL HIDDEN=966 SEED=$sd INIT_SEED=$sd TAG_SUFFIX=_full_ep200_s$sd
+done
 true

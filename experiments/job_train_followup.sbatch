@@ -7,7 +7,7 @@
 #SBATCH --mem=96G
 #SBATCH --gres=gpu:1
 #SBATCH --constraint=l40s|a100|h100|h200
-#SBATCH --time=01:59:00
+#SBATCH --time=12:00:00
 #SBATCH --mail-type=FAIL
 #SBATCH --account=torch_pr_41_tandon_advanced
 
@@ -20,10 +20,11 @@
 #   hard constraint; give it a TAG_SUFFIX such as _mu10)
 #   L1_BRIGHT_POWER=0 (barrier L1 weight / max(1, I)**p; tag it too, e.g. _ibr1)
 #   INPUT=sqrt FOURIER=12 (INPUT=log1p FOURIER=0 for the log1p input)  CLIP=1
-# A segment stops before MAX_HOURS (default 1.7; GPU jobs past 2 h with low
-# utilisation get cancelled) and the next segment resumes from <tag>_state.pt.
-# Extra segments exit at once when training is already complete.
-# Submit through experiments/submit_followup.sh.
+# A run is ONE job from start to end on one GPU (MAX_HOURS=0, the default): no chains of
+# short segments and no spare segments, and the GPU kept busy with the per-pixel cache
+# (PIXEL_CACHE). --resume stays only as a safety net. EVAL_MODEL / EVAL_TAG run the full
+# shared-test evaluation on the same GPU once training has finished.
+# Submit through experiments/submit_followup.sh (one()).
 set -euo pipefail
 cd "${SLURM_SUBMIT_DIR:-$HOME/projects/dem}"
 source env.sh
@@ -42,6 +43,8 @@ case "${TRACK:?set TRACK=bp or TRACK=enet}" in
 esac
 EXTRA=()
 if [ "${TF32:-0}" = 1 ]; then EXTRA+=(--tf32); fi
+# INIT_SEED=<n>: seed the starting weights too (seed studies); SEED alone changes only the pixels drawn
+if [ -n "${INIT_SEED:-}" ]; then EXTRA+=(--init_seed "$INIT_SEED"); fi
 # INIT_FROM=<checkpoint>: warm start from its weights (a continuation run)
 if [ -n "${INIT_FROM:-}" ]; then EXTRA+=(--init_from "$INIT_FROM"); fi
 # CLAMP_MODE=mask keeps deconvolution-clamp pixels with the clamped channels free;
@@ -86,6 +89,16 @@ python3 -u experiments/train_scaled.py \
   --seed "${SEED:-42}" \
   --lr "${LR:-3e-4}" \
   --resume \
-  --max_hours "${MAX_HOURS:-1.7}" \
+  --max_hours "${MAX_HOURS:-0}" \
   "${EXTRA[@]}" \
   --out_dir output/experiments/followup
+
+# Evaluate in the same job (same GPU) once training is complete.
+if [ -n "${EVAL_MODEL:-}" ]; then
+  done_ep=$(python3 -c "import sys, torch; print(torch.load(sys.argv[1], map_location='cpu', weights_only=False)['epoch'])" "$EVAL_MODEL")
+  if [ "$done_ep" = "${EPOCHS:-40}" ]; then
+    MODEL_PATH="$EVAL_MODEL" TAG="${EVAL_TAG:?}" bash experiments/job_eval_followup_gpu.sbatch
+  else
+    echo "training at epoch $done_ep of ${EPOCHS:-40}; evaluation skipped" >&2; exit 4
+  fi
+fi

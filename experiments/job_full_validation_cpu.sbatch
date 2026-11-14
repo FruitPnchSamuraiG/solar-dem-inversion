@@ -32,4 +32,7 @@ args=(--root "$ROOT" --phase "${PHASE:-val}" "${LOSS[@]}" --models "${M[@]}"
 if [ "${LABELS:-0}" = 1 ]; then args+=(--labels); fi
 if [ "${SUP:-0}" = 1 ]; then args+=(--supervised "$SUPPTH"); fi
 if [ -n "${MAX_BLOCKS:-}" ]; then args+=(--max_blocks "$MAX_BLOCKS"); fi
+# REFINE=32:10:3.2 (colons: sbatch --export splits on commas): also score each label-free model
+# with the pixels at that many times the Bright threshold or above solved exactly (src/refine.py)
+if [ -n "${REFINE:-}" ]; then args+=(--refine "${REFINE//:/,}"); fi
 python3 -u experiments/full_validation.py "${args[@]}"

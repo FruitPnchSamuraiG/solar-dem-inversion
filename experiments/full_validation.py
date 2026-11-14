@@ -142,10 +142,50 @@ def supervised(path, device):
     return predict
 
 
+def _add(tally, o64, t, free, inten, x, rec, loss, y, has):
+    """Group masks and per-pixel errors for one set of predictions, into tally."""
+    clamped = free.any(1)
+    wild = ((rec > 1e3) & (rec > 100 * o64.clamp_min(1))).any(1)
+    masks = {"all": torch.ones_like(clamped), "unclamped": ~clamped, "clamped": clamped,
+             "feasible": t == 1, "relaxed": t > 1, "quiet": inten < 1,
+             "bright": (inten >= 1) & (inten < 32), "flare_core": inten >= 32,
+             "checked": ~wild, "feasible_checked": (t == 1) & ~wild,
+             "relaxed_checked": (t > 1) & ~wild, "quiet_checked": (inten < 1) & ~wild}
+    aia_se = ((rec - o64) ** 2).sum(1)
+    sse = ae = pe = re = None
+    if y is not None:
+        sse = ((x - y) ** 2).sum(1)
+        ae = (x - y).abs().sum(1)
+        pe, re = x.sum(1), y.sum(1)
+    tally.add(masks, loss, sse, ae, pe, re, aia_se, wild, has)
+
+
+def _add_weights(tally, o64, h64, t, free, inten, w, y, has, D, B, args):
+    """Label-free predictions (basis weights w) -> DEM, reconstruction and loss, into tally."""
+    x = w @ B.T
+    rec = w @ D.T
+    if args.loss == "barrier":
+        v = (torch.abs(rec - o64) - h64).clamp_min(0)
+        loss = w.sum(1) + args.mu * ((v / h64) ** 2).masked_fill(free, 0).sum(1)
+    else:
+        fit = (((rec - o64) / h64) ** 2).masked_fill(free, 0).sum(1) / (2 * args.enet_C)
+        loss = fit + args.enet_alpha * args.enet_lam * w.sum(1) \
+            + 0.5 * args.enet_alpha * (1 - args.enet_lam) * (w ** 2).sum(1)
+    _add(tally, o64, t, free, inten, x, rec, loss, y, has)
+
+
 @torch.no_grad()
 def score(predict, is_sup, loader, D, B, R, args, device):
+    """-> results; for a label-free model with --refine also {threshold: results} and stats.
+
+    With --refine T1,T2,..: pixels at T x the Bright threshold or above (from the readings
+    alone) get the exact solve of their own band problem (src/refine.py) in place of the
+    network's answer; every other pixel keeps the network's. One pass scores both."""
     tally = Tally(device)
     thr = torch.tensor(BRIGHT, device=device)
+    refine = sorted(args.refine) if (args.refine and not is_sup) else []
+    tallies = {T: Tally(device) for T in refine}
+    kept = []
     for obs, err, tol, dem in loader:
         obs, err, tol = (torch.as_tensor(a, device=device) for a in (obs, err, tol))
         ok = (torch.isfinite(obs).all(0) & torch.isfinite(err).all(0) & (tol > 0)).flatten()
@@ -156,40 +196,61 @@ def score(predict, is_sup, loader, D, B, R, args, device):
         t = tol.flatten()[ok]
         free = o <= MIN_OBS
         o64, h64 = o.double(), h.double()
-        if is_sup:
-            x = predict(o.clamp_min(0)).double().clamp_min(0)
-            rec = x @ R.T
-            loss = None
-        else:
-            w = predict(o).double()
-            x = w @ B.T
-            rec = w @ D.T
-            if args.loss == "barrier":
-                v = (torch.abs(rec - o64) - h64).clamp_min(0)
-                loss = w.sum(1) + args.mu * ((v / h64) ** 2).masked_fill(free, 0).sum(1)
-            else:
-                fit = (((rec - o64) / h64) ** 2).masked_fill(free, 0).sum(1) / (2 * args.enet_C)
-                loss = fit + args.enet_alpha * args.enet_lam * w.sum(1) \
-                    + 0.5 * args.enet_alpha * (1 - args.enet_lam) * (w ** 2).sum(1)
         inten = (o / thr).amax(1)
-        clamped = free.any(1)
-        wild = ((rec > 1e3) & (rec > 100 * o64.clamp_min(1))).any(1)
-        masks = {"all": torch.ones_like(clamped), "unclamped": ~clamped, "clamped": clamped,
-                 "feasible": t == 1, "relaxed": t > 1, "quiet": inten < 1,
-                 "bright": (inten >= 1) & (inten < 32), "flare_core": inten >= 32,
-                 "checked": ~wild, "feasible_checked": (t == 1) & ~wild,
-                 "relaxed_checked": (t > 1) & ~wild, "quiet_checked": (inten < 1) & ~wild}
-        aia_se = ((rec - o64) ** 2).sum(1)
-        sse = ae = pe = re = has = None
+        y = has = None
         if args.labels:
             y = torch.as_tensor(dem, device=device).reshape(N_BINS, -1).T[ok].double()
             has = torch.isfinite(y).all(1)
             y = torch.nan_to_num(y)
-            sse = ((x - y) ** 2).sum(1)
-            ae = (x - y).abs().sum(1)
-            pe, re = x.sum(1), y.sum(1)
-        tally.add(masks, loss, sse, ae, pe, re, aia_se, wild, has)
-    return tally.result()
+        if is_sup:
+            x = predict(o.clamp_min(0)).double().clamp_min(0)
+            _add(tally, o64, t, free, inten, x, x @ R.T, None, y, has)
+            continue
+        w = predict(o).double()
+        _add_weights(tally, o64, h64, t, free, inten, w, y, has, D, B, args)
+        for T in refine:
+            k = inten < T
+            _add_weights(tallies[T], o64[k], h64[k], t[k], free[k], inten[k], w[k],
+                         None if y is None else y[k], None if has is None else has[k], D, B, args)
+        if refine:
+            k = inten >= refine[0]
+            if k.any():
+                kept.append({"o": o64[k].cpu(), "h": h64[k].cpu(), "t": t[k].cpu(), "free": free[k].cpu(),
+                             "inten": inten[k].cpu(), "w": w[k].cpu(),
+                             "y": None if y is None else y[k].cpu(), "has": None if has is None else has[k].cpu()})
+    if not refine:
+        return tally.result()
+
+    from src.refine import solve_pixels
+    C = {key: (None if kept[0][key] is None else torch.cat([c[key] for c in kept])) for key in kept[0]} \
+        if kept else None
+    t0 = time.time()
+    n = 0 if C is None else len(C["o"])
+    if n:
+        w_ref, level, need = solve_pixels(C["o"].numpy(), C["h"].numpy(), D.cpu().numpy(), args.refine_workers)
+    else:
+        w_ref, level, need = np.zeros((0, D.shape[1])), np.zeros(0, np.int8), np.zeros(0)
+    secs = time.time() - t0
+    stats = {"pixels_solved_at_lowest_threshold": n, "seconds": round(secs, 1),
+             "ms_per_pixel_per_worker": round(1e3 * secs * args.refine_workers / max(n, 1), 2), "by_threshold": {}}
+    if n:
+        solved = torch.as_tensor(level > 0)
+        W = torch.where(solved[:, None], torch.as_tensor(w_ref), C["w"])
+        lev = torch.as_tensor(level.astype(np.int64))
+        for T in refine:
+            k = C["inten"] >= T
+            dev = lambda a: None if a is None else a[k].to(device)
+            _add_weights(tallies[T], dev(C["o"]), dev(C["h"]), dev(C["t"]), dev(C["free"]), dev(C["inten"]),
+                         W[k].to(device), dev(C["y"]), dev(C["has"]), D, B, args)
+            cross = {}
+            for lv in (0, 1, 3, 5):
+                for tv in (1, 3, 5):
+                    c = int(((lev[k] == lv) & (C["t"][k] == tv)).sum())
+                    if c:
+                        cross[f"ours {lv}x / solver {tv}x"] = c
+            stats["by_threshold"][f"{T:g}"] = {"pixels": int(k.sum()), "solved": int((solved & k).sum()),
+                                               "band_used_vs_solver": cross}
+    return tally.result(), {T: tallies[T].result() for T in refine}, stats
 
 
 def main():
@@ -207,6 +268,10 @@ def main():
     p.add_argument("--labels", action="store_true", help="also score the staged solver DEM")
     p.add_argument("--max_blocks", type=int, default=None)
     p.add_argument("--workers", type=int, default=12)
+    p.add_argument("--refine", type=lambda v: [float(a) for a in v.split(",") if a], default=[],
+                   help="comma list T: also score label-free models with the pixels at T x Bright or above "
+                        "solved exactly (src/refine.py)")
+    p.add_argument("--refine_workers", type=int, default=max(1, int(os.environ.get("SLURM_CPUS_PER_TASK", 2)) - 1))
     p.add_argument("--output", required=True)
     args = p.parse_args()
 
@@ -228,7 +293,14 @@ def main():
         is_sup = label == "supervised"
         predict = supervised(path, device) if is_sup else label_free(path, n_basis, device)
         loader = torch.utils.data.DataLoader(data, batch_size=None, num_workers=args.workers, prefetch_factor=4)
-        out["models"][label] = score(predict, is_sup, loader, D, B, R, args, device)
+        res = score(predict, is_sup, loader, D, B, R, args, device)
+        if isinstance(res, tuple):
+            res, refined, stats = res
+            for T, r in refined.items():
+                out["models"][f"{label}+solve{T:g}"] = r
+            out.setdefault("refine", {})[label] = stats
+            print(f"{label}: refinement {stats}", flush=True)
+        out["models"][label] = res
         a = out["models"][label]["all"]
         print(f"{label}: {a['n']:,} px, loss {a.get('loss')}, DEM {a.get('dem')}, wild {a['wild']}, "
               f"{time.time() - t0:.0f} s", flush=True)

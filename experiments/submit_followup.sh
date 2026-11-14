@@ -17,14 +17,14 @@ mkdir -p logs/scaled logs/eval
 OUT=output/experiments/followup
 JOBS=logs/followup_jobs.txt
 
-# Accounts: the advisor's torch_pr_41_general / _courant / _tandon_advanced. The cilvr and cds
-# accounts belong to another group: use them only when those three are full, and only with
-# ALLOW_CILVR_CDS=1. Each job goes to one account, chosen before submitting (sbatch --test-only
-# shows start estimates); no copies raced across accounts, no spare segments.
+# Accounts: every torch_pr_41_* account (general, courant, tandon_advanced, cilvr) is the advisor's.
+# The torch_pr_718_* accounts (cds, cilvr) belong to another group: use them only when the
+# advisor's are full, and only with ALLOW_718=1. Each job goes to one account, chosen before
+# submitting (sbatch --test-only shows start estimates); no copies raced across accounts, no spares.
 acct_ok() {
   case "$1" in
-    *cilvr*|*cds*) [ "${ALLOW_CILVR_CDS:-0}" = 1 ] || {
-      echo "refusing account $1: cilvr/cds only when the advisor's accounts are full (ALLOW_CILVR_CDS=1)" >&2
+    *pr_718*) [ "${ALLOW_718:-0}" = 1 ] || {
+      echo "refusing account $1: torch_pr_718 only when the advisor's accounts are full (ALLOW_718=1)" >&2
       return 1; } ;;
   esac
 }

@@ -1,0 +1,72 @@
+{
+ "ratio": [
+  1.0099949210416526,
+  1.045986311743036,
+  0.9697480995673686,
+  1.2061950850766152,
+  1.0846991988364607,
+  1.2656005762983114
+ ],
+ "channels": [
+  94,
+  131,
+  171,
+  193,
+  211,
+  335
+ ],
+ "target_p999": 1.002,
+ "pixels": 9303208,
+ "by_intensity": [
+  {
+   "intensity": [
+    0,
+    1
+   ],
+   "pixels": 8241480,
+   "inside_ours": 0.2850480738896412,
+   "inside_fitted": 1.0,
+   "worst_channel_p99_fitted": 1.0019768199477763
+  },
+  {
+   "intensity": [
+    1,
+    3.2
+   ],
+   "pixels": 928372,
+   "inside_ours": 0.12608954169233885,
+   "inside_fitted": 1.0,
+   "worst_channel_p99_fitted": 1.0020316071629742
+  },
+  {
+   "intensity": [
+    3.2,
+    10
+   ],
+   "pixels": 120388,
+   "inside_ours": 0.08049805628467954,
+   "inside_fitted": 1.0,
+   "worst_channel_p99_fitted": 1.0030280185863885
+  },
+  {
+   "intensity": [
+    10,
+    32
+   ],
+   "pixels": 10618,
+   "inside_ours": 0.04351101902429836,
+   "inside_fitted": 1.0,
+   "worst_channel_p99_fitted": 1.003818420538199
+  },
+  {
+   "intensity": [
+    32,
+    null
+   ],
+   "pixels": 2350,
+   "inside_ours": 0.005531914893617021,
+   "inside_fitted": 1.0,
+   "worst_channel_p99_fitted": 1.0041584173709932
+  }
+ ]
+}

@@ -68,5 +68,24 @@ every pixel about 220 s on 16 cores.
   1%), still with no labels. The remaining flare-core error (665) is where that optimum and the
   solver's stored DEM differ (equally good DEMs, total emission ratio 0.999).
 - The typical pixel is unchanged (it was already 10x better than the supervised model's).
-- Not yet done: the solver's own AIA MSE on these pixels (to see how much of ours is the
-  widened bands), and the shared test (needs noise estimates for its blocks).
+- Pixels the solver could not fit at the tight band (relaxed or unsolved) are reported as a
+  separate set, as agreed with the advisor; the headline numbers are the tight-band pixels.
+
+## Noise for the shared test (`shared_noise_fit.json`)
+
+The shared test stores readings and the solver's DEMs but no noise estimates. The solver's noise
+is aiapy's `estimate_error` on the counts floored at 0.5, divided by the image's scale factor
+(exposure time x degradation; `src/aia_noise.py`), which reproduces our staged noise to 1e-7.
+The shared test was staged with a slightly different calibration (none of its blocks equals one
+of ours), so its scale factor is ours times a per-channel ratio, fitted so that the solver's own
+clean DEMs sit on their band edges (`experiments/fit_shared_noise.py`; the clean solve is slot 0
+of the five targets per image, the other four are re-solves of noisy copies):
+
+| channel | 94 | 131 | 171 | 193 | 211 | 335 |
+|---|---|---|---|---|---|---|
+| scale ratio | 1.010 | 1.046 | 0.970 | 1.206 | 1.085 | 1.266 |
+
+With these, 100% of the clean-slot pixels (9.3 million, 2,350 of them flare cores) have the
+solver's DEM inside the rebuilt band at every brightness (worst channel at most 1.004 half-widths,
+the solver's 12-bit DEM rounding); with our own scale factors only 29% at quiet pixels and 0.6% at
+flare cores. Shared-test scoring of the refinement: pending (jobs 23154671, 23154672).

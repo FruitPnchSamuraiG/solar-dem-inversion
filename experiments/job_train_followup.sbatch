@@ -22,9 +22,9 @@
 #   INPUT=sqrt FOURIER=12 (INPUT=log1p FOURIER=0 for the log1p input)  CLIP=1
 # A run is ONE job from start to end on one GPU (MAX_HOURS=0, the default): no chains of
 # short segments and no spare segments, and the GPU kept busy with the per-pixel cache
-# (PIXEL_CACHE). --resume stays only as a safety net. EVAL_MODEL / EVAL_TAG run the full
-# shared-test evaluation on the same GPU once training has finished.
-# Submit through experiments/submit_followup.sh (one()).
+# (PIXEL_CACHE). --resume stays only as a safety net. The shared-test evaluation is a CPU job
+# chained after it (experiments/job_eval_followup_cpu.sbatch), so the GPU is held only while
+# the network trains. Submit through experiments/submit_followup.sh (one()).
 set -euo pipefail
 cd "${SLURM_SUBMIT_DIR:-$HOME/projects/dem}"
 source env.sh
@@ -93,12 +93,3 @@ python3 -u experiments/train_scaled.py \
   "${EXTRA[@]}" \
   --out_dir output/experiments/followup
 
-# Evaluate in the same job (same GPU) once training is complete.
-if [ -n "${EVAL_MODEL:-}" ]; then
-  done_ep=$(python3 -c "import sys, torch; print(torch.load(sys.argv[1], map_location='cpu', weights_only=False)['epoch'])" "$EVAL_MODEL")
-  if [ "$done_ep" = "${EPOCHS:-40}" ]; then
-    MODEL_PATH="$EVAL_MODEL" TAG="${EVAL_TAG:?}" bash experiments/job_eval_followup_gpu.sbatch
-  else
-    echo "training at epoch $done_ep of ${EPOCHS:-40}; evaluation skipped" >&2; exit 4
-  fi
-fi

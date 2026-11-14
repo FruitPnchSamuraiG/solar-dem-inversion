@@ -17,6 +17,13 @@
 # zarr stays CPU-parallel. The supervised model still runs on the CPU.
 #   sbatch --export=ALL,TRACK=bp,MODEL_PATH=...,TAG=... experiments/job_eval_followup_gpu.sbatch
 set -euo pipefail
+# Called from inside a training job (jobs queued 14 Nov evaluate at the end of training): skip, so the
+# job frees its GPU once training is done; the evaluation runs as a CPU job
+# (experiments/job_eval_followup_cpu.sbatch, chained afterok on the training job).
+if [[ "${SLURM_JOB_NAME:-}" == fu_* ]]; then
+  echo "evaluation of $TAG runs as a separate CPU job (job_eval_followup_cpu.sbatch); GPU released"
+  exit 0
+fi
 cd "${SLURM_SUBMIT_DIR:-$HOME/projects/dem}"
 source env.sh
 mkdir -p logs/eval output/experiments/diagnostics

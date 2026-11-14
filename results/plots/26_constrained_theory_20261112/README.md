@@ -255,7 +255,8 @@ the median pixel's squared DEM error, read from 0.02-dex bins (steps of about 5%
    are not.
 2. **The method against the old loss, both from scratch with the zero band.** The old loss is
    worse on every measure (median 4 bins, about 20%, higher) and blows up at a few pixels. Not a
-   matched pair (120 against 200 epochs), but the old loss's validation had stopped improving.
+   matched pair (120 against 200 epochs), but the old loss's validation loss moved by under 0.5%
+   over its last 30 epochs (7.455 to 7.428).
 3. **Muon.** Typical-pixel measures equal to Adam's, tails within the spread: no gain, as on the
    toy with three seeds. Adam stays.
 4. **Size.** Typical-pixel accuracy improves from 409k to 1.5M (median 2 bins, about 10%) and is

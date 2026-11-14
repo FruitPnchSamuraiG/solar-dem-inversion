@@ -321,8 +321,14 @@ def combine_group(into, other):
 
 # ── worker ────────────────────────────────────────────────────────────────────
 
-def load_predictor(path, threads):
-    """Return (predict(obs[6,H,W]) -> DEM[18,H,W], description).
+def load_predictor(path, threads, data=None, thresholds=None):
+    """Return (predict(obs[6,H,W], pixel_batch, block=None) -> DEM[18,H,W], description).
+
+    DEM_REFINE=T (environment) with `data` and `thresholds` given: for a label-free model,
+    pixels at T x the Bright threshold or above get the exact solve of their own band problem
+    (src/refine.py) in place of the network's DEM, with noise estimates rebuilt from the
+    readings (src/aia_noise.py; scale factors from the solver output files in DEM_REFINE_NPZ).
+    predict then needs the block index, to know the image.
 
     Label-free mlp6 checkpoints come from train_scaled.py; supervised ones are
     the supplied .pth files, recognised by their ``model_name`` key and run exactly
@@ -345,7 +351,7 @@ def load_predictor(path, threads):
         clamp = os.environ.get("SUP_CLAMP", "0") == "1"
         model, meta = load_model(path, sup_device)
 
-        def predict(obs, pixel_batch):
+        def predict(obs, pixel_batch, block=None):
             C, H, W = obs.shape
             points = np.ascontiguousarray(obs.reshape(C, -1))
             out = np.empty((N_BINS, H * W), dtype=np.float32)
@@ -360,14 +366,51 @@ def load_predictor(path, threads):
 
     from experiments.train_scaled import load_operators
     from src.scaled_eval import load_scaled_model
-    _, basis_t, n_basis, _ = load_operators(device)
+    D_t, basis_t, n_basis, _ = load_operators(device)
     model, ckpt = load_scaled_model(path, n_basis, device)
     if ckpt["variant"] != "mlp6":
         raise ValueError(f"only the center-pixel mlp6 is supported, got {ckpt['variant']}")
+    info = {"kind": "label_free", **{k: ckpt.get(k) for k in ("variant", "loss", "hidden", "epoch")}}
 
-    def predict(obs, pixel_batch):
+    def predict(obs, pixel_batch, block=None):
         return predict_dem(model, basis_t, obs, ckpt["patch_size"], pixel_batch)
-    return predict, {"kind": "label_free", **{k: ckpt.get(k) for k in ("variant", "loss", "hidden", "epoch")}}
+
+    refine = os.environ.get("DEM_REFINE")
+    if not refine or data is None:
+        return predict, info
+    import zarr
+    from src.aia_noise import NoiseModel
+    from src.refine import TOLFAC, solve_serial
+    T = float(refine)
+    stamps = open(os.path.join(data, "test_datetimes.txt")).read().split()
+    per_image = zarr.open(os.path.join(data, "test_x.zarr"), mode="r").shape[-1] // len(stamps)
+    # DEM_REFINE_RATIO: JSON with the staging's calibration scale over ours per channel
+    # (experiments/fit_shared_noise.py; the shared test was staged with a different calibration)
+    ratio = None
+    if os.environ.get("DEM_REFINE_RATIO"):
+        with open(os.environ["DEM_REFINE_RATIO"]) as f:
+            ratio = json.load(f)["ratio"]
+    noise = NoiseModel(os.environ["DEM_REFINE_NPZ"], stamps, ratio=ratio)
+    thr = np.asarray(thresholds, dtype=np.float64)
+    D = D_t.double().cpu().numpy()
+    Bm = basis_t.double().cpu().numpy()[:N_BINS]
+    network = predict
+
+    def predict(obs, pixel_batch, block=None):
+        dem = np.ascontiguousarray(network(obs, pixel_batch))
+        if block is None:
+            raise ValueError("DEM_REFINE needs the block index")
+        flat = obs.reshape(obs.shape[0], -1).T.astype(np.float64)
+        finite = np.isfinite(flat).all(axis=1)
+        inten = np.where(finite, (np.where(finite[:, None], flat, 0) / thr).max(axis=1), -np.inf)
+        sel = np.flatnonzero(inten >= T)
+        if sel.size:
+            w, level, _ = solve_serial(flat[sel], TOLFAC * noise.sigma(flat[sel], block // per_image), D)
+            ok = level > 0
+            if ok.any():
+                dem.reshape(N_BINS, -1)[:, sel[ok]] = (w[ok] @ Bm.T).T
+        return dem
+    return predict, {**info, "refine_threshold": T, "blocks_per_image": per_image, "noise_scale_ratio": ratio}
 
 
 def predict_dem(model, basis_t, obs, patch_size, pixel_batch):
@@ -390,7 +433,7 @@ def predict_dem(model, basis_t, obs, patch_size, pixel_batch):
 def run_range(job):
     cfg, start, stop, wid = job
     import zarr
-    predict, _ = load_predictor(cfg["model"], cfg["threads"])
+    predict, _ = load_predictor(cfg["model"], cfg["threads"], data=cfg["data"], thresholds=cfg["thresholds"])
     logt = np.asarray(np.load("RData.npz")["logT"][:N_BINS], dtype=np.float64)
     x = zarr.open(os.path.join(cfg["data"], "test_x.zarr"), mode="r")
     y = zarr.open(os.path.join(cfg["data"], "test_y.zarr"), mode="r")
@@ -406,7 +449,7 @@ def run_range(job):
         grp = pending.get(key)
         obs = np.ascontiguousarray(xb[:, ::2, ::2])
         if grp is None:
-            pred = predict(obs, cfg["pixel_batch"])
+            pred = predict(obs, cfg["pixel_batch"], block=b)
             acc["stats"]["predicted_blocks"] += 1
         else:
             pred = grp["pred"]
@@ -809,7 +852,7 @@ def main():
     for grp in leftovers.values():
         finalize_group(acc, grp)
 
-    _, model_info = load_predictor(cfg["model"], 1)
+    _, model_info = load_predictor(cfg["model"], 1, data=cfg["data"], thresholds=cfg["thresholds"])
     logt = np.load("RData.npz")["logT"]
     meta = {"purpose": "Bright-failure association diagnostic; not a causal inference",
             "reference": args.reference, "model": cfg["model"], "model_info": model_info,

@@ -82,7 +82,7 @@ def reservoir_add(res, seen, rng, k, items):
 def run_range(job):
     cfg, start, stop, wid = job
     import zarr
-    lf_predict, _ = load_predictor(cfg["label_free"], cfg["threads"])
+    lf_predict, _ = load_predictor(cfg["label_free"], cfg["threads"], data=cfg["data"], thresholds=cfg["thresholds"])
     sup_predict, _ = load_predictor(cfg["supervised"], cfg["threads"])
     with np.load("RData.npz") as rdata:
         response = np.asarray(rdata["R"][:, :N_BINS], dtype=np.float64) * 1e26
@@ -103,7 +103,7 @@ def run_range(job):
         if key in cache:
             lf, sup = cache.pop(key)
         else:
-            lf = lf_predict(obs, cfg["pixel_batch"])
+            lf = lf_predict(obs, cfg["pixel_batch"], block=b)
             sup = sup_predict(obs, cfg["pixel_batch"])
         cache[key] = (lf, sup)
         if len(cache) > CACHE:

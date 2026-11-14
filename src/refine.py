@@ -19,6 +19,7 @@ import multiprocessing as mp
 import numpy as np
 
 LADDER = (1, 3, 5)
+TOLFAC = 1.4                      # band half-width in noise sigmas, as in training and fullBP.py
 _G = {}
 
 
@@ -82,3 +83,9 @@ def solve_pixels(obs, half, D, workers, chunk=1000):
         parts = pool.map(_chunk, jobs)
     return (np.concatenate([p[0] for p in parts]), np.concatenate([p[1] for p in parts]),
             np.concatenate([p[2] for p in parts]))
+
+
+def solve_serial(obs, half, D):
+    """solve_pixels in the calling process (for code already running in worker processes)."""
+    _init(D)
+    return _chunk((np.asarray(obs, dtype=np.float64), np.asarray(half, dtype=np.float64)))

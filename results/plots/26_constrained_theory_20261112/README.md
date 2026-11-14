@@ -228,3 +228,49 @@ Full-scale follow-up (all pixels, fresh pixels every epoch), queued 12 Nov on To
 from frozen copies of the network), and `bp_h680_keep_settle` (the network-aware rule from
 mu = 1, 200 epochs, multipliers capped at 256 x the price scale so that pixels with no DEM
 inside the band get a finite push); see `experiments/submit_followup.sh`.
+
+## Full scale, 14 Nov: old loss from scratch, Muon, network size, one-shot cache
+
+Shared test (`fullscale_summary.txt`). Unless stated: 200 epochs from scratch, zero band kept,
+multipliers at mu = 10, Adam at lr 3e-4, width 680 (1.5M parameters), one run each. "median" is
+the median pixel's squared DEM error, read from 0.02-dex bins (steps of about 5%).
+
+| run | DEM MSE | median | DEM MAE | W1 | EM err % | AIA MSE | Bright MSE | core 94 A |
+|---|---|---|---|---|---|---|---|---|
+| old loss (mu 100, no prices), 120 epochs | 2.574 | 0.0339 | 0.073 | 0.069 | 11.0 | 52,244 | 25.15 | 0.88 |
+| multipliers, zarr loader | 1.096 | 0.0282 | 0.071 | 0.066 | 10.8 | 7,351 | 10.53 | 0.94 |
+| multipliers, one-shot cache | 1.253 | 0.0282 | 0.072 | 0.067 | 10.8 | 34,340 | 12.07 | 0.92 |
+| multipliers + BP's widened band | 0.976 | 0.0269 | 0.070 | 0.066 | 10.8 | 54 | 9.34 | 0.92 |
+| multipliers, Muon | 1.488 | 0.0282 | 0.073 | 0.067 | 11.0 | 50 | 14.39 | 0.89 |
+| multipliers, 409k | 1.496 | 0.0309 | 0.073 | 0.067 | 10.9 | 50 | 14.48 | 0.93 |
+| multipliers, 3.0M | 0.885 | 0.0282 | 0.071 | 0.067 | 10.8 | 50 | 8.44 | 0.92 |
+| multipliers, 5.3M | 1.640 | 0.0269 | 0.071 | 0.066 | 10.8 | 28,641 | 15.90 | 0.93 |
+| supervised 10.1M | 0.387 | 0.0891 | 0.085 | 0.113 | 13.1 | 26 | 3.55 | 0.92 |
+
+1. **Run-to-run spread.** The zarr-loader and cache runs have the same settings and differ only
+   in the random draw of pixels. They agree on every typical-pixel measure (median, MAE, W1, EM)
+   and differ in DEM MSE (1.10 against 1.25) and AIA MSE (7,351 against 34,340), which a handful
+   of pixels decide (flare cores, pixels BP cannot fit). So between single runs, DEM MSE
+   differences of this size and AIA MSE in the thousands are noise; the typical-pixel measures
+   are not.
+2. **The method against the old loss, both from scratch with the zero band.** The old loss is
+   worse on every measure (median 4 bins, about 20%, higher) and blows up at a few pixels. Not a
+   matched pair (120 against 200 epochs), but the old loss's validation had stopped improving.
+3. **Muon.** Typical-pixel measures equal to Adam's, tails within the spread: no gain, as on the
+   toy with three seeds. Adam stays.
+4. **Size.** Typical-pixel accuracy improves from 409k to 1.5M (median 2 bins, about 10%) and is
+   about flat above (3.0M equal, 5.3M one bin lower). The tail measures jump between runs: 3.0M
+   has the lowest DEM MSE of any label-free run (0.885), but one run cannot separate size from
+   the draw (with the old loss, the 3M lead was luck over three seeds). Large models no longer
+   break down as they did with the old loss (5.3M DEM MSE 7.88 then, 1.64 now). The 3.0M and
+   5.3M runs at lr 1e-4 are still training.
+5. **BP's widened band** at the pixels BP cannot fit is the one change that removes the blow-ups
+   for a reason we can name (the wild pixels were the solver-relaxed ones), so it belongs in the
+   recipe.
+
+One-shot cache (`experiments/build_pixel_cache.py`, `--pixel_cache`): 200 epochs in 3 h 08 min
+in a single job on one GPU, which was busy 91% of the time on average (median 94%; 98% of
+30-second samples at 50% or more; `logs/scaled/gpu_util_23082745.csv` on Torch). Epochs take 18 s
+with no prices and 80 s with 11 frozen copies, since every copy is one more forward pass per
+batch. With the cache the pixel set is fixed, so each pixel's prices could be stored once per
+round instead, which would keep every epoch near 18 s.

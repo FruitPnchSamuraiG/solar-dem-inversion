@@ -2,6 +2,8 @@ Held-out solvable pixels, toy (1M training pixels, 400 epochs from scratch); sor
 run                                          epochs | outside >0.01 | worst-1% viol | weight/solver | DEM error | flare-core DEM error | minutes
 ------------------------------------------------------------------------------------------------------------------------------------------------
 baseline, seed 1                                400 |        19.92% |         0.394 |         1.119 |    0.0824 |                 47.6 |      48
+EMA, seed 1                                     400 |        19.78% |         0.394 |         1.119 |    0.0824 |                 47.6 |      52
+EMA, seed 2                                     400 |        18.21% |         0.400 |         1.123 |    0.0846 |                 48.8 |      52
 baseline, seed 2                                400 |        18.30% |         0.400 |         1.123 |    0.0846 |                 48.8 |      47
 Muon, Adam-matched step, lr 3e-4                400 |        23.54% |         0.534 |         1.102 |    0.0907 |                 93.9 |      40
 Muon, Adam-matched step, seed 2                 400 |        24.21% |         0.655 |         1.109 |    0.1013 |                169.8 |      53
@@ -10,6 +12,7 @@ Muon (hidden matrices), lr 0.02                 400 |        23.85% |         0.
 NAdam                                           400 |        22.59% |         0.427 |         1.141 |    0.1163 |                 76.5 |      37
 baseline: Adam, lr 3e-4, clip 1, batch 4096     400 |        23.75% |         0.770 |         1.159 |    0.1173 |                 45.8 |      25
 Adam, no gradient clipping                      400 |        24.07% |         0.526 |         1.180 |    0.1197 |                139.0 |      64
+EMA of weights (0.999)                          400 |        21.71% |         0.441 |         1.142 |    0.1252 |                 51.8 |      38
 AdamW (weight decay 0.01)                       400 |        23.03% |         0.476 |         1.158 |    0.1286 |                 49.0 |      59
 RAdam                                           400 |        19.00% |         0.431 |         1.156 |    0.1327 |                 50.8 |      38
 Adafactor                                       400 |        23.99% |         1.051 |         1.454 |    0.1807 |                247.3 |      34

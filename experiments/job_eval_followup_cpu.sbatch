@@ -7,7 +7,7 @@
 #SBATCH --cpus-per-task=16
 #SBATCH --mem=64G
 #SBATCH --partition=cpu_short
-#SBATCH --time=08:00:00
+#SBATCH --time=06:00:00
 #SBATCH --mail-type=FAIL
 #SBATCH --account=torch_pr_41_general
 
@@ -15,7 +15,8 @@
 # diagnostic, then the AIA fit by brightness (the two CPU job scripts, one after the other).
 # Reading the zarr dominates this work, so on a GPU node the GPU would mostly wait, under the
 # cluster's GPU-utilization limits; here it runs after the training job, which holds its GPU
-# only while it trains (experiments/submit_followup.sh one() chains it with afterok).
+# only while it trains (experiments/submit_followup.sh one() chains it with afterok). cpu_short
+# allows at most 6 h; the 5.3M model takes about 4.
 #   sbatch --dependency=afterok:<train job> --export=ALL,TRACK=bp,MODEL_PATH=...,TAG=... \
 #          experiments/job_eval_followup_cpu.sbatch
 set -euo pipefail

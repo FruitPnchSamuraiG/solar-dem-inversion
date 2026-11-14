@@ -167,4 +167,14 @@ pick bp_h680_keep_mm10_relax && ACCOUNT=${ACCOUNT:-torch_pr_41_general} run bp_h
 # Muon (hidden weight matrices; Adam on the rest, Adam-matched step 3e-4), otherwise the run
 # bp_h680_keep_mm10: the constrained toy's best training change (DEM error 0.091 vs 0.117, 13 Nov).
 pick bp_h680_keep_mm10_muon && ACCOUNT=${ACCOUNT:-torch_pr_41_general} run bp_h680_keep_mm10_muon bp 8 cpu "${B}_h680_sqrt_ff12_resample_clampkeep_al10_sched_muon_fixed_ep200" EPOCHS=200 MAX_HOURS=1.85 CLAMP_MODE=keep HIDDEN=680 AL_MU=10 AL_RULE=adaptive AL_GROWTH=1 AL_OUTER=settled AL_FLOOR=0 AL_EVERY=10 AL_MAX=12 AL_STOP=0 AL_CAP=256 OPTIMIZER=muon MUON_LR=3e-4 TAG_SUFFIX=_fixed_ep200
+# Network size under the new method (13 Nov): the settings of bp_h680_keep_mm10 (multipliers, mu 10,
+# settled rounds, zero band, 200 epochs) at widths 336 / 966 / 1299 (409k / 3.0M / 5.3M; 680 = 1.5M is
+# the finished run), the larger two also at lr 1e-4. Size has to be judged at full scale: the toy's
+# 1M fixed pixels do not show how capacity uses 961M fresh ones.
+FM="EPOCHS=200 MAX_HOURS=1.85 CLAMP_MODE=keep AL_MU=10 AL_RULE=adaptive AL_GROWTH=1 AL_OUTER=settled AL_FLOOR=0 AL_EVERY=10 AL_MAX=12 AL_STOP=0 AL_CAP=256"
+pick bp_h336_keep_mm10      && ACCOUNT=${ACCOUNT:-torch_pr_41_general} run bp_h336_keep_mm10      bp 8 cpu "${B}_h336_sqrt_ff12_resample_clampkeep_al10_sched_fixed_ep200" $FM HIDDEN=336 TAG_SUFFIX=_fixed_ep200
+pick bp_h966_keep_mm10      && ACCOUNT=${ACCOUNT:-torch_pr_41_cilvr}   run bp_h966_keep_mm10      bp 8 gpu "${B}_h966_sqrt_ff12_resample_clampkeep_al10_sched_fixed_ep200" $FM HIDDEN=966 TF32=1 TAG_SUFFIX=_fixed_ep200
+pick bp_h966_keep_mm10_lr1  && ACCOUNT=${ACCOUNT:-torch_pr_41_general} run bp_h966_keep_mm10_lr1  bp 8 gpu "${B}_h966_sqrt_ff12_resample_clampkeep_al10_sched_fixed_ep200_lr1e-4" $FM HIDDEN=966 TF32=1 LR=1e-4 TAG_SUFFIX=_fixed_ep200_lr1e-4
+pick bp_h1299_keep_mm10     && ACCOUNT=${ACCOUNT:-torch_pr_41_cilvr}   run bp_h1299_keep_mm10     bp 8 gpu "${B}_h1299_sqrt_ff12_resample_clampkeep_al10_sched_fixed_ep200" $FM HIDDEN=1299 TF32=1 TAG_SUFFIX=_fixed_ep200
+pick bp_h1299_keep_mm10_lr1 && ACCOUNT=${ACCOUNT:-torch_pr_41_cilvr}   run bp_h1299_keep_mm10_lr1 bp 8 gpu "${B}_h1299_sqrt_ff12_resample_clampkeep_al10_sched_fixed_ep200_lr1e-4" $FM HIDDEN=1299 TF32=1 LR=1e-4 TAG_SUFFIX=_fixed_ep200_lr1e-4
 true

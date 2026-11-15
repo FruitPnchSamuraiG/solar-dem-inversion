@@ -1,0 +1,25 @@
+{
+ "bp": [
+  {
+   "label": "network alone (1.5M full recipe)",
+   "diag": "results/plots/26_constrained_theory_20261112/bp_bright_failure_fu_bp_h680_keep_mm10_relax.json",
+   "aia": "results/plots/26_constrained_theory_20261112/bp_aia_fit_fu_bp_h680_keep_mm10_relax.json"
+  },
+  {
+   "label": "+ exact solve, flare cores (>=32x)",
+   "diag": "results/plots/27_refine_20261114/bp_bright_failure_fu_bp_h680_keep_mm10_relax_refine32.json",
+   "aia": "results/plots/27_refine_20261114/bp_aia_fit_fu_bp_h680_keep_mm10_relax_refine32.json"
+  },
+  {
+   "label": "+ exact solve, >=3.2x Bright",
+   "diag": "results/plots/27_refine_20261114/bp_bright_failure_fu_bp_h680_keep_mm10_relax_refine3.2.json",
+   "aia": "results/plots/27_refine_20261114/bp_aia_fit_fu_bp_h680_keep_mm10_relax_refine3.2.json"
+  },
+  {
+   "label": "supervised 10.1M clipped",
+   "diag": "results/plots/25_followup_20261109/bp_bright_failure_supervised_sup10m.json",
+   "aia": "results/plots/25_followup_20261109/bp_aia_fit_sup10m.json",
+   "supervised": true
+  }
+ ]
+}

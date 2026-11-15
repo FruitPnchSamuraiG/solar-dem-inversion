@@ -88,4 +88,24 @@ of the five targets per image, the other four are re-solves of noisy copies):
 With these, 100% of the clean-slot pixels (9.3 million, 2,350 of them flare cores) have the
 solver's DEM inside the rebuilt band at every brightness (worst channel at most 1.004 half-widths,
 the solver's 12-bit DEM rounding); with our own scale factors only 29% at quiet pixels and 0.6% at
-flare cores. Shared-test scoring of the refinement: pending (jobs 23154671, 23154672).
+flare cores.
+
+## Shared test (the published comparison's pixels; `shared_summary.txt`)
+
+Same 1.5M model, flagged pixels solved exactly with the rebuilt noise (jobs 23154671 / 23154672).
+The shared test leaves out the pixels the solver could not fit, so these are tight-band pixels.
+
+| | DEM MSE | DEM MAE | median pixel | EM err % | W1 | Bright MSE | Quiet MSE | AIA MAE | AIA MSE |
+|---|---|---|---|---|---|---|---|---|---|
+| network alone | 0.976 | 0.070 | 0.0269 | 10.8 | 0.066 | 9.34 | 0.0336 | 3.87 | 54 |
+| + solve flare cores (>= 32x) | 0.114 | 0.070 | 0.0269 | 10.8 | 0.066 | 0.83 | 0.0336 | 3.87 | 47 |
+| + solve >= 3.2x | **0.107** | **0.069** | **0.0269** | **10.7** | **0.066** | **0.76** | 0.0336 | 3.92 | 50 |
+| supervised 10.1M | 0.387 | 0.085 | 0.0891 | 13.1 | 0.113 | 3.55 | **0.0305** | **2.29** | **26** |
+| the solver's own DEMs | | | | | | | | 4.26 | 62 |
+
+The hybrid's DEM error is 3.6x lower than the supervised model's (Bright pixels 4.7x, median
+pixel 3.3x); the supervised model fits the AIA readings more closely, but the solver's own DEMs
+fit them less closely than either (the band allows 1.4 sigma by design), so the hybrid is closer
+to the solver's fit than the solver's target requires. Quiet pixels: 0.0336 against 0.0305.
+Solving the flare cores alone (about 1 pixel in 10,000, ~0.1 s per full-disk image) gives
+nearly all of the gain.

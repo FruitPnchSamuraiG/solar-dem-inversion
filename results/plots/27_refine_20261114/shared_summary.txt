@@ -1,0 +1,7 @@
+
+== bp
+model                                 DEM MSE    DEM MAE     median   EM err %         W1    AIA MAE    AIA MSE Bright MSE  Quiet MSE    core EM   core 94A
+network alone (1.5M full recipe)        0.976      0.070     0.0269       10.8      0.066       3.87         54       9.34     0.0336       0.99       0.92
++ exact solve, flare cores (>=32x)      0.114      0.070     0.0269       10.8      0.066       3.87         47       0.83     0.0336       1.00       0.92
++ exact solve, >=3.2x Bright            0.107      0.069     0.0269       10.7      0.066       3.92         50       0.76     0.0336       1.00       0.92
+supervised 10.1M clipped                0.387      0.085     0.0891       13.1      0.113       2.29         26       3.55     0.0305       1.00       0.92

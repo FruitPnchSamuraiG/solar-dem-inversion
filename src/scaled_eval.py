@@ -44,13 +44,15 @@ def load_scaled_model(ckpt_path, n_basis, device):
     core = build_model(ckpt["variant"], n_basis, ckpt["patch_size"],
                        ckpt["channels"], perm=ckpt.get("perm"),
                        hidden=ckpt.get("hidden"),
-                       fourier_freqs=ckpt.get("fourier_freqs", 0))
+                       fourier_freqs=ckpt.get("fourier_freqs", 0),
+                       in_channels=7 if ckpt.get("bright_norm") else 6)
     # The saved weights come from a model whose Softplus was already replaced, so
     # rebuild that structure before load_state_dict (it is parameter-free, but
     # skipping it would silently restore the module that died in 15088220).
     harden_softplus(core, ckpt.get("softplus_floor", -20.0))
     core.load_state_dict(ckpt["model"])
-    model = NormalizedInput(core, ckpt.get("input_transform", "log1p")).to(device)
+    model = NormalizedInput(core, ckpt.get("input_transform", "log1p"),
+                            bright_thr=ckpt.get("bright_thr") if ckpt.get("bright_norm") else None).to(device)
     model.eval()
     return model, ckpt
 

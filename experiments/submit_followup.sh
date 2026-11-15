@@ -229,4 +229,9 @@ for sd in 1 2 3; do  # not s: pick() sets s
   pick bp_full_h680_s$sd && TIME=${TIME:-09:00:00} SBATCH_EXTRA="--constraint=l40s|h100|h200" one bp_full_h680_s$sd bp "${B}_h680_sqrt_ff12_resample_clampkeep_al10_sched_relax_full_ep200_s$sd" $FULL HIDDEN=680 SEED=$sd INIT_SEED=$sd TAG_SUFFIX=_full_ep200_s$sd
   pick bp_full_h966_s$sd && TIME=${TIME:-16:00:00} SBATCH_EXTRA="--constraint=l40s|h100|h200" one bp_full_h966_s$sd bp "${B}_h966_sqrt_ff12_resample_clampkeep_al10_sched_relax_full_ep200_s$sd" $FULL HIDDEN=966 SEED=$sd INIT_SEED=$sd TAG_SUFFIX=_full_ep200_s$sd
 done
+# Brightness rescaling inside the network (14-15 Nov), otherwise the full recipe, three seeds to set
+# against the three full-recipe seeds above.
+for sd in 1 2 3; do  # not s: pick() sets s
+  pick bp_bnorm_h680_s$sd && TIME=${TIME:-09:00:00} SBATCH_EXTRA="--constraint=l40s|h100|h200" one bp_bnorm_h680_s$sd bp "${B}_h680_sqrt_ff12_resample_clampkeep_al10_sched_relax_bnorm_full_ep200_s$sd" $FULL HIDDEN=680 SEED=$sd INIT_SEED=$sd BRIGHT_NORM=1 TAG_SUFFIX=_full_ep200_s$sd
+done
 true

@@ -77,11 +77,12 @@ class CenterMLP(nn.Module):
     fourier_freqs > 0 lifts the 6 inputs with FourierFeatures first (6 -> 150
     features at 12 frequencies); 0 keeps the original network exactly."""
 
-    def __init__(self, n_basis=54, patch_size=9, hidden=680, fourier_freqs=0):
+    def __init__(self, n_basis=54, patch_size=9, hidden=680, fourier_freqs=0, in_channels=6):
         super().__init__()
         self.pad = patch_size // 2
         self.encode = FourierFeatures(fourier_freqs) if fourier_freqs else nn.Identity()
-        in_dim = 6 * (2 * fourier_freqs + 1) if fourier_freqs else 6
+        # in_channels 7: the six readings plus log brightness (train_scaled.py --bright_norm)
+        in_dim = in_channels * (2 * fourier_freqs + 1) if fourier_freqs else in_channels
         self.net = nn.Sequential(
             nn.Linear(in_dim, hidden), nn.SiLU(),
             nn.Linear(hidden, hidden), nn.SiLU(),
@@ -138,7 +139,7 @@ VARIANTS = ["cnn", "mlp6", "mlp_patch", "cnn_shuffled"]
 
 
 def build_model(variant, n_basis, patch_size, channels, perm=None, hidden=None,
-                fourier_freqs=0):
+                fourier_freqs=0, in_channels=6):
     if fourier_freqs and variant != "mlp6":
         raise ValueError("fourier_freqs is only implemented for mlp6")
     if variant == "cnn":
@@ -146,7 +147,7 @@ def build_model(variant, n_basis, patch_size, channels, perm=None, hidden=None,
     if variant == "mlp6":
         # hidden is the size sweep's knob; None keeps the capacity-matched 680.
         return CenterMLP(n_basis=n_basis, patch_size=patch_size, fourier_freqs=fourier_freqs,
-                         **({} if hidden is None else {"hidden": hidden}))
+                         in_channels=in_channels, **({} if hidden is None else {"hidden": hidden}))
     if variant == "mlp_patch":
         return FlatPatchMLP(n_basis=n_basis, patch_size=patch_size)
     if variant == "cnn_shuffled":

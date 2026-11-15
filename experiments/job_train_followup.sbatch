@@ -45,6 +45,8 @@ EXTRA=()
 if [ "${TF32:-0}" = 1 ]; then EXTRA+=(--tf32); fi
 # INIT_SEED=<n>: seed the starting weights too (seed studies); SEED alone changes only the pixels drawn
 if [ -n "${INIT_SEED:-}" ]; then EXTRA+=(--init_seed "$INIT_SEED"); fi
+# BRIGHT_NORM=1: brightness rescaling inside the network (adds _bnorm to the tag)
+if [ "${BRIGHT_NORM:-0}" = 1 ]; then EXTRA+=(--bright_norm); fi
 # INIT_FROM=<checkpoint>: warm start from its weights (a continuation run)
 if [ -n "${INIT_FROM:-}" ]; then EXTRA+=(--init_from "$INIT_FROM"); fi
 # CLAMP_MODE=mask keeps deconvolution-clamp pixels with the clamped channels free;

@@ -122,12 +122,26 @@ class NormalizedInput(nn.Module):
     comparable to the crop runs.
     """
 
-    def __init__(self, inner, mode="log1p"):
+    def __init__(self, inner, mode="log1p", bright_thr=None):
         super().__init__()
         self.inner = inner
         self.mode = mode
+        # Brightness rescaling (--bright_norm): b = max(1, max_c reading_c / Bright threshold_c)
+        # from the centre pixel's own readings; the network sees the readings divided by b
+        # plus log b as a seventh input, and its basis weights are multiplied by b. Pixels
+        # below the Bright threshold (b = 1) are unchanged; a flare core looks like an
+        # ordinary bright pixel. If every reading and its band scaled by b, the solver's
+        # DEM would scale by exactly b (the LP is homogeneous); log b carries what does not
+        # scale (photon noise grows like the square root).
+        self.bright = bright_thr is not None
+        if self.bright:
+            self.register_buffer("bright_thr", torch.as_tensor(bright_thr, dtype=torch.float32).reshape(1, -1))
 
     def forward(self, patch):
+        if self.bright:
+            pad = patch.shape[-1] // 2
+            b = (patch[:, :, pad, pad].clamp(min=0.0) / self.bright_thr).amax(1).clamp(min=1.0)
+            patch = patch / b[:, None, None, None]
         if self.mode == "log1p":
             # patch is already floored at MIN_OBS > 0 by the dataloader's mask,
             # but clamp anyway so an unmasked caller cannot produce NaN.
@@ -137,7 +151,10 @@ class NormalizedInput(nn.Module):
             # more than log1p: flare core ~1e4 DN -> 100 vs bright region ~500
             # -> 22, against 9.2 vs 6.2 under log1p.
             patch = torch.sqrt(patch.clamp(min=0.0))
-        return self.inner(patch)
+        if not self.bright:
+            return self.inner(patch)
+        logb = torch.log(b)[:, None, None, None].expand(-1, 1, patch.shape[-2], patch.shape[-1])
+        return self.inner(torch.cat([patch, logb], dim=1)) * b[:, None]
 
 
 def make_scheduler(optimizer, total_steps, warmup_steps, base_lr):
@@ -315,11 +332,15 @@ def train(args):
         # Without it the weights start from PyTorch's fixed default seed, the same in every run,
         # so runs differ only in the pixels drawn; a seed study varies the starting weights too.
         torch.manual_seed(args.init_seed)
+    if args.bright_norm and args.variant != "mlp6":
+        raise ValueError("--bright_norm is implemented for mlp6")
     core = build_model(args.variant, n_basis, args.patch_size, args.channels,
-                       perm=perm, hidden=args.hidden, fourier_freqs=args.fourier_freqs)
+                       perm=perm, hidden=args.hidden, fourier_freqs=args.fourier_freqs,
+                       in_channels=7 if args.bright_norm else 6)
     n_sp = harden_softplus(core, args.softplus_floor)
     init_output_head(core, args.init_bias, args.init_weight_scale)
-    model = NormalizedInput(core, args.input_transform).to(device)
+    model = NormalizedInput(core, args.input_transform,
+                            bright_thr=thresholds if args.bright_norm else None).to(device)
     if args.init_from:
         # Warm start: weights only, with a fresh optimizer and schedule. A
         # segment's own <tag>_state.pt still takes precedence below.
@@ -395,6 +416,8 @@ def train(args):
         tag += f"_{args.optimizer}"
     if args.relax_band:
         tag += "_relax"
+    if args.bright_norm:
+        tag += "_bnorm"
     tag += args.tag_suffix
     out_dir = args.out_dir
     os.makedirs(out_dir, exist_ok=True)
@@ -567,6 +590,8 @@ def train(args):
                     "input_transform": args.input_transform,
                     "fourier_freqs": args.fourier_freqs,
                     "softplus_floor": args.softplus_floor,
+                    "bright_norm": bool(args.bright_norm),
+                    "bright_thr": [float(v) for v in thresholds] if args.bright_norm else None,
                     "args": vars(args)},
                    os.path.join(out_dir, f"{tag}.pt"))
         with open(os.path.join(out_dir, f"{tag}_history.json"), "w") as f:
@@ -708,6 +733,8 @@ def parse_args():
     p.add_argument("--epochs", type=int, default=30)
     p.add_argument("--lr", type=float, default=3e-4)
     p.add_argument("--seed", type=int, default=42)
+    p.add_argument("--bright_norm", action="store_true",
+                   help="rescale each pixel by its brightness inside the network (NormalizedInput)")
     p.add_argument("--init_seed", type=int, default=None,
                    help="seed for the starting weights (default: PyTorch's fixed default seed, as in every run so far)")
     p.add_argument("--input_transform", choices=["none", "log1p", "sqrt"], default="log1p",

@@ -32,14 +32,15 @@ acct_ok() {
 # one name track checkpoint-tag env...: one GPU job that trains start to end (MAX_HOURS=0), then
 # one CPU job (afterok) for the shared-test evaluation, which would leave a GPU mostly idle.
 # ACCOUNT (default torch_pr_41_general), TIME (default 12 h), AFTER=<job id> (start once that
-# job has ended), SBATCH_EXTRA (e.g. a GPU-type constraint).
+# job has ended), AFTER_OK=<job id> (only if it succeeded), SBATCH_EXTRA (e.g. a GPU-type constraint).
 one() {
   local name=$1 track=$2 tag=$3; shift 3
   local acct=${ACCOUNT:-torch_pr_41_general} env="ALL,TRACK=$track" kv id ev
   acct_ok "$acct" || return 1
   for kv in "$@"; do case $kv in MAX_HOURS=*) ;; *) env+=",$kv" ;; esac; done
   env+=",MAX_HOURS=0"
-  id=$(sbatch --parsable ${AFTER:+--dependency=afterany:$AFTER} --job-name="fu_$name" --account="$acct" \
+  id=$(sbatch --parsable ${AFTER:+--dependency=afterany:$AFTER} ${AFTER_OK:+--dependency=afterok:$AFTER_OK} \
+       --job-name="fu_$name" --account="$acct" \
        --time="${TIME:-12:00:00}" ${SBATCH_EXTRA:-} --export="$env" experiments/job_train_followup.sbatch)
   ev=$(sbatch --parsable --dependency=afterok:$id --job-name="fe_$name" \
        --export=ALL,TRACK=$track,MODEL_PATH=$OUT/$tag.pt,TAG=fu_$name experiments/job_eval_followup_cpu.sbatch)
@@ -233,5 +234,12 @@ done
 # against the three full-recipe seeds above.
 for sd in 1 2 3; do  # not s: pick() sets s
   pick bp_bnorm_h680_s$sd && TIME=${TIME:-09:00:00} SBATCH_EXTRA="--constraint=l40s|h100|h200" one bp_bnorm_h680_s$sd bp "${B}_h680_sqrt_ff12_resample_clampkeep_al10_sched_relax_bnorm_full_ep200_s$sd" $FULL HIDDEN=680 SEED=$sd INIT_SEED=$sd BRIGHT_NORM=1 TAG_SUFFIX=_full_ep200_s$sd
+done
+# ElasticNet (15 Nov): the current final (409k, sqrt + Fourier, fresh pixels, 40 epochs, its own objective)
+# with the one change that held up for BP and the advisor asked for: zeroed channels kept as data
+# (clamp keep) instead of dropping those pixels; from the ElasticNet pixel cache, three seeds.
+ECACHE=$SCRATCH/dem/cache/enet_train_keep
+for sd in 1 2 3; do  # not s: pick() sets s
+  pick enet_keep_h336_s$sd && TIME=${TIME:-03:00:00} SBATCH_EXTRA="--constraint=l40s|a100|h100|h200" one enet_keep_h336_s$sd enet "${E}_h336_sqrt_ff12_resample_clampkeep_ep40_s$sd" EPOCHS=40 CLAMP_MODE=keep HIDDEN=336 PIXEL_CACHE=$ECACHE EVAL_EVERY=5 SEED=$sd INIT_SEED=$sd TAG_SUFFIX=_ep40_s$sd
 done
 true

@@ -96,6 +96,11 @@
    "aia": "results/plots/26_constrained_theory_20261112/bp_aia_fit_fu_bp_h1299_keep_mm10_lr1.json"
   },
   {
+   "label": "brightness rescaling, seed 3",
+   "diag": "results/plots/26_constrained_theory_20261112/bp_bright_failure_fu_bp_bnorm_h680_s3.json",
+   "aia": "results/plots/26_constrained_theory_20261112/bp_aia_fit_fu_bp_bnorm_h680_s3.json"
+  },
+  {
    "label": "supervised 10.1M clipped",
    "diag": "results/plots/25_followup_20261109/bp_bright_failure_supervised_sup10m.json",
    "aia": "results/plots/25_followup_20261109/bp_aia_fit_sup10m.json",

@@ -1,0 +1,15 @@
+{
+ "enet": [
+  {
+   "label": "current final (409k, zero-channel pixels dropped)",
+   "diag": "results/plots/20_sqrtff_final_20261004/enet_bright_failure_sqrtff12_resample_h336.json",
+   "aia": "results/plots/20_sqrtff_final_20261004/enet_aia_fit_sqrtff12_resample_h336.json"
+  },
+  {
+   "label": "supervised 10.1M clipped",
+   "diag": "results/plots/25_followup_20261109/enet_bright_failure_supervised_sup10m.json",
+   "aia": "results/plots/25_followup_20261109/enet_aia_fit_sup10m.json",
+   "supervised": true
+  }
+ ]
+}

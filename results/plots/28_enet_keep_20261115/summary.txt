@@ -1,0 +1,5 @@
+
+== enet
+model                                 DEM MSE    DEM MAE     median   EM err %         W1    AIA MAE    AIA MSE Bright MSE  Quiet MSE    core EM   core 94A
+current final (409k, zero-channel pixels dropped)      0.310      0.151     0.8511       12.2      0.103       0.56        161       1.91     0.1224       0.99       0.53
+supervised 10.1M clipped                0.232      0.149     0.7413       12.5      0.112       1.49        165       1.23     0.1155       1.01       0.55

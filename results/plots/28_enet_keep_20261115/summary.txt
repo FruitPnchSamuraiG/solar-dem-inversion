@@ -2,4 +2,7 @@
 == enet
 model                                 DEM MSE    DEM MAE     median   EM err %         W1    AIA MAE    AIA MSE Bright MSE  Quiet MSE    core EM   core 94A
 current final (409k, zero-channel pixels dropped)      0.310      0.151     0.8511       12.2      0.103       0.56        161       1.91     0.1224       0.99       0.53
+zeroed channels kept, seed 1            0.360      0.153     0.8913       12.2      0.103       0.55        156       2.34     0.1279       0.99       0.52
+zeroed channels kept, seed 2            0.328      0.154     0.8913       12.1      0.103       0.55        247       2.05     0.1254       0.99       0.54
+zeroed channels kept, seed 3            0.371      0.158     0.9772       12.2      0.105       0.55        159       2.36     0.1375       0.98       0.51
 supervised 10.1M clipped                0.232      0.149     0.7413       12.5      0.112       1.49        165       1.23     0.1155       1.01       0.55

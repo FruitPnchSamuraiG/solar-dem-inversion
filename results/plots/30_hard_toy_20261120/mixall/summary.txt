@@ -1,0 +1,23 @@
+run | train: outside >0.01 % / p99 miss / weight vs LP / DEM MAE vs LP | held-out bright: outside % / weight vs LP / DEM MAE | flare cores (balanced): outside % / peak vs LP (median) | minutes
+bpflags  |  95.43 / 32.8 / 0.630 / 10.5 |  90.99 / 1.893 / 0.459 | 100.00 / 0.090 | 0
+tight    |  63.89 / 8.07 / 1.108 / 2.02 |  42.11 / 1.601 / 0.169 |  84.62 / 1.037 | 11
+trunc1   |  68.65 / 82 / 0.076 / 11.7 |  38.30 / 1.137 / 0.164 | 100.00 / 0.000 | 11
+trunc3   |  64.95 / 53.5 / 0.702 / 4.31 |  43.20 / 1.313 / 0.138 |  94.34 / 0.932 | 11
+trunc10  |  62.29 / 98.4 / 0.989 / 2.19 |  34.07 / 1.544 / 0.162 |  93.56 / 0.962 | 11
+
+by BP's flag, training pixels (miss in TIGHT half-widths; BP's band = 3x/5x where BP widened):
+run | class: n / inside tight % / inside BP's band % / worst miss p50, p90 / DEM MAE vs LP / vs BP
+bpflags  | tight   :  19702 /   4.07 /   4.07 / 6.01, 16 / 10.1 / 10.1
+bpflags  | widened :   2000 /   0.00 /   9.45 / 6.67, 11.5 / nan / 0.649
+tight    | tight   :  19702 /  43.44 /  43.44 / 0.0493, 0.482 / 1.95 / 1.97
+tight    | widened :   2000 /   0.00 /  98.20 / 0.568, 1.4 / nan / 0.482
+tight    | unsolved:   2000 /   0.00 /   0.00 / 5.91, 8.35 / nan / nan
+trunc1   | tight   :  19702 /  37.71 /  37.71 / 0.0872, 54.6 / 11.3 / 11.3
+trunc1   | widened :   2000 /   0.00 /  54.80 / 1.53, 14.8 / nan / 0.4
+trunc1   | unsolved:   2000 /   0.00 /   0.00 / 19.3, 53.1 / nan / nan
+trunc3   | tight   :  19702 /  42.16 /  42.16 / 0.0418, 0.354 / 4.15 / 4.2
+trunc3   | widened :   2000 /   0.00 /  96.75 / 0.525, 1.34 / nan / 0.416
+trunc3   | unsolved:   2000 /   0.00 /   0.00 / 27.7, 52.5 / nan / nan
+trunc10  | tight   :  19702 /  45.36 /  45.36 / 0.0416, 0.49 / 2.11 / 2.14
+trunc10  | widened :   2000 /   0.00 /  97.60 / 0.534, 1.37 / nan / 0.448
+trunc10  | unsolved:   2000 /   0.00 /   0.00 / 16.9, 100 / nan / nan

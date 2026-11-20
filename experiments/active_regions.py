@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """40 active regions from the test dates: band maps, and DEM line plots of their hard pixels.
 
-Scan: on each test date, Bright pixels (any channel at or above its Bright threshold) are grouped into
-connected regions (lightly smoothed); regions touching the image frame are skipped. One region per date
+Scan: on each test date, pixels at 3x the Bright threshold or above (any channel) are grouped into
+connected regions (smoothed); regions touching the image frame are skipped; the box is centred on the
+region's densest bright core. One region per date
 at most: the --n_flaring regions with the brightest peak, then the largest by Bright area, until --n.
 
 Per region (a --box x --box crop of the 2048 grid, AIA pixel (2i, 2j) for DEM pixel (i, j)), with our
@@ -56,7 +57,7 @@ def parse_args():
     p.add_argument("--n", type=int, default=40)
     p.add_argument("--n_flaring", type=int, default=15)
     p.add_argument("--box", type=int, default=192)
-    p.add_argument("--min_area", type=int, default=400, help="Bright pixels a region needs")
+    p.add_argument("--min_area", type=int, default=300, help="pixels at 3x Bright or above a region needs")
     p.add_argument("--tolfac", type=float, default=1.4)
     p.add_argument("--workers", type=int, default=8)
     p.add_argument("--seed", type=int, default=0)
@@ -75,9 +76,10 @@ def scan(job):
     aia = aia[:6, ::2, ::2]
     with np.errstate(invalid="ignore", divide="ignore"):
         ratio = np.nan_to_num((aia / np.asarray(thr, np.float32)[:, None, None]).max(0), nan=0.0, posinf=0.0)
-    bright = ratio >= 1.0
-    grown = ndimage.uniform_filter(bright.astype(np.float32), 15) > 0.15
+    core = ratio >= 3.0                                # active-region cores: 3x the Bright threshold
+    grown = ndimage.uniform_filter(core.astype(np.float32), 25) > 0.05
     lab, n = ndimage.label(grown)
+    dens = ndimage.uniform_filter(np.minimum(ratio, 100.0), 31)
     H, W = ratio.shape
     out = []
     for k, sl in enumerate(ndimage.find_objects(lab), start=1):
@@ -85,15 +87,14 @@ def scan(job):
             continue
         if sl[0].start < 20 or sl[1].start < 20 or sl[0].stop > H - 20 or sl[1].stop > W - 20:
             continue                                   # touches the frame: edge artifacts
-        m = (lab[sl] == k) & bright[sl]
+        inside = lab[sl] == k
+        m = inside & core[sl]
         area = int(m.sum())
-        if area < 400:
+        if area < 100:
             continue
-        r = np.where(m, ratio[sl], 0.0)
-        ii, jj = np.nonzero(m)
-        wgt = np.sqrt(r[ii, jj])
-        out.append({"date": date, "cy": int(sl[0].start + np.average(ii, weights=wgt)),
-                    "cx": int(sl[1].start + np.average(jj, weights=wgt)), "area": area,
+        r = np.where(inside, ratio[sl], 0.0)
+        cy, cx = np.unravel_index(np.argmax(np.where(inside, dens[sl], -1.0)), r.shape)
+        out.append({"date": date, "cy": int(sl[0].start + cy), "cx": int(sl[1].start + cx), "area": area,
                     "peak": float(r.max()), "n_core": int((r >= 32).sum())})
     return out
 

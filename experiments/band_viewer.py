@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 """Click a pixel on a full-disk band map to see its DEMs and resynthesis.
 
-Reads viewer_<date>.npz written by experiments/band_maps.py --viewer. Left: the network's worst
+Reads viewer_<date>.npz written by experiments/band_maps.py --viewer, or viewer_ar<k>.npz written by
+experiments/active_regions.py (these also carry the noise and the supervised model's DEM, so the
+readings are drawn with error bars and every DEM's resynthesis in DN/s). Left: the network's worst
 channel against the band BP used (grey inside, orange to dark red further outside), or BP's own
 status with --show status. Right, for the clicked pixel: our DEM and BP's against temperature,
 and (reconstruction - reading) / half-width per channel for both, the band drawn as +-1.
@@ -39,10 +41,20 @@ def main():
         cmap, labels = ListedColormap(["black", "#d9d9d9", "#74add1", "#313695"]), [STATUS[k] for k in (0, 1, 3, 5)]
         vals = (0, 1, 2, 3)
 
-    fig = plt.figure(figsize=(15, 7))
-    ax_map = fig.add_axes([0.03, 0.08, 0.45, 0.85])
-    ax_dem = fig.add_axes([0.55, 0.56, 0.42, 0.37])
-    ax_res = fig.add_axes([0.55, 0.08, 0.42, 0.37])
+    full = "err" in d.files
+    fig = plt.figure(figsize=(16, 8.5 if full else 7))
+    ax_map = fig.add_axes([0.03, 0.08, 0.42, 0.85])
+    if full:
+        ax_dem = fig.add_axes([0.53, 0.70, 0.44, 0.25])
+        ax_obs = fig.add_axes([0.53, 0.38, 0.44, 0.25])
+        ax_res = fig.add_axes([0.53, 0.06, 0.44, 0.25])
+    else:
+        ax_dem = fig.add_axes([0.55, 0.56, 0.42, 0.37])
+        ax_res = fig.add_axes([0.55, 0.08, 0.42, 0.37])
+    R = None
+    if full:
+        import os
+        R = np.load(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "RData.npz"))["R"][:, :18] * 1e26
     im = ax_map.imshow(img.reshape(H, W), origin="lower", cmap=cmap, vmin=-0.5, vmax=3.5, interpolation="nearest")
     cb = fig.colorbar(im, ax=ax_map, fraction=0.04, pad=0.01, ticks=vals)
     cb.set_ticklabels(labels)
@@ -59,6 +71,26 @@ def main():
         miss, miss_bp = d["miss"][k].astype(float), d["miss_bp"][k].astype(float)
         ax_dem.plot(logT, bp, "k-", lw=2, label="BP")
         ax_dem.plot(logT, ours, "-", color="tab:blue", lw=1.6, label="ours")
+        if full and np.any(d["sup"][k]):
+            ax_dem.plot(logT, d["sup"][k], "--", color="tab:orange", lw=1.4, label="supervised")
+        if full:
+            ax_obs.cla()
+            o, s_ = d["obs"][k].astype(float), d["err"][k].astype(float)
+            h = 1.4 * s_ * float(d["level"][k])
+            for c in range(6):
+                ax_obs.add_patch(plt.Rectangle((c - 0.32, o[c] - h[c]), 0.64, 2 * h[c], color="0.85", zorder=0))
+            ax_obs.errorbar(np.arange(6), o, yerr=s_, fmt="o", color="k", capsize=4, label="reading +-1 sigma", zorder=3)
+            # ours: the stored miss gives its resynthesis exactly; BP's and the supervised model's via R
+            ax_obs.plot(np.arange(6), o + miss * h, "o", color="tab:blue", mfc="none", ms=7, mew=1.6, label="ours", zorder=4)
+            if np.isfinite(bp).all():
+                ax_obs.plot(np.arange(6) - 0.2, R @ bp, "x", color="k", ms=7, mew=1.6, label="BP", zorder=4)
+            if np.any(d["sup"][k]):
+                ax_obs.plot(np.arange(6) + 0.2, R @ d["sup"][k].astype(float), "s", color="tab:orange", mfc="none",
+                            ms=7, mew=1.6, label="supervised", zorder=4)
+            ax_obs.set_yscale("symlog", linthresh=1.0)
+            ax_obs.set_xticks(np.arange(6), [str(c) for c in CHANNELS])
+            ax_obs.set(ylabel="DN/s", title="readings (grey: BP's band) and resynthesis")
+            ax_obs.legend(fontsize=7, frameon=False, ncol=4)
         ax_dem.set(xlabel="logT", ylabel="DEM")
         ax_dem.legend(fontsize=8, frameon=False)
         ax_dem.set_title(f"pixel ({i},{j}) | BP: {STATUS.get(int(d['tol'][k]), '?')} | readings "

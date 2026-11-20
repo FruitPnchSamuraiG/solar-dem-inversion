@@ -1,0 +1,58 @@
+{
+ "sat_counts": 15000.0,
+ "mapping_check": [
+  0.0,
+  0.0,
+  0.0
+ ],
+ "tight_band_flare_cores": {
+  "n": 16749,
+  "saturated_pct": 9.182637769419069,
+  "saturated_by_channel_pct": {
+   "94": 0.11343960833482597,
+   "131": 0.029852528509164727,
+   "171": 3.4031882500447788,
+   "193": 8.227356857125798,
+   "211": 2.304615200907517,
+   "335": 0.0
+  },
+  "share_of_our_sq_error_pct": 92.3976896845794,
+  "share_of_supervised_sq_error_pct": 99.33275080286516,
+  "saturated_pct_by_type": {
+   "good": 7.799627956417751,
+   "tie": 7.865168539325842,
+   "fits_more": 6.25,
+   "smeared": 5.828779599271402,
+   "too_little": 50.0,
+   "too_much": 21.904761904761905,
+   "wrong_peak": 45.69892473118279,
+   "other": 27.500000000000004
+  },
+  "saturated_pct_extreme_top1": 66.66666666666666,
+  "saturated_pct_missing_hot": 40.0,
+  "our_dem_mse_unsaturated_vs_all": [
+   2024.6779876613425,
+   24186.84670536911
+  ],
+  "supervised_dem_mse_unsaturated_vs_all": [
+   90.97988483352044,
+   12383.009514438869
+  ]
+ },
+ "all_flare_cores_by_bp_status": {
+  "tight": {
+   "n": 16749,
+   "saturated_pct": 9.182637769419069
+  },
+  "widened": {
+   "n": 700,
+   "saturated_pct": 7.7142857142857135
+  },
+  "unsolved": {
+   "n": 806,
+   "saturated_pct": 35.73200992555831
+  }
+ },
+ "unsolved_flare_cores_among_saturated_pct": 15.319148936170212,
+ "dates_with_saturated_pixels": 42
+}

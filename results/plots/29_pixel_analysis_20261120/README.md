@@ -32,6 +32,18 @@ tight band (549 at 3x, 151 at 5x, 806 unsolved). Each of the 16,749 is put in on
 - No two of these pixels have readings within 4.7% of each other in all six channels, so the
   look-alike question cannot be tested on flare cores this way.
 
+## Saturation (`flare_pixels/saturation.json`, `experiments/saturation_check.py`)
+
+Raw counts estimated as reading x the solver file's scale factor (exposure x degradation; before
+deconvolution, so approximate); saturated if any channel reaches 15,000 (AIA saturates near 16,000).
+- 9.2% of the 16,749 tight-band flare cores are saturated (193 A 8.2%, 171 A 3.4%, 211 A 2.3%).
+- They hold 92% of our squared DEM error at flare cores and 99.3% of the supervised model's.
+- Saturated share by type: too little emission 50%, peak shifted 46%, the brightest 1% 67%,
+  matches BP 7.8%.
+- Without them, flare-core DEM MSE is ours 2,025 vs supervised 91 (all: 24,187 vs 12,383), so
+  saturation explains why a few pixels dominate the error, not our gap to the supervised model.
+- Of all flare cores BP could not solve, 36% are saturated (tight band 9.2%, widened 7.7%).
+
 ## Disk maps (`band_maps/`)
 
 Network's worst channel against the band BP used, beside BP's status, for all eight viewer dates

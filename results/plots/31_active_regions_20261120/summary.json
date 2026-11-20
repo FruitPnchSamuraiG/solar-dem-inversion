@@ -1,0 +1,5018 @@
+{
+ "regions": [
+  {
+   "date": "20150927_181524",
+   "cy": 839,
+   "cx": 1733,
+   "area": 12912,
+   "peak": 547.357421875,
+   "n_core": 267,
+   "chosen_by": "peak",
+   "region": 1,
+   "box": [
+    743,
+    1637,
+    192
+   ],
+   "inside_tight_pct": {
+    "ours": 76.03577611079054,
+    "sup": 55.05481823427583
+   },
+   "status_counts": {
+    "unsolved": 0,
+    "tight band": 34660,
+    "widened 3x": 2178,
+    "widened 5x": 26
+   },
+   "pixels": [
+    {
+     "n": 1,
+     "case": "worst_dem",
+     "pixel": [
+      842,
+      1727
+     ],
+     "status": "tight band",
+     "ratio": 533.8897177092344,
+     "rel_dem_diff": 0.18287824682954612,
+     "worst_miss_ours": 5.261984428592536
+    },
+    {
+     "n": 2,
+     "case": "worst_dem",
+     "pixel": [
+      842,
+      1726
+     ],
+     "status": "tight band",
+     "ratio": 547.3574616733948,
+     "rel_dem_diff": 0.13235191296228338,
+     "worst_miss_ours": 2.1295874538681026
+    },
+    {
+     "n": 3,
+     "case": "worst_dem",
+     "pixel": [
+      843,
+      1725
+     ],
+     "status": "tight band",
+     "ratio": 446.85270883143903,
+     "rel_dem_diff": 0.09101794027245683,
+     "worst_miss_ours": 3.477159746053028
+    },
+    {
+     "n": 4,
+     "case": "worst_shape",
+     "pixel": [
+      861,
+      1650
+     ],
+     "status": "tight band",
+     "ratio": 1.3688980299483418,
+     "rel_dem_diff": 1.8533488369433764,
+     "worst_miss_ours": 0.9575420453940593
+    },
+    {
+     "n": 5,
+     "case": "worst_band",
+     "pixel": [
+      843,
+      1726
+     ],
+     "status": "tight band",
+     "ratio": 398.4931614343041,
+     "rel_dem_diff": 0.08363255828596107,
+     "worst_miss_ours": 6.53234072965483
+    },
+    {
+     "n": 6,
+     "case": "widened",
+     "pixel": [
+      858,
+      1726
+     ],
+     "status": "widened 3x",
+     "ratio": 72.60202897715726,
+     "rel_dem_diff": 0.3580771799364427,
+     "worst_miss_ours": 5.29456200129008
+    },
+    {
+     "n": 7,
+     "case": "typical",
+     "pixel": [
+      890,
+      1731
+     ],
+     "status": "tight band",
+     "ratio": 1.7454846474826378,
+     "rel_dem_diff": 0.09668982796516207,
+     "worst_miss_ours": 0.9037927275293175
+    }
+   ]
+  },
+  {
+   "date": "20150928_060524",
+   "cy": 862,
+   "cx": 1781,
+   "area": 13556,
+   "peak": 364.0354309082031,
+   "n_core": 1142,
+   "chosen_by": "peak",
+   "region": 2,
+   "box": [
+    766,
+    1685,
+    192
+   ],
+   "inside_tight_pct": {
+    "ours": 73.84099256731353,
+    "sup": 52.31512276947103
+   },
+   "status_counts": {
+    "unsolved": 0,
+    "tight band": 34577,
+    "widened 3x": 2251,
+    "widened 5x": 36
+   },
+   "pixels": [
+    {
+     "n": 1,
+     "case": "worst_dem",
+     "pixel": [
+      862,
+      1770
+     ],
+     "status": "tight band",
+     "ratio": 306.36224351936954,
+     "rel_dem_diff": 0.15914469841909254,
+     "worst_miss_ours": 1.2207731686608596
+    },
+    {
+     "n": 2,
+     "case": "worst_dem",
+     "pixel": [
+      863,
+      1771
+     ],
+     "status": "tight band",
+     "ratio": 281.69582337121943,
+     "rel_dem_diff": 0.18506828690591298,
+     "worst_miss_ours": 1.4561546029411108
+    },
+    {
+     "n": 3,
+     "case": "worst_dem",
+     "pixel": [
+      863,
+      1770
+     ],
+     "status": "tight band",
+     "ratio": 364.03544053318836,
+     "rel_dem_diff": 0.14567230170897544,
+     "worst_miss_ours": 2.3904168504193053
+    },
+    {
+     "n": 4,
+     "case": "worst_shape",
+     "pixel": [
+      840,
+      1728
+     ],
+     "status": "tight band",
+     "ratio": 1.6592330800662674,
+     "rel_dem_diff": 2.070463144180283,
+     "worst_miss_ours": 1.2401378620641539
+    },
+    {
+     "n": 5,
+     "case": "worst_band",
+     "pixel": [
+      862,
+      1767
+     ],
+     "status": "tight band",
+     "ratio": 97.33860788781658,
+     "rel_dem_diff": 0.07549452571209096,
+     "worst_miss_ours": 3.389765322415532
+    },
+    {
+     "n": 6,
+     "case": "widened",
+     "pixel": [
+      862,
+      1757
+     ],
+     "status": "widened 3x",
+     "ratio": 66.74998953268579,
+     "rel_dem_diff": 0.20405147833722992,
+     "worst_miss_ours": 1.9775686039539146
+    },
+    {
+     "n": 7,
+     "case": "typical",
+     "pixel": [
+      880,
+      1790
+     ],
+     "status": "tight band",
+     "ratio": 34.601905018064464,
+     "rel_dem_diff": 0.12289947896673423,
+     "worst_miss_ours": 1.1254717768603337
+    }
+   ]
+  },
+  {
+   "date": "20150929_060354",
+   "cy": 673,
+   "cx": 1481,
+   "area": 17945,
+   "peak": 1490.7509765625,
+   "n_core": 2071,
+   "chosen_by": "peak",
+   "region": 3,
+   "box": [
+    577,
+    1385,
+    192
+   ],
+   "inside_tight_pct": {
+    "ours": 69.86794010140314,
+    "sup": 42.26506308218371
+   },
+   "status_counts": {
+    "unsolved": 40,
+    "tight band": 33924,
+    "widened 3x": 2786,
+    "widened 5x": 114
+   },
+   "pixels": [
+    {
+     "n": 1,
+     "case": "worst_dem",
+     "pixel": [
+      673,
+      1484
+     ],
+     "status": "tight band",
+     "ratio": 852.3865802065311,
+     "rel_dem_diff": 0.5165671805137735,
+     "worst_miss_ours": 5.865469387555439
+    },
+    {
+     "n": 2,
+     "case": "worst_dem",
+     "pixel": [
+      682,
+      1491
+     ],
+     "status": "tight band",
+     "ratio": 525.2558204526705,
+     "rel_dem_diff": 0.7891208886024575,
+     "worst_miss_ours": 7.538078441783678
+    },
+    {
+     "n": 3,
+     "case": "worst_dem",
+     "pixel": [
+      682,
+      1489
+     ],
+     "status": "tight band",
+     "ratio": 375.79384030981674,
+     "rel_dem_diff": 0.8727676367063476,
+     "worst_miss_ours": 4.880822595062589
+    },
+    {
+     "n": 4,
+     "case": "worst_shape",
+     "pixel": [
+      662,
+      1492
+     ],
+     "status": "tight band",
+     "ratio": 19.712939695562245,
+     "rel_dem_diff": 1.4882578490474,
+     "worst_miss_ours": 1.873020305209278
+    },
+    {
+     "n": 5,
+     "case": "worst_band",
+     "pixel": [
+      680,
+      1492
+     ],
+     "status": "tight band",
+     "ratio": 371.83806681138446,
+     "rel_dem_diff": 0.39721800624436165,
+     "worst_miss_ours": 22.43223652899864
+    },
+    {
+     "n": 6,
+     "case": "brightest",
+     "pixel": [
+      675,
+      1486
+     ],
+     "status": "tight band",
+     "ratio": 1490.7510345079618,
+     "rel_dem_diff": 0.1702418364402745,
+     "worst_miss_ours": 17.688968179984535
+    },
+    {
+     "n": 7,
+     "case": "widened",
+     "pixel": [
+      674,
+      1485
+     ],
+     "status": "widened 3x",
+     "ratio": 1351.2650132561193,
+     "rel_dem_diff": 0.48586502798420295,
+     "worst_miss_ours": 2.876377956969342
+    },
+    {
+     "n": 8,
+     "case": "unsolved",
+     "pixel": [
+      675,
+      1487
+     ],
+     "status": "unsolved",
+     "ratio": 1315.2964317109606,
+     "rel_dem_diff": null,
+     "worst_miss_ours": 22.34506491994247
+    },
+    {
+     "n": 9,
+     "case": "typical",
+     "pixel": [
+      663,
+      1422
+     ],
+     "status": "tight band",
+     "ratio": 8.33740230784401,
+     "rel_dem_diff": 0.08729276515499748,
+     "worst_miss_ours": 0.9617765652949622
+    }
+   ]
+  },
+  {
+   "date": "20150929_180425",
+   "cy": 677,
+   "cx": 1538,
+   "area": 19179,
+   "peak": 771.7033081054688,
+   "n_core": 740,
+   "chosen_by": "peak",
+   "region": 4,
+   "box": [
+    581,
+    1442,
+    192
+   ],
+   "inside_tight_pct": {
+    "ours": 74.27435728788355,
+    "sup": 42.60630844462238
+   },
+   "status_counts": {
+    "unsolved": 1,
+    "tight band": 34969,
+    "widened 3x": 1876,
+    "widened 5x": 18
+   },
+   "pixels": [
+    {
+     "n": 1,
+     "case": "worst_dem",
+     "pixel": [
+      681,
+      1490
+     ],
+     "status": "tight band",
+     "ratio": 771.7033131037341,
+     "rel_dem_diff": 0.45674122835282077,
+     "worst_miss_ours": 8.706917132718988
+    },
+    {
+     "n": 2,
+     "case": "worst_dem",
+     "pixel": [
+      681,
+      1491
+     ],
+     "status": "tight band",
+     "ratio": 331.5988844301884,
+     "rel_dem_diff": 0.8785850317804677,
+     "worst_miss_ours": 18.60399173448231
+    },
+    {
+     "n": 3,
+     "case": "worst_dem",
+     "pixel": [
+      680,
+      1489
+     ],
+     "status": "tight band",
+     "ratio": 575.8776109248847,
+     "rel_dem_diff": 0.33498094997389455,
+     "worst_miss_ours": 3.2006191349495436
+    },
+    {
+     "n": 4,
+     "case": "worst_shape",
+     "pixel": [
+      730,
+      1594
+     ],
+     "status": "tight band",
+     "ratio": 1.2980018030184912,
+     "rel_dem_diff": 1.1968356724421745,
+     "worst_miss_ours": 1.267045709063683
+    },
+    {
+     "n": 5,
+     "case": "widened",
+     "pixel": [
+      680,
+      1490
+     ],
+     "status": "widened 5x",
+     "ratio": 344.0166120298142,
+     "rel_dem_diff": 0.8769160659306909,
+     "worst_miss_ours": 4.440820355294853
+    },
+    {
+     "n": 6,
+     "case": "unsolved",
+     "pixel": [
+      695,
+      1532
+     ],
+     "status": "unsolved",
+     "ratio": 100.3243805369353,
+     "rel_dem_diff": null,
+     "worst_miss_ours": 15411.44506858419
+    },
+    {
+     "n": 7,
+     "case": "typical",
+     "pixel": [
+      629,
+      1445
+     ],
+     "status": "tight band",
+     "ratio": 8.871784874241483,
+     "rel_dem_diff": 0.0773890294820259,
+     "worst_miss_ours": 1.1333040067425149
+    }
+   ]
+  },
+  {
+   "date": "20150930_053501",
+   "cy": 663,
+   "cx": 1540,
+   "area": 23120,
+   "peak": 849.2201538085938,
+   "n_core": 1154,
+   "chosen_by": "peak",
+   "region": 5,
+   "box": [
+    567,
+    1444,
+    192
+   ],
+   "inside_tight_pct": {
+    "ours": 66.86325101363803,
+    "sup": 38.577787859026344
+   },
+   "status_counts": {
+    "unsolved": 34,
+    "tight band": 35269,
+    "widened 3x": 1530,
+    "widened 5x": 31
+   },
+   "pixels": [
+    {
+     "n": 1,
+     "case": "worst_dem",
+     "pixel": [
+      667,
+      1535
+     ],
+     "status": "tight band",
+     "ratio": 590.7525219907816,
+     "rel_dem_diff": 0.4369478012492836,
+     "worst_miss_ours": 22.904901123563945
+    },
+    {
+     "n": 2,
+     "case": "worst_dem",
+     "pixel": [
+      667,
+      1533
+     ],
+     "status": "tight band",
+     "ratio": 775.5143535789521,
+     "rel_dem_diff": 0.35428947475764716,
+     "worst_miss_ours": 4.8195690691581445
+    },
+    {
+     "n": 3,
+     "case": "worst_dem",
+     "pixel": [
+      668,
+      1531
+     ],
+     "status": "tight band",
+     "ratio": 431.6843422226427,
+     "rel_dem_diff": 0.6441367452638095,
+     "worst_miss_ours": 6.675382392015144
+    },
+    {
+     "n": 4,
+     "case": "worst_shape",
+     "pixel": [
+      651,
+      1481
+     ],
+     "status": "tight band",
+     "ratio": 5.596575557974489,
+     "rel_dem_diff": 1.4036994989027545,
+     "worst_miss_ours": 1.2377619576681225
+    },
+    {
+     "n": 5,
+     "case": "brightest",
+     "pixel": [
+      667,
+      1532
+     ],
+     "status": "tight band",
+     "ratio": 849.2201517044726,
+     "rel_dem_diff": 0.15771886582134098,
+     "worst_miss_ours": 9.770369364267298
+    },
+    {
+     "n": 6,
+     "case": "widened",
+     "pixel": [
+      664,
+      1536
+     ],
+     "status": "widened 3x",
+     "ratio": 401.3136223647956,
+     "rel_dem_diff": 0.4978655741856096,
+     "worst_miss_ours": 4.315356418060416
+    },
+    {
+     "n": 7,
+     "case": "unsolved",
+     "pixel": [
+      661,
+      1540
+     ],
+     "status": "unsolved",
+     "ratio": 438.15022588257267,
+     "rel_dem_diff": null,
+     "worst_miss_ours": 19.435625432610312
+    },
+    {
+     "n": 8,
+     "case": "typical",
+     "pixel": [
+      624,
+      1628
+     ],
+     "status": "tight band",
+     "ratio": 8.29252695007598,
+     "rel_dem_diff": 0.17166410139101576,
+     "worst_miss_ours": 1.0050759733741397
+    }
+   ]
+  },
+  {
+   "date": "20150930_182354",
+   "cy": 713,
+   "cx": 1650,
+   "area": 20525,
+   "peak": 752.1329345703125,
+   "n_core": 133,
+   "chosen_by": "peak",
+   "region": 6,
+   "box": [
+    617,
+    1554,
+    192
+   ],
+   "inside_tight_pct": {
+    "ours": 71.78416113527123,
+    "sup": 42.52403295948729
+   },
+   "status_counts": {
+    "unsolved": 5,
+    "tight band": 34952,
+    "widened 3x": 1882,
+    "widened 5x": 25
+   },
+   "pixels": [
+    {
+     "n": 1,
+     "case": "worst_dem",
+     "pixel": [
+      711,
+      1662
+     ],
+     "status": "tight band",
+     "ratio": 462.4541802206483,
+     "rel_dem_diff": 0.7820402988346564,
+     "worst_miss_ours": 5.751606799253159
+    },
+    {
+     "n": 2,
+     "case": "worst_dem",
+     "pixel": [
+      708,
+      1662
+     ],
+     "status": "tight band",
+     "ratio": 295.1115705134944,
+     "rel_dem_diff": 0.42558268179427056,
+     "worst_miss_ours": 3.144640560790842
+    },
+    {
+     "n": 3,
+     "case": "worst_dem",
+     "pixel": [
+      713,
+      1663
+     ],
+     "status": "tight band",
+     "ratio": 334.2852408528771,
+     "rel_dem_diff": 0.1922010392953178,
+     "worst_miss_ours": 1.7821949966778516
+    },
+    {
+     "n": 4,
+     "case": "worst_shape",
+     "pixel": [
+      674,
+      1562
+     ],
+     "status": "tight band",
+     "ratio": 8.780124062836425,
+     "rel_dem_diff": 1.602135252309964,
+     "worst_miss_ours": 0.8882063375977092
+    },
+    {
+     "n": 5,
+     "case": "brightest",
+     "pixel": [
+      713,
+      1662
+     ],
+     "status": "unsolved",
+     "ratio": 752.1329530459038,
+     "rel_dem_diff": null,
+     "worst_miss_ours": 3176.752354511518
+    },
+    {
+     "n": 6,
+     "case": "widened",
+     "pixel": [
+      711,
+      1663
+     ],
+     "status": "widened 5x",
+     "ratio": 635.7319844538667,
+     "rel_dem_diff": 1.0892748440358972,
+     "worst_miss_ours": 5.229715559683536
+    },
+    {
+     "n": 7,
+     "case": "typical",
+     "pixel": [
+      623,
+      1707
+     ],
+     "status": "tight band",
+     "ratio": 2.8889368363531616,
+     "rel_dem_diff": 0.050067270912513964,
+     "worst_miss_ours": 0.9481928893556618
+    }
+   ]
+  },
+  {
+   "date": "20151001_060854",
+   "cy": 923,
+   "cx": 1838,
+   "area": 28403,
+   "peak": 33.21412658691406,
+   "n_core": 1,
+   "chosen_by": "area",
+   "region": 7,
+   "box": [
+    827,
+    1742,
+    192
+   ],
+   "inside_tight_pct": {
+    "ours": 78.88422134244009,
+    "sup": 54.07235032790353
+   },
+   "status_counts": {
+    "unsolved": 1,
+    "tight band": 33089,
+    "widened 3x": 3735,
+    "widened 5x": 39
+   },
+   "pixels": [
+    {
+     "n": 1,
+     "case": "worst_dem",
+     "pixel": [
+      924,
+      1836
+     ],
+     "status": "tight band",
+     "ratio": 21.44402851615813,
+     "rel_dem_diff": 0.3583063337093874,
+     "worst_miss_ours": 1.7216111029754513
+    },
+    {
+     "n": 2,
+     "case": "worst_dem",
+     "pixel": [
+      909,
+      1830
+     ],
+     "status": "tight band",
+     "ratio": 22.35041060424186,
+     "rel_dem_diff": 0.3606847511226992,
+     "worst_miss_ours": 1.6654154984047105
+    },
+    {
+     "n": 3,
+     "case": "worst_dem",
+     "pixel": [
+      916,
+      1843
+     ],
+     "status": "tight band",
+     "ratio": 22.69629300641395,
+     "rel_dem_diff": 0.23837819420645293,
+     "worst_miss_ours": 1.105846450177669
+    },
+    {
+     "n": 4,
+     "case": "worst_shape",
+     "pixel": [
+      914,
+      1818
+     ],
+     "status": "tight band",
+     "ratio": 3.418362234768484,
+     "rel_dem_diff": 1.3394961514585886,
+     "worst_miss_ours": 0.9587372447120039
+    },
+    {
+     "n": 5,
+     "case": "worst_band",
+     "pixel": [
+      926,
+      1832
+     ],
+     "status": "tight band",
+     "ratio": 16.876967906777985,
+     "rel_dem_diff": 0.23874037375843857,
+     "worst_miss_ours": 3.725005999991577
+    },
+    {
+     "n": 6,
+     "case": "brightest",
+     "pixel": [
+      915,
+      1846
+     ],
+     "status": "tight band",
+     "ratio": 25.189879636457192,
+     "rel_dem_diff": 0.19748597353721226,
+     "worst_miss_ours": 1.6077144875253429
+    },
+    {
+     "n": 7,
+     "case": "widened",
+     "pixel": [
+      908,
+      1847
+     ],
+     "status": "widened 3x",
+     "ratio": 18.840005832511576,
+     "rel_dem_diff": 0.1789384238057256,
+     "worst_miss_ours": 1.0579419563752839
+    },
+    {
+     "n": 8,
+     "case": "unsolved",
+     "pixel": [
+      916,
+      1817
+     ],
+     "status": "unsolved",
+     "ratio": 1.6441497972853336,
+     "rel_dem_diff": null,
+     "worst_miss_ours": 5.698490897944615
+    },
+    {
+     "n": 9,
+     "case": "typical",
+     "pixel": [
+      841,
+      1853
+     ],
+     "status": "tight band",
+     "ratio": 1.82278500596763,
+     "rel_dem_diff": 0.019700522691045122,
+     "worst_miss_ours": 1.0146015931764203
+    }
+   ]
+  },
+  {
+   "date": "20151001_180354",
+   "cy": 722,
+   "cx": 1735,
+   "area": 44879,
+   "peak": 181.9805145263672,
+   "n_core": 996,
+   "chosen_by": "area",
+   "region": 8,
+   "box": [
+    626,
+    1639,
+    192
+   ],
+   "inside_tight_pct": {
+    "ours": 71.22847237754416,
+    "sup": 41.30507716394543
+   },
+   "status_counts": {
+    "unsolved": 1,
+    "tight band": 35768,
+    "widened 3x": 1090,
+    "widened 5x": 5
+   },
+   "pixels": [
+    {
+     "n": 1,
+     "case": "worst_dem",
+     "pixel": [
+      713,
+      1694
+     ],
+     "status": "tight band",
+     "ratio": 159.91414309800717,
+     "rel_dem_diff": 0.18265999745697992,
+     "worst_miss_ours": 1.4457647514428087
+    },
+    {
+     "n": 2,
+     "case": "worst_dem",
+     "pixel": [
+      709,
+      1682
+     ],
+     "status": "tight band",
+     "ratio": 134.07927194647647,
+     "rel_dem_diff": 0.20034322843346175,
+     "worst_miss_ours": 4.006051209668368
+    },
+    {
+     "n": 3,
+     "case": "worst_dem",
+     "pixel": [
+      736,
+      1697
+     ],
+     "status": "tight band",
+     "ratio": 54.05149863444637,
+     "rel_dem_diff": 0.2936193662669373,
+     "worst_miss_ours": 2.0275429119267474
+    },
+    {
+     "n": 4,
+     "case": "worst_shape",
+     "pixel": [
+      798,
+      1771
+     ],
+     "status": "tight band",
+     "ratio": 2.777032859741256,
+     "rel_dem_diff": 1.1850041387799843,
+     "worst_miss_ours": 2.3145729273917093
+    },
+    {
+     "n": 5,
+     "case": "worst_band",
+     "pixel": [
+      712,
+      1692
+     ],
+     "status": "tight band",
+     "ratio": 118.64801622210108,
+     "rel_dem_diff": 0.1578094976969312,
+     "worst_miss_ours": 5.237279359270945
+    },
+    {
+     "n": 6,
+     "case": "brightest",
+     "pixel": [
+      715,
+      1700
+     ],
+     "status": "tight band",
+     "ratio": 181.98052660159755,
+     "rel_dem_diff": 0.13925009625068135,
+     "worst_miss_ours": 0.8007146050488059
+    },
+    {
+     "n": 7,
+     "case": "widened",
+     "pixel": [
+      679,
+      1684
+     ],
+     "status": "widened 3x",
+     "ratio": 8.106827932033307,
+     "rel_dem_diff": 0.2761691351939467,
+     "worst_miss_ours": 0.6317726774443536
+    },
+    {
+     "n": 8,
+     "case": "unsolved",
+     "pixel": [
+      704,
+      1639
+     ],
+     "status": "unsolved",
+     "ratio": 1.6689558970425864,
+     "rel_dem_diff": null,
+     "worst_miss_ours": 5.445866644549919
+    },
+    {
+     "n": 9,
+     "case": "typical",
+     "pixel": [
+      628,
+      1820
+     ],
+     "status": "tight band",
+     "ratio": 2.358891445569197,
+     "rel_dem_diff": 0.04032061605193237,
+     "worst_miss_ours": 0.9806577251690602
+    }
+   ]
+  },
+  {
+   "date": "20151002_175929",
+   "cy": 715,
+   "cx": 1781,
+   "area": 22961,
+   "peak": 3163.27197265625,
+   "n_core": 3477,
+   "chosen_by": "peak",
+   "region": 9,
+   "box": [
+    619,
+    1685,
+    192
+   ],
+   "inside_tight_pct": {
+    "ours": 67.10080750195362,
+    "sup": 37.243495123151284
+   },
+   "status_counts": {
+    "unsolved": 293,
+    "tight band": 34551,
+    "widened 3x": 1870,
+    "widened 5x": 150
+   },
+   "pixels": [
+    {
+     "n": 1,
+     "case": "worst_dem",
+     "pixel": [
+      746,
+      1760
+     ],
+     "status": "tight band",
+     "ratio": 2275.2291786812766,
+     "rel_dem_diff": 0.8358805514720395,
+     "worst_miss_ours": 26.608651738454956
+    },
+    {
+     "n": 2,
+     "case": "worst_dem",
+     "pixel": [
+      749,
+      1760
+     ],
+     "status": "tight band",
+     "ratio": 2054.4236479058536,
+     "rel_dem_diff": 0.7792509184237029,
+     "worst_miss_ours": 23.300097091949073
+    },
+    {
+     "n": 3,
+     "case": "worst_dem",
+     "pixel": [
+      748,
+      1763
+     ],
+     "status": "tight band",
+     "ratio": 844.2157851447361,
+     "rel_dem_diff": 0.7706596465113318,
+     "worst_miss_ours": 25.931915447640428
+    },
+    {
+     "n": 4,
+     "case": "worst_shape",
+     "pixel": [
+      781,
+      1735
+     ],
+     "status": "tight band",
+     "ratio": 2.1490190603443766,
+     "rel_dem_diff": 1.6379075308451112,
+     "worst_miss_ours": 2.317849873858651
+    },
+    {
+     "n": 5,
+     "case": "worst_band",
+     "pixel": [
+      749,
+      1762
+     ],
+     "status": "tight band",
+     "ratio": 788.1874202780581,
+     "rel_dem_diff": 0.7694030473171274,
+     "worst_miss_ours": 62.05777919249187
+    },
+    {
+     "n": 6,
+     "case": "brightest",
+     "pixel": [
+      748,
+      1761
+     ],
+     "status": "unsolved",
+     "ratio": 3163.2721639513647,
+     "rel_dem_diff": null,
+     "worst_miss_ours": 23590.065680433167
+    },
+    {
+     "n": 7,
+     "case": "widened",
+     "pixel": [
+      745,
+      1760
+     ],
+     "status": "widened 3x",
+     "ratio": 1939.2116751469787,
+     "rel_dem_diff": 0.5869367656693314,
+     "worst_miss_ours": 12.376142673905706
+    },
+    {
+     "n": 8,
+     "case": "typical",
+     "pixel": [
+      647,
+      1867
+     ],
+     "status": "tight band",
+     "ratio": 2.0020437686398056,
+     "rel_dem_diff": 0.061831834004888786,
+     "worst_miss_ours": 0.9611335971006503
+    }
+   ]
+  },
+  {
+   "date": "20151014_174600",
+   "cy": 846,
+   "cx": 257,
+   "area": 23611,
+   "peak": 892.3468017578125,
+   "n_core": 394,
+   "chosen_by": "peak",
+   "region": 10,
+   "box": [
+    750,
+    161,
+    192
+   ],
+   "inside_tight_pct": {
+    "ours": 74.76214746856948,
+    "sup": 44.00554989240005
+   },
+   "status_counts": {
+    "unsolved": 6,
+    "tight band": 35316,
+    "widened 3x": 1513,
+    "widened 5x": 29
+   },
+   "pixels": [
+    {
+     "n": 1,
+     "case": "worst_dem",
+     "pixel": [
+      853,
+      263
+     ],
+     "status": "tight band",
+     "ratio": 892.3468124739684,
+     "rel_dem_diff": 0.924948339187466,
+     "worst_miss_ours": 8.367192729154372
+    },
+    {
+     "n": 2,
+     "case": "worst_dem",
+     "pixel": [
+      854,
+      264
+     ],
+     "status": "tight band",
+     "ratio": 755.8670249273116,
+     "rel_dem_diff": 0.30497599810499876,
+     "worst_miss_ours": 13.57431487494442
+    },
+    {
+     "n": 3,
+     "case": "worst_dem",
+     "pixel": [
+      854,
+      263
+     ],
+     "status": "tight band",
+     "ratio": 622.3339846878805,
+     "rel_dem_diff": 0.3869335964403433,
+     "worst_miss_ours": 5.868942010249566
+    },
+    {
+     "n": 4,
+     "case": "worst_shape",
+     "pixel": [
+      766,
+      180
+     ],
+     "status": "tight band",
+     "ratio": 2.6565041758121937,
+     "rel_dem_diff": 1.244105408080059,
+     "worst_miss_ours": 1.6797767572646338
+    },
+    {
+     "n": 5,
+     "case": "widened",
+     "pixel": [
+      852,
+      264
+     ],
+     "status": "widened 3x",
+     "ratio": 802.6630695425638,
+     "rel_dem_diff": 0.4115965682630631,
+     "worst_miss_ours": 2.9033197696386477
+    },
+    {
+     "n": 6,
+     "case": "unsolved",
+     "pixel": [
+      852,
+      263
+     ],
+     "status": "unsolved",
+     "ratio": 685.4566402745739,
+     "rel_dem_diff": null,
+     "worst_miss_ours": 21.47131738437887
+    },
+    {
+     "n": 7,
+     "case": "typical",
+     "pixel": [
+      905,
+      183
+     ],
+     "status": "tight band",
+     "ratio": 2.4194753426483135,
+     "rel_dem_diff": 0.11394973267361286,
+     "worst_miss_ours": 1.0654854379082486
+    }
+   ]
+  },
+  {
+   "date": "20151015_060325",
+   "cy": 830,
+   "cx": 246,
+   "area": 38175,
+   "peak": 44.243743896484375,
+   "n_core": 7,
+   "chosen_by": "area",
+   "region": 11,
+   "box": [
+    734,
+    150,
+    192
+   ],
+   "inside_tight_pct": {
+    "ours": 73.48942812544344,
+    "sup": 37.28111253015467
+   },
+   "status_counts": {
+    "unsolved": 0,
+    "tight band": 35235,
+    "widened 3x": 1596,
+    "widened 5x": 33
+   },
+   "pixels": [
+    {
+     "n": 1,
+     "case": "worst_dem",
+     "pixel": [
+      882,
+      297
+     ],
+     "status": "tight band",
+     "ratio": 19.864696909311913,
+     "rel_dem_diff": 0.5186061170301437,
+     "worst_miss_ours": 7.957839915252467
+    },
+    {
+     "n": 2,
+     "case": "worst_dem",
+     "pixel": [
+      779,
+      278
+     ],
+     "status": "tight band",
+     "ratio": 6.956445363342882,
+     "rel_dem_diff": 1.142354576371871,
+     "worst_miss_ours": 1.792569502332819
+    },
+    {
+     "n": 3,
+     "case": "worst_dem",
+     "pixel": [
+      906,
+      300
+     ],
+     "status": "tight band",
+     "ratio": 10.769331268097304,
+     "rel_dem_diff": 0.5308091864478676,
+     "worst_miss_ours": 2.4122327634315837
+    },
+    {
+     "n": 4,
+     "case": "worst_shape",
+     "pixel": [
+      739,
+      311
+     ],
+     "status": "tight band",
+     "ratio": 1.8217695476290607,
+     "rel_dem_diff": 1.1481942400401344,
+     "worst_miss_ours": 2.0203622308494102
+    },
+    {
+     "n": 5,
+     "case": "brightest",
+     "pixel": [
+      797,
+      299
+     ],
+     "status": "tight band",
+     "ratio": 35.88052911457598,
+     "rel_dem_diff": 0.1692469555902995,
+     "worst_miss_ours": 0.920545908447798
+    },
+    {
+     "n": 6,
+     "case": "widened",
+     "pixel": [
+      854,
+      221
+     ],
+     "status": "widened 3x",
+     "ratio": 18.62987446466085,
+     "rel_dem_diff": 0.2686357495490206,
+     "worst_miss_ours": 0.9817044432640151
+    },
+    {
+     "n": 7,
+     "case": "typical",
+     "pixel": [
+      860,
+      307
+     ],
+     "status": "tight band",
+     "ratio": 7.032688986241438,
+     "rel_dem_diff": 0.08763847590944047,
+     "worst_miss_ours": 0.9821010189437988
+    }
+   ]
+  },
+  {
+   "date": "20151015_190901",
+   "cy": 823,
+   "cx": 400,
+   "area": 35350,
+   "peak": 105.87080383300781,
+   "n_core": 131,
+   "chosen_by": "area",
+   "region": 12,
+   "box": [
+    727,
+    304,
+    192
+   ],
+   "inside_tight_pct": {
+    "ours": 77.58822154709044,
+    "sup": 47.74772143024071
+   },
+   "status_counts": {
+    "unsolved": 1,
+    "tight band": 34232,
+    "widened 3x": 2604,
+    "widened 5x": 27
+   },
+   "pixels": [
+    {
+     "n": 1,
+     "case": "worst_dem",
+     "pixel": [
+      816,
+      394
+     ],
+     "status": "tight band",
+     "ratio": 78.17964652830342,
+     "rel_dem_diff": 0.1509038876657474,
+     "worst_miss_ours": 0.6610670404219671
+    },
+    {
+     "n": 2,
+     "case": "worst_dem",
+     "pixel": [
+      813,
+      393
+     ],
+     "status": "tight band",
+     "ratio": 76.96964000412001,
+     "rel_dem_diff": 0.14365032123293284,
+     "worst_miss_ours": 1.0656555837705122
+    },
+    {
+     "n": 3,
+     "case": "worst_dem",
+     "pixel": [
+      816,
+      388
+     ],
+     "status": "tight band",
+     "ratio": 20.060481191613377,
+     "rel_dem_diff": 0.5634932944502131,
+     "worst_miss_ours": 2.463657808511075
+    },
+    {
+     "n": 4,
+     "case": "worst_shape",
+     "pixel": [
+      733,
+      367
+     ],
+     "status": "tight band",
+     "ratio": 1.4127260014711005,
+     "rel_dem_diff": 1.3101971857364414,
+     "worst_miss_ours": 1.3670336948288806
+    },
+    {
+     "n": 5,
+     "case": "worst_band",
+     "pixel": [
+      819,
+      415
+     ],
+     "status": "tight band",
+     "ratio": 7.36598637033805,
+     "rel_dem_diff": 0.32032046982659856,
+     "worst_miss_ours": 4.379050576965401
+    },
+    {
+     "n": 6,
+     "case": "brightest",
+     "pixel": [
+      816,
+      398
+     ],
+     "status": "tight band",
+     "ratio": 105.87080921650727,
+     "rel_dem_diff": 0.1020075036291642,
+     "worst_miss_ours": 1.1782004836574573
+    },
+    {
+     "n": 7,
+     "case": "widened",
+     "pixel": [
+      826,
+      425
+     ],
+     "status": "widened 3x",
+     "ratio": 14.595056962239262,
+     "rel_dem_diff": 0.12747794801590423,
+     "worst_miss_ours": 0.9902664944061071
+    },
+    {
+     "n": 8,
+     "case": "unsolved",
+     "pixel": [
+      767,
+      355
+     ],
+     "status": "unsolved",
+     "ratio": 0.9955192519719213,
+     "rel_dem_diff": null,
+     "worst_miss_ours": 7.117259853709931
+    },
+    {
+     "n": 9,
+     "case": "typical",
+     "pixel": [
+      902,
+      382
+     ],
+     "status": "tight band",
+     "ratio": 7.6477819917375225,
+     "rel_dem_diff": 0.07317721413123761,
+     "worst_miss_ours": 1.010329507445038
+    }
+   ]
+  },
+  {
+   "date": "20151016_062000",
+   "cy": 814,
+   "cx": 454,
+   "area": 64600,
+   "peak": 6010.302734375,
+   "n_core": 614,
+   "chosen_by": "peak",
+   "region": 13,
+   "box": [
+    718,
+    358,
+    192
+   ],
+   "inside_tight_pct": {
+    "ours": 64.81297284263195,
+    "sup": 44.28369050848479
+   },
+   "status_counts": {
+    "unsolved": 367,
+    "tight band": 33177,
+    "widened 3x": 3115,
+    "widened 5x": 205
+   },
+   "pixels": [
+    {
+     "n": 1,
+     "case": "worst_dem",
+     "pixel": [
+      808,
+      457
+     ],
+     "status": "tight band",
+     "ratio": 2886.463376966391,
+     "rel_dem_diff": 1.0243687379245396,
+     "worst_miss_ours": 62.936075229541956
+    },
+    {
+     "n": 2,
+     "case": "worst_dem",
+     "pixel": [
+      809,
+      458
+     ],
+     "status": "tight band",
+     "ratio": 2774.1295915833653,
+     "rel_dem_diff": 0.7896093864988942,
+     "worst_miss_ours": 42.92872787506894
+    },
+    {
+     "n": 3,
+     "case": "worst_dem",
+     "pixel": [
+      808,
+      455
+     ],
+     "status": "tight band",
+     "ratio": 5584.249401421293,
+     "rel_dem_diff": 0.6189974736506726,
+     "worst_miss_ours": 730.7612168412162
+    },
+    {
+     "n": 4,
+     "case": "worst_shape",
+     "pixel": [
+      766,
+      539
+     ],
+     "status": "tight band",
+     "ratio": 1.0114490741120548,
+     "rel_dem_diff": 7.213404424592546,
+     "worst_miss_ours": 1.0969452841502987
+    },
+    {
+     "n": 5,
+     "case": "brightest",
+     "pixel": [
+      807,
+      454
+     ],
+     "status": "unsolved",
+     "ratio": 6010.302870530514,
+     "rel_dem_diff": null,
+     "worst_miss_ours": 169475.97710184375
+    },
+    {
+     "n": 6,
+     "case": "widened",
+     "pixel": [
+      807,
+      455
+     ],
+     "status": "widened 3x",
+     "ratio": 4877.97202784347,
+     "rel_dem_diff": 0.5309216603383642,
+     "worst_miss_ours": 62.17781213206663
+    },
+    {
+     "n": 7,
+     "case": "typical",
+     "pixel": [
+      822,
+      403
+     ],
+     "status": "tight band",
+     "ratio": 1.3758456968243697,
+     "rel_dem_diff": 0.2507135377239752,
+     "worst_miss_ours": 1.0169840346344365
+    }
+   ]
+  },
+  {
+   "date": "20151016_180555",
+   "cy": 806,
+   "cx": 522,
+   "area": 16891,
+   "peak": 396.2493591308594,
+   "n_core": 146,
+   "chosen_by": "peak",
+   "region": 14,
+   "box": [
+    710,
+    426,
+    192
+   ],
+   "inside_tight_pct": {
+    "ours": 78.96109345962472,
+    "sup": 48.908938313050776
+   },
+   "status_counts": {
+    "unsolved": 53,
+    "tight band": 33362,
+    "widened 3x": 3403,
+    "widened 5x": 46
+   },
+   "pixels": [
+    {
+     "n": 1,
+     "case": "worst_dem",
+     "pixel": [
+      801,
+      523
+     ],
+     "status": "tight band",
+     "ratio": 254.82250087981987,
+     "rel_dem_diff": 0.3296327050576673,
+     "worst_miss_ours": 7.0092419004889965
+    },
+    {
+     "n": 2,
+     "case": "worst_dem",
+     "pixel": [
+      800,
+      523
+     ],
+     "status": "tight band",
+     "ratio": 396.2493783065207,
+     "rel_dem_diff": 0.2868549527825708,
+     "worst_miss_ours": 4.006999230070291
+    },
+    {
+     "n": 3,
+     "case": "worst_dem",
+     "pixel": [
+      801,
+      524
+     ],
+     "status": "tight band",
+     "ratio": 258.6170173556044,
+     "rel_dem_diff": 0.23557466060221785,
+     "worst_miss_ours": 5.337612018624337
+    },
+    {
+     "n": 4,
+     "case": "worst_shape",
+     "pixel": [
+      811,
+      458
+     ],
+     "status": "tight band",
+     "ratio": 2.8015849477836876,
+     "rel_dem_diff": 1.2207907699110974,
+     "worst_miss_ours": 1.538694433765946
+    },
+    {
+     "n": 5,
+     "case": "worst_band",
+     "pixel": [
+      796,
+      526
+     ],
+     "status": "tight band",
+     "ratio": 26.815331942753847,
+     "rel_dem_diff": 0.28422873567192336,
+     "worst_miss_ours": 18.529192398621092
+    },
+    {
+     "n": 6,
+     "case": "widened",
+     "pixel": [
+      798,
+      526
+     ],
+     "status": "widened 5x",
+     "ratio": 57.53848731476416,
+     "rel_dem_diff": 0.4826615612077475,
+     "worst_miss_ours": 5.093241216494463
+    },
+    {
+     "n": 7,
+     "case": "unsolved",
+     "pixel": [
+      797,
+      526
+     ],
+     "status": "unsolved",
+     "ratio": 58.06827476567432,
+     "rel_dem_diff": null,
+     "worst_miss_ours": 53292.64324416018
+    },
+    {
+     "n": 8,
+     "case": "typical",
+     "pixel": [
+      836,
+      554
+     ],
+     "status": "tight band",
+     "ratio": 2.891112944414627,
+     "rel_dem_diff": 0.052362819126993025,
+     "worst_miss_ours": 1.070915858624471
+    }
+   ]
+  },
+  {
+   "date": "20151017_191501",
+   "cy": 740,
+   "cx": 256,
+   "area": 33025,
+   "peak": 697.61572265625,
+   "n_core": 1011,
+   "chosen_by": "peak",
+   "region": 15,
+   "box": [
+    644,
+    160,
+    192
+   ],
+   "inside_tight_pct": {
+    "ours": 64.71544251824818,
+    "sup": 28.715214416058394
+   },
+   "status_counts": {
+    "unsolved": 3,
+    "tight band": 35072,
+    "widened 3x": 1757,
+    "widened 5x": 32
+   },
+   "pixels": [
+    {
+     "n": 1,
+     "case": "worst_dem",
+     "pixel": [
+      732,
+      263
+     ],
+     "status": "tight band",
+     "ratio": 697.6157225936739,
+     "rel_dem_diff": 0.8274576472417013,
+     "worst_miss_ours": 7.68898811574102
+    },
+    {
+     "n": 2,
+     "case": "worst_dem",
+     "pixel": [
+      731,
+      263
+     ],
+     "status": "tight band",
+     "ratio": 582.0524241853093,
+     "rel_dem_diff": 0.8310685143977805,
+     "worst_miss_ours": 8.409793307089252
+    },
+    {
+     "n": 3,
+     "case": "worst_dem",
+     "pixel": [
+      733,
+      264
+     ],
+     "status": "tight band",
+     "ratio": 620.7005531225971,
+     "rel_dem_diff": 0.6325279745557187,
+     "worst_miss_ours": 6.133111687571733
+    },
+    {
+     "n": 4,
+     "case": "worst_shape",
+     "pixel": [
+      772,
+      324
+     ],
+     "status": "tight band",
+     "ratio": 6.000399905118565,
+     "rel_dem_diff": 1.4409122183927543,
+     "worst_miss_ours": 1.3834016775558857
+    },
+    {
+     "n": 5,
+     "case": "worst_band",
+     "pixel": [
+      733,
+      257
+     ],
+     "status": "tight band",
+     "ratio": 303.51759301811,
+     "rel_dem_diff": 0.1924281224252072,
+     "worst_miss_ours": 13.877320445171948
+    },
+    {
+     "n": 6,
+     "case": "widened",
+     "pixel": [
+      732,
+      262
+     ],
+     "status": "widened 3x",
+     "ratio": 601.9104387184817,
+     "rel_dem_diff": 0.5216554050080155,
+     "worst_miss_ours": 3.026922837956788
+    },
+    {
+     "n": 7,
+     "case": "unsolved",
+     "pixel": [
+      726,
+      259
+     ],
+     "status": "unsolved",
+     "ratio": 45.47939474087991,
+     "rel_dem_diff": null,
+     "worst_miss_ours": 11.995699627433474
+    },
+    {
+     "n": 8,
+     "case": "typical",
+     "pixel": [
+      829,
+      278
+     ],
+     "status": "tight band",
+     "ratio": 4.19743210288009,
+     "rel_dem_diff": 0.06211842098760054,
+     "worst_miss_ours": 0.9491215428775961
+    }
+   ]
+  },
+  {
+   "date": "20151018_060358",
+   "cy": 1126,
+   "cx": 269,
+   "area": 31760,
+   "peak": 609.9542236328125,
+   "n_core": 84,
+   "chosen_by": "peak",
+   "region": 16,
+   "box": [
+    1030,
+    173,
+    192
+   ],
+   "inside_tight_pct": {
+    "ours": 67.41959960310511,
+    "sup": 36.429697075818595
+   },
+   "status_counts": {
+    "unsolved": 4,
+    "tight band": 34266,
+    "widened 3x": 2557,
+    "widened 5x": 37
+   },
+   "pixels": [
+    {
+     "n": 1,
+     "case": "worst_dem",
+     "pixel": [
+      1116,
+      259
+     ],
+     "status": "tight band",
+     "ratio": 424.46579884890025,
+     "rel_dem_diff": 0.49486177558135347,
+     "worst_miss_ours": 4.098949009751856
+    },
+    {
+     "n": 2,
+     "case": "worst_dem",
+     "pixel": [
+      1118,
+      261
+     ],
+     "status": "tight band",
+     "ratio": 244.7733866256368,
+     "rel_dem_diff": 0.5180150383436101,
+     "worst_miss_ours": 2.944039155534087
+    },
+    {
+     "n": 3,
+     "case": "worst_dem",
+     "pixel": [
+      1115,
+      258
+     ],
+     "status": "tight band",
+     "ratio": 583.1789894011117,
+     "rel_dem_diff": 0.11718167743870976,
+     "worst_miss_ours": 6.479721850782653
+    },
+    {
+     "n": 4,
+     "case": "worst_shape",
+     "pixel": [
+      1110,
+      301
+     ],
+     "status": "tight band",
+     "ratio": 11.907589655361324,
+     "rel_dem_diff": 1.3461498532133702,
+     "worst_miss_ours": 1.413518429526692
+    },
+    {
+     "n": 5,
+     "case": "worst_band",
+     "pixel": [
+      1167,
+      224
+     ],
+     "status": "tight band",
+     "ratio": 23.206700441177983,
+     "rel_dem_diff": 0.6561564749936696,
+     "worst_miss_ours": 7.866369218785742
+    },
+    {
+     "n": 6,
+     "case": "brightest",
+     "pixel": [
+      1114,
+      258
+     ],
+     "status": "unsolved",
+     "ratio": 609.9542434225018,
+     "rel_dem_diff": null,
+     "worst_miss_ours": 73.86352763525709
+    },
+    {
+     "n": 7,
+     "case": "widened",
+     "pixel": [
+      1112,
+      258
+     ],
+     "status": "widened 3x",
+     "ratio": 444.3933119548371,
+     "rel_dem_diff": 0.7146854060743593,
+     "worst_miss_ours": 2.1066359332149927
+    },
+    {
+     "n": 8,
+     "case": "typical",
+     "pixel": [
+      1174,
+      355
+     ],
+     "status": "tight band",
+     "ratio": 1.2533821259457674,
+     "rel_dem_diff": 0.1528866516231324,
+     "worst_miss_ours": 1.000536980077027
+    }
+   ]
+  },
+  {
+   "date": "20151020_190856",
+   "cy": 701,
+   "cx": 416,
+   "area": 32583,
+   "peak": 36.784751892089844,
+   "n_core": 1,
+   "chosen_by": "area",
+   "region": 17,
+   "box": [
+    605,
+    320,
+    192
+   ],
+   "inside_tight_pct": {
+    "ours": 74.01530597169281,
+    "sup": 38.93271873060899
+   },
+   "status_counts": {
+    "unsolved": 0,
+    "tight band": 33843,
+    "widened 3x": 2938,
+    "widened 5x": 83
+   },
+   "pixels": [
+    {
+     "n": 1,
+     "case": "worst_dem",
+     "pixel": [
+      661,
+      418
+     ],
+     "status": "tight band",
+     "ratio": 9.49856522248983,
+     "rel_dem_diff": 0.8605625402244328,
+     "worst_miss_ours": 1.6631796853964738
+    },
+    {
+     "n": 2,
+     "case": "worst_dem",
+     "pixel": [
+      681,
+      491
+     ],
+     "status": "tight band",
+     "ratio": 11.715933354610362,
+     "rel_dem_diff": 0.6219138278425497,
+     "worst_miss_ours": 1.4628750752177637
+    },
+    {
+     "n": 3,
+     "case": "worst_dem",
+     "pixel": [
+      701,
+      411
+     ],
+     "status": "tight band",
+     "ratio": 9.600932302478679,
+     "rel_dem_diff": 0.7728712360978,
+     "worst_miss_ours": 1.5457030458315946
+    },
+    {
+     "n": 4,
+     "case": "worst_shape",
+     "pixel": [
+      770,
+      511
+     ],
+     "status": "tight band",
+     "ratio": 3.141471830747238,
+     "rel_dem_diff": 1.2112409403606916,
+     "worst_miss_ours": 2.0583251138870713
+    },
+    {
+     "n": 5,
+     "case": "worst_band",
+     "pixel": [
+      783,
+      416
+     ],
+     "status": "tight band",
+     "ratio": 0.7967547551858222,
+     "rel_dem_diff": 0.8886597815947462,
+     "worst_miss_ours": 3.038267820583158
+    },
+    {
+     "n": 6,
+     "case": "brightest",
+     "pixel": [
+      694,
+      417
+     ],
+     "status": "tight band",
+     "ratio": 19.453491987943124,
+     "rel_dem_diff": 0.02945384790180196,
+     "worst_miss_ours": 0.8621422989406172
+    },
+    {
+     "n": 7,
+     "case": "widened",
+     "pixel": [
+      689,
+      420
+     ],
+     "status": "widened 3x",
+     "ratio": 14.946618794387847,
+     "rel_dem_diff": 0.1604730303979134,
+     "worst_miss_ours": 1.0068109555182263
+    },
+    {
+     "n": 8,
+     "case": "typical",
+     "pixel": [
+      721,
+      475
+     ],
+     "status": "tight band",
+     "ratio": 3.852643029484842,
+     "rel_dem_diff": 0.02803378805907576,
+     "worst_miss_ours": 0.9321826048538406
+    }
+   ]
+  },
+  {
+   "date": "20151021_051358",
+   "cy": 696,
+   "cx": 464,
+   "area": 29592,
+   "peak": 34.752662658691406,
+   "n_core": 1,
+   "chosen_by": "area",
+   "region": 18,
+   "box": [
+    600,
+    368,
+    192
+   ],
+   "inside_tight_pct": {
+    "ours": 74.99694488573873,
+    "sup": 40.87742881583771
+   },
+   "status_counts": {
+    "unsolved": 1,
+    "tight band": 32732,
+    "widened 3x": 4036,
+    "widened 5x": 95
+   },
+   "pixels": [
+    {
+     "n": 1,
+     "case": "worst_dem",
+     "pixel": [
+      717,
+      522
+     ],
+     "status": "tight band",
+     "ratio": 5.080162346749685,
+     "rel_dem_diff": 0.9906059738071146,
+     "worst_miss_ours": 1.5070588457913117
+    },
+    {
+     "n": 2,
+     "case": "worst_dem",
+     "pixel": [
+      708,
+      450
+     ],
+     "status": "tight band",
+     "ratio": 9.57563743013671,
+     "rel_dem_diff": 0.7263990809940492,
+     "worst_miss_ours": 1.5013130836985347
+    },
+    {
+     "n": 3,
+     "case": "worst_dem",
+     "pixel": [
+      672,
+      463
+     ],
+     "status": "tight band",
+     "ratio": 5.630438600257789,
+     "rel_dem_diff": 1.0279529908603,
+     "worst_miss_ours": 1.4501796520135446
+    },
+    {
+     "n": 4,
+     "case": "worst_shape",
+     "pixel": [
+      782,
+      536
+     ],
+     "status": "tight band",
+     "ratio": 1.9951904862770127,
+     "rel_dem_diff": 1.2852005594179596,
+     "worst_miss_ours": 1.427794591658022
+    },
+    {
+     "n": 5,
+     "case": "worst_band",
+     "pixel": [
+      778,
+      410
+     ],
+     "status": "tight band",
+     "ratio": 0.7371825447409953,
+     "rel_dem_diff": 0.8911799048816177,
+     "worst_miss_ours": 3.0086070592055894
+    },
+    {
+     "n": 6,
+     "case": "brightest",
+     "pixel": [
+      700,
+      478
+     ],
+     "status": "tight band",
+     "ratio": 34.75266092685574,
+     "rel_dem_diff": 0.17561780372151647,
+     "worst_miss_ours": 1.364101881065891
+    },
+    {
+     "n": 7,
+     "case": "widened",
+     "pixel": [
+      685,
+      470
+     ],
+     "status": "widened 3x",
+     "ratio": 10.277215341562137,
+     "rel_dem_diff": 0.14789390531162883,
+     "worst_miss_ours": 1.092005285718757
+    },
+    {
+     "n": 8,
+     "case": "unsolved",
+     "pixel": [
+      617,
+      414
+     ],
+     "status": "unsolved",
+     "ratio": 2.0340606369728405,
+     "rel_dem_diff": null,
+     "worst_miss_ours": 6.353697739126373
+    },
+    {
+     "n": 9,
+     "case": "typical",
+     "pixel": [
+      696,
+      496
+     ],
+     "status": "tight band",
+     "ratio": 6.379278741310119,
+     "rel_dem_diff": 0.018962746269789346,
+     "worst_miss_ours": 0.9817563039235625
+    }
+   ]
+  },
+  {
+   "date": "20151021_192600",
+   "cy": 1082,
+   "cx": 656,
+   "area": 58086,
+   "peak": 26.074867248535156,
+   "n_core": 0,
+   "chosen_by": "area",
+   "region": 19,
+   "box": [
+    986,
+    560,
+    192
+   ],
+   "inside_tight_pct": {
+    "ours": 71.7073871802242,
+    "sup": 40.18970968669158
+   },
+   "status_counts": {
+    "unsolved": 3,
+    "tight band": 34790,
+    "widened 3x": 2023,
+    "widened 5x": 48
+   },
+   "pixels": [
+    {
+     "n": 1,
+     "case": "worst_dem",
+     "pixel": [
+      1052,
+      717
+     ],
+     "status": "tight band",
+     "ratio": 10.615903100003267,
+     "rel_dem_diff": 0.8886878720623624,
+     "worst_miss_ours": 6.773182388680924
+    },
+    {
+     "n": 2,
+     "case": "worst_dem",
+     "pixel": [
+      1047,
+      719
+     ],
+     "status": "tight band",
+     "ratio": 12.856209833969064,
+     "rel_dem_diff": 0.5171821204762963,
+     "worst_miss_ours": 3.984533035805253
+    },
+    {
+     "n": 3,
+     "case": "worst_dem",
+     "pixel": [
+      1048,
+      711
+     ],
+     "status": "tight band",
+     "ratio": 9.743684011430222,
+     "rel_dem_diff": 0.5858277820161261,
+     "worst_miss_ours": 2.171640391010345
+    },
+    {
+     "n": 4,
+     "case": "worst_shape",
+     "pixel": [
+      1022,
+      604
+     ],
+     "status": "tight band",
+     "ratio": 2.0017289905413946,
+     "rel_dem_diff": 1.3421146277954217,
+     "worst_miss_ours": 1.9857841834545216
+    },
+    {
+     "n": 5,
+     "case": "brightest",
+     "pixel": [
+      1085,
+      691
+     ],
+     "status": "tight band",
+     "ratio": 23.48520351528709,
+     "rel_dem_diff": 0.08765903273750374,
+     "worst_miss_ours": 0.9017703368421063
+    },
+    {
+     "n": 6,
+     "case": "widened",
+     "pixel": [
+      1119,
+      640
+     ],
+     "status": "widened 3x",
+     "ratio": 9.228749014270102,
+     "rel_dem_diff": 0.8819623898148289,
+     "worst_miss_ours": 0.7096802421165392
+    },
+    {
+     "n": 7,
+     "case": "unsolved",
+     "pixel": [
+      1155,
+      649
+     ],
+     "status": "unsolved",
+     "ratio": 7.1577690654788775,
+     "rel_dem_diff": null,
+     "worst_miss_ours": 12.384194704565294
+    },
+    {
+     "n": 8,
+     "case": "typical",
+     "pixel": [
+      1089,
+      652
+     ],
+     "status": "tight band",
+     "ratio": 21.86750885952318,
+     "rel_dem_diff": 0.19277382529153864,
+     "worst_miss_ours": 1.1866630070053341
+    }
+   ]
+  },
+  {
+   "date": "20151022_053428",
+   "cy": 819,
+   "cx": 1499,
+   "area": 30337,
+   "peak": 88.65888977050781,
+   "n_core": 1797,
+   "chosen_by": "area",
+   "region": 20,
+   "box": [
+    723,
+    1403,
+    192
+   ],
+   "inside_tight_pct": {
+    "ours": 67.20242778464652,
+    "sup": 35.42767224907272
+   },
+   "status_counts": {
+    "unsolved": 0,
+    "tight band": 35588,
+    "widened 3x": 1266,
+    "widened 5x": 10
+   },
+   "pixels": [
+    {
+     "n": 1,
+     "case": "worst_dem",
+     "pixel": [
+      821,
+      1513
+     ],
+     "status": "tight band",
+     "ratio": 41.092590660555736,
+     "rel_dem_diff": 0.9204913534802065,
+     "worst_miss_ours": 2.545282042492844
+    },
+    {
+     "n": 2,
+     "case": "worst_dem",
+     "pixel": [
+      822,
+      1512
+     ],
+     "status": "tight band",
+     "ratio": 40.270262584615395,
+     "rel_dem_diff": 0.932770813505954,
+     "worst_miss_ours": 2.6108134766604096
+    },
+    {
+     "n": 3,
+     "case": "worst_dem",
+     "pixel": [
+      826,
+      1519
+     ],
+     "status": "tight band",
+     "ratio": 37.93572212325813,
+     "rel_dem_diff": 0.786082958573835,
+     "worst_miss_ours": 2.6328348095419667
+    },
+    {
+     "n": 4,
+     "case": "worst_shape",
+     "pixel": [
+      808,
+      1559
+     ],
+     "status": "tight band",
+     "ratio": 1.804083342041254,
+     "rel_dem_diff": 1.8927187418805813,
+     "worst_miss_ours": 1.1851659950366895
+    },
+    {
+     "n": 5,
+     "case": "worst_band",
+     "pixel": [
+      728,
+      1447
+     ],
+     "status": "tight band",
+     "ratio": 8.662960184734255,
+     "rel_dem_diff": 0.9321243124374206,
+     "worst_miss_ours": 5.97317356915024
+    },
+    {
+     "n": 6,
+     "case": "brightest",
+     "pixel": [
+      839,
+      1499
+     ],
+     "status": "tight band",
+     "ratio": 88.65889319850439,
+     "rel_dem_diff": 0.11306124376154504,
+     "worst_miss_ours": 1.3079452817809503
+    },
+    {
+     "n": 7,
+     "case": "widened",
+     "pixel": [
+      819,
+      1509
+     ],
+     "status": "widened 3x",
+     "ratio": 46.70715234256105,
+     "rel_dem_diff": 0.16574238944432151,
+     "worst_miss_ours": 1.508353764888907
+    },
+    {
+     "n": 8,
+     "case": "typical",
+     "pixel": [
+      895,
+      1590
+     ],
+     "status": "tight band",
+     "ratio": 2.1750748531796695,
+     "rel_dem_diff": 0.13946709414900707,
+     "worst_miss_ours": 0.9266877954074225
+    }
+   ]
+  },
+  {
+   "date": "20151024_061055",
+   "cy": 814,
+   "cx": 1817,
+   "area": 28807,
+   "peak": 162.25315856933594,
+   "n_core": 21,
+   "chosen_by": "area",
+   "region": 21,
+   "box": [
+    718,
+    1721,
+    192
+   ],
+   "inside_tight_pct": {
+    "ours": 74.0594642331469,
+    "sup": 38.14836620547542
+   },
+   "status_counts": {
+    "unsolved": 0,
+    "tight band": 33970,
+    "widened 3x": 2837,
+    "widened 5x": 57
+   },
+   "pixels": [
+    {
+     "n": 1,
+     "case": "worst_dem",
+     "pixel": [
+      828,
+      1743
+     ],
+     "status": "tight band",
+     "ratio": 162.25316899412186,
+     "rel_dem_diff": 0.170456764533264,
+     "worst_miss_ours": 1.677236514554493
+    },
+    {
+     "n": 2,
+     "case": "worst_dem",
+     "pixel": [
+      830,
+      1742
+     ],
+     "status": "tight band",
+     "ratio": 119.50762596066818,
+     "rel_dem_diff": 0.18949149317354988,
+     "worst_miss_ours": 1.0351027264591208
+    },
+    {
+     "n": 3,
+     "case": "worst_dem",
+     "pixel": [
+      827,
+      1743
+     ],
+     "status": "tight band",
+     "ratio": 76.03269990370791,
+     "rel_dem_diff": 0.21877437228839305,
+     "worst_miss_ours": 1.8571039303176895
+    },
+    {
+     "n": 4,
+     "case": "worst_shape",
+     "pixel": [
+      893,
+      1882
+     ],
+     "status": "tight band",
+     "ratio": 1.6807116594191451,
+     "rel_dem_diff": 1.1712996058886112,
+     "worst_miss_ours": 2.5404927994071476
+    },
+    {
+     "n": 5,
+     "case": "worst_band",
+     "pixel": [
+      791,
+      1899
+     ],
+     "status": "tight band",
+     "ratio": 1.079695155368395,
+     "rel_dem_diff": 0.927583519721358,
+     "worst_miss_ours": 3.09381331491452
+    },
+    {
+     "n": 6,
+     "case": "widened",
+     "pixel": [
+      832,
+      1740
+     ],
+     "status": "widened 3x",
+     "ratio": 38.53501042814938,
+     "rel_dem_diff": 0.3585042297456319,
+     "worst_miss_ours": 0.7596203394559878
+    },
+    {
+     "n": 7,
+     "case": "typical",
+     "pixel": [
+      773,
+      1843
+     ],
+     "status": "tight band",
+     "ratio": 2.2428164906593424,
+     "rel_dem_diff": 0.12076096006359159,
+     "worst_miss_ours": 0.926680408522688
+    }
+   ]
+  },
+  {
+   "date": "20151031_102404",
+   "cy": 1090,
+   "cx": 367,
+   "area": 19127,
+   "peak": 364.69952392578125,
+   "n_core": 888,
+   "chosen_by": "peak",
+   "region": 22,
+   "box": [
+    994,
+    271,
+    192
+   ],
+   "inside_tight_pct": {
+    "ours": 71.64298350739028,
+    "sup": 39.684985447697315
+   },
+   "status_counts": {
+    "unsolved": 1,
+    "tight band": 35046,
+    "widened 3x": 1785,
+    "widened 5x": 32
+   },
+   "pixels": [
+    {
+     "n": 1,
+     "case": "worst_dem",
+     "pixel": [
+      1096,
+      352
+     ],
+     "status": "tight band",
+     "ratio": 360.4983660130719,
+     "rel_dem_diff": 0.5547983016332668,
+     "worst_miss_ours": 6.330768769901398
+    },
+    {
+     "n": 2,
+     "case": "worst_dem",
+     "pixel": [
+      1095,
+      354
+     ],
+     "status": "tight band",
+     "ratio": 316.7942843497693,
+     "rel_dem_diff": 0.4276003371715703,
+     "worst_miss_ours": 3.8139348796553145
+    },
+    {
+     "n": 3,
+     "case": "worst_dem",
+     "pixel": [
+      1095,
+      369
+     ],
+     "status": "tight band",
+     "ratio": 198.83707885663966,
+     "rel_dem_diff": 0.6366154762887546,
+     "worst_miss_ours": 3.2808117959670278
+    },
+    {
+     "n": 4,
+     "case": "worst_shape",
+     "pixel": [
+      1061,
+      440
+     ],
+     "status": "tight band",
+     "ratio": 5.713371908890659,
+     "rel_dem_diff": 1.347781772407553,
+     "worst_miss_ours": 1.24688535840476
+    },
+    {
+     "n": 5,
+     "case": "worst_band",
+     "pixel": [
+      1095,
+      353
+     ],
+     "status": "tight band",
+     "ratio": 340.54183324422496,
+     "rel_dem_diff": 0.3061928985667691,
+     "worst_miss_ours": 11.240781947011602
+    },
+    {
+     "n": 6,
+     "case": "brightest",
+     "pixel": [
+      1096,
+      353
+     ],
+     "status": "widened 3x",
+     "ratio": 364.69952931514723,
+     "rel_dem_diff": 0.4344641420621679,
+     "worst_miss_ours": 2.384546193392723
+    },
+    {
+     "n": 7,
+     "case": "unsolved",
+     "pixel": [
+      1178,
+      347
+     ],
+     "status": "unsolved",
+     "ratio": 1.668163170857,
+     "rel_dem_diff": null,
+     "worst_miss_ours": 5.75134914007087
+    },
+    {
+     "n": 8,
+     "case": "typical",
+     "pixel": [
+      1147,
+      403
+     ],
+     "status": "tight band",
+     "ratio": 5.479532074245744,
+     "rel_dem_diff": 0.05098415778806727,
+     "worst_miss_ours": 1.0829251878885298
+    }
+   ]
+  },
+  {
+   "date": "20151107_180525",
+   "cy": 829,
+   "cx": 307,
+   "area": 30616,
+   "peak": 37.46479797363281,
+   "n_core": 4,
+   "chosen_by": "area",
+   "region": 23,
+   "box": [
+    733,
+    211,
+    192
+   ],
+   "inside_tight_pct": {
+    "ours": 71.28028707850174,
+    "sup": 42.824520300127524
+   },
+   "status_counts": {
+    "unsolved": 0,
+    "tight band": 33719,
+    "widened 3x": 3103,
+    "widened 5x": 42
+   },
+   "pixels": [
+    {
+     "n": 1,
+     "case": "worst_dem",
+     "pixel": [
+      811,
+      320
+     ],
+     "status": "tight band",
+     "ratio": 11.797618900166091,
+     "rel_dem_diff": 0.8686537477368452,
+     "worst_miss_ours": 2.3283232627719332
+    },
+    {
+     "n": 2,
+     "case": "worst_dem",
+     "pixel": [
+      859,
+      302
+     ],
+     "status": "tight band",
+     "ratio": 7.056705659365422,
+     "rel_dem_diff": 1.0842720004426265,
+     "worst_miss_ours": 1.844882354482616
+    },
+    {
+     "n": 3,
+     "case": "worst_dem",
+     "pixel": [
+      749,
+      289
+     ],
+     "status": "tight band",
+     "ratio": 9.423703097180542,
+     "rel_dem_diff": 0.8138392911401718,
+     "worst_miss_ours": 1.41099952426351
+    },
+    {
+     "n": 4,
+     "case": "worst_shape",
+     "pixel": [
+      767,
+      388
+     ],
+     "status": "tight band",
+     "ratio": 1.0138332905337732,
+     "rel_dem_diff": 1.3168558906025554,
+     "worst_miss_ours": 2.539375115325841
+    },
+    {
+     "n": 5,
+     "case": "worst_band",
+     "pixel": [
+      916,
+      249
+     ],
+     "status": "tight band",
+     "ratio": 1.0306483276823626,
+     "rel_dem_diff": 0.8890364102120963,
+     "worst_miss_ours": 3.0458812051213844
+    },
+    {
+     "n": 6,
+     "case": "brightest",
+     "pixel": [
+      818,
+      306
+     ],
+     "status": "tight band",
+     "ratio": 34.035256500811236,
+     "rel_dem_diff": 0.13271967290042572,
+     "worst_miss_ours": 1.208963960993938
+    },
+    {
+     "n": 7,
+     "case": "widened",
+     "pixel": [
+      807,
+      270
+     ],
+     "status": "widened 3x",
+     "ratio": 9.608849751267002,
+     "rel_dem_diff": 0.430884271025944,
+     "worst_miss_ours": 0.5468740373345795
+    },
+    {
+     "n": 8,
+     "case": "typical",
+     "pixel": [
+      842,
+      254
+     ],
+     "status": "tight band",
+     "ratio": 3.973878940155988,
+     "rel_dem_diff": 0.026534308215216056,
+     "worst_miss_ours": 1.0434279291922544
+    }
+   ]
+  },
+  {
+   "date": "20151108_055125",
+   "cy": 825,
+   "cx": 353,
+   "area": 35670,
+   "peak": 27.994327545166016,
+   "n_core": 0,
+   "chosen_by": "area",
+   "region": 24,
+   "box": [
+    729,
+    257,
+    192
+   ],
+   "inside_tight_pct": {
+    "ours": 75.9849006860601,
+    "sup": 45.91509631804428
+   },
+   "status_counts": {
+    "unsolved": 0,
+    "tight band": 33379,
+    "widened 3x": 3448,
+    "widened 5x": 37
+   },
+   "pixels": [
+    {
+     "n": 1,
+     "case": "worst_dem",
+     "pixel": [
+      800,
+      296
+     ],
+     "status": "tight band",
+     "ratio": 7.703274696381246,
+     "rel_dem_diff": 0.9083656857126905,
+     "worst_miss_ours": 1.5500420299986277
+    },
+    {
+     "n": 2,
+     "case": "worst_dem",
+     "pixel": [
+      789,
+      298
+     ],
+     "status": "tight band",
+     "ratio": 6.5772780066657255,
+     "rel_dem_diff": 0.8683479409640638,
+     "worst_miss_ours": 1.4158208604343536
+    },
+    {
+     "n": 3,
+     "case": "worst_dem",
+     "pixel": [
+      799,
+      291
+     ],
+     "status": "tight band",
+     "ratio": 6.40188856760975,
+     "rel_dem_diff": 0.664388966137118,
+     "worst_miss_ours": 1.422708728021908
+    },
+    {
+     "n": 4,
+     "case": "worst_shape",
+     "pixel": [
+      904,
+      396
+     ],
+     "status": "tight band",
+     "ratio": 1.0542974676151513,
+     "rel_dem_diff": 1.241350213236757,
+     "worst_miss_ours": 2.828786689347125
+    },
+    {
+     "n": 5,
+     "case": "worst_band",
+     "pixel": [
+      853,
+      383
+     ],
+     "status": "tight band",
+     "ratio": 10.226354506653305,
+     "rel_dem_diff": 0.1389738181229749,
+     "worst_miss_ours": 3.2024072681578932
+    },
+    {
+     "n": 6,
+     "case": "brightest",
+     "pixel": [
+      784,
+      290
+     ],
+     "status": "tight band",
+     "ratio": 26.507365562343185,
+     "rel_dem_diff": 0.18416044177142174,
+     "worst_miss_ours": 1.2893268192219927
+    },
+    {
+     "n": 7,
+     "case": "widened",
+     "pixel": [
+      851,
+      380
+     ],
+     "status": "widened 3x",
+     "ratio": 26.01501005965197,
+     "rel_dem_diff": 1.0735128118842976,
+     "worst_miss_ours": 0.8097854307603003
+    },
+    {
+     "n": 8,
+     "case": "typical",
+     "pixel": [
+      729,
+      327
+     ],
+     "status": "tight band",
+     "ratio": 6.472281114883853,
+     "rel_dem_diff": 0.048470764714661115,
+     "worst_miss_ours": 0.9531768347773022
+    }
+   ]
+  },
+  {
+   "date": "20151108_175354",
+   "cy": 815,
+   "cx": 407,
+   "area": 33091,
+   "peak": 20.505582809448242,
+   "n_core": 0,
+   "chosen_by": "area",
+   "region": 25,
+   "box": [
+    719,
+    311,
+    192
+   ],
+   "inside_tight_pct": {
+    "ours": 76.96576685266174,
+    "sup": 49.79037852510933
+   },
+   "status_counts": {
+    "unsolved": 0,
+    "tight band": 33155,
+    "widened 3x": 3673,
+    "widened 5x": 36
+   },
+   "pixels": [
+    {
+     "n": 1,
+     "case": "worst_dem",
+     "pixel": [
+      737,
+      405
+     ],
+     "status": "tight band",
+     "ratio": 11.68761720290558,
+     "rel_dem_diff": 0.4899404795865236,
+     "worst_miss_ours": 1.4886999950556759
+    },
+    {
+     "n": 2,
+     "case": "worst_dem",
+     "pixel": [
+      817,
+      464
+     ],
+     "status": "tight band",
+     "ratio": 6.131088226120853,
+     "rel_dem_diff": 1.0736682918854557,
+     "worst_miss_ours": 1.5875911494381112
+    },
+    {
+     "n": 3,
+     "case": "worst_dem",
+     "pixel": [
+      735,
+      342
+     ],
+     "status": "tight band",
+     "ratio": 6.678069742881073,
+     "rel_dem_diff": 0.939662265789802,
+     "worst_miss_ours": 1.7004689939482316
+    },
+    {
+     "n": 4,
+     "case": "worst_shape",
+     "pixel": [
+      852,
+      434
+     ],
+     "status": "tight band",
+     "ratio": 13.165529087344877,
+     "rel_dem_diff": 1.3740927765375537,
+     "worst_miss_ours": 1.1720818500946593
+    },
+    {
+     "n": 5,
+     "case": "worst_band",
+     "pixel": [
+      899,
+      415
+     ],
+     "status": "tight band",
+     "ratio": 0.5586093904451852,
+     "rel_dem_diff": 1.0568348446044238,
+     "worst_miss_ours": 2.9262657128336675
+    },
+    {
+     "n": 6,
+     "case": "brightest",
+     "pixel": [
+      785,
+      346
+     ],
+     "status": "tight band",
+     "ratio": 20.505581998964445,
+     "rel_dem_diff": 0.11523964734961496,
+     "worst_miss_ours": 1.0717494066379414
+    },
+    {
+     "n": 7,
+     "case": "widened",
+     "pixel": [
+      846,
+      433
+     ],
+     "status": "widened 3x",
+     "ratio": 16.71878945350187,
+     "rel_dem_diff": 0.37053548447800655,
+     "worst_miss_ours": 0.49037306171875045
+    },
+    {
+     "n": 8,
+     "case": "typical",
+     "pixel": [
+      784,
+      454
+     ],
+     "status": "tight band",
+     "ratio": 2.53176616694323,
+     "rel_dem_diff": 0.0681713910155795,
+     "worst_miss_ours": 0.9946597710570345
+    }
+   ]
+  },
+  {
+   "date": "20151109_060354",
+   "cy": 1097,
+   "cx": 1777,
+   "area": 30649,
+   "peak": 30.634334564208984,
+   "n_core": 0,
+   "chosen_by": "area",
+   "region": 26,
+   "box": [
+    1001,
+    1681,
+    192
+   ],
+   "inside_tight_pct": {
+    "ours": 67.12348570272067,
+    "sup": 34.070604562407844
+   },
+   "status_counts": {
+    "unsolved": 4,
+    "tight band": 34587,
+    "widened 3x": 2216,
+    "widened 5x": 57
+   },
+   "pixels": [
+    {
+     "n": 1,
+     "case": "worst_dem",
+     "pixel": [
+      1170,
+      1771
+     ],
+     "status": "tight band",
+     "ratio": 19.213186518447227,
+     "rel_dem_diff": 0.3838453930159663,
+     "worst_miss_ours": 2.6413618961157876
+    },
+    {
+     "n": 2,
+     "case": "worst_dem",
+     "pixel": [
+      1106,
+      1735
+     ],
+     "status": "tight band",
+     "ratio": 12.595235010409258,
+     "rel_dem_diff": 0.8852327272175882,
+     "worst_miss_ours": 2.4055307273547837
+    },
+    {
+     "n": 3,
+     "case": "worst_dem",
+     "pixel": [
+      1137,
+      1764
+     ],
+     "status": "tight band",
+     "ratio": 15.873257836922097,
+     "rel_dem_diff": 0.3974574528834853,
+     "worst_miss_ours": 1.6771466401176607
+    },
+    {
+     "n": 4,
+     "case": "worst_shape",
+     "pixel": [
+      1135,
+      1690
+     ],
+     "status": "tight band",
+     "ratio": 1.2966852592655012,
+     "rel_dem_diff": 1.3421933668569068,
+     "worst_miss_ours": 2.615321492498976
+    },
+    {
+     "n": 5,
+     "case": "worst_band",
+     "pixel": [
+      1065,
+      1847
+     ],
+     "status": "tight band",
+     "ratio": 1.9091009166458104,
+     "rel_dem_diff": 0.8481043179247926,
+     "worst_miss_ours": 2.8810629334416302
+    },
+    {
+     "n": 6,
+     "case": "brightest",
+     "pixel": [
+      1107,
+      1782
+     ],
+     "status": "tight band",
+     "ratio": 30.634336313895197,
+     "rel_dem_diff": 0.14188805880694527,
+     "worst_miss_ours": 1.0128087685606397
+    },
+    {
+     "n": 7,
+     "case": "widened",
+     "pixel": [
+      1044,
+      1763
+     ],
+     "status": "widened 3x",
+     "ratio": 21.773665549828337,
+     "rel_dem_diff": 0.18668899777979378,
+     "worst_miss_ours": 0.8859641803241429
+    },
+    {
+     "n": 8,
+     "case": "unsolved",
+     "pixel": [
+      1165,
+      1844
+     ],
+     "status": "unsolved",
+     "ratio": 2.1889015783880668,
+     "rel_dem_diff": null,
+     "worst_miss_ours": 5.7106948669776605
+    },
+    {
+     "n": 9,
+     "case": "typical",
+     "pixel": [
+      1165,
+      1847
+     ],
+     "status": "tight band",
+     "ratio": 1.9597376315169783,
+     "rel_dem_diff": 0.023003110587347594,
+     "worst_miss_ours": 0.9941005300236193
+    }
+   ]
+  },
+  {
+   "date": "20151121_062724",
+   "cy": 1206,
+   "cx": 319,
+   "area": 29129,
+   "peak": 128.4011688232422,
+   "n_core": 11,
+   "chosen_by": "area",
+   "region": 27,
+   "box": [
+    1110,
+    223,
+    192
+   ],
+   "inside_tight_pct": {
+    "ours": 70.5612932195779,
+    "sup": 39.12587935937734
+   },
+   "status_counts": {
+    "unsolved": 1,
+    "tight band": 33405,
+    "widened 3x": 3401,
+    "widened 5x": 57
+   },
+   "pixels": [
+    {
+     "n": 1,
+     "case": "worst_dem",
+     "pixel": [
+      1180,
+      327
+     ],
+     "status": "tight band",
+     "ratio": 89.50123845217401,
+     "rel_dem_diff": 0.2887616419699592,
+     "worst_miss_ours": 2.709445857227153
+    },
+    {
+     "n": 2,
+     "case": "worst_dem",
+     "pixel": [
+      1179,
+      327
+     ],
+     "status": "tight band",
+     "ratio": 128.401170491614,
+     "rel_dem_diff": 0.1557566748569914,
+     "worst_miss_ours": 2.235174699038756
+    },
+    {
+     "n": 3,
+     "case": "worst_dem",
+     "pixel": [
+      1195,
+      329
+     ],
+     "status": "tight band",
+     "ratio": 36.91383224329882,
+     "rel_dem_diff": 0.16048924622754893,
+     "worst_miss_ours": 1.1197103679875577
+    },
+    {
+     "n": 4,
+     "case": "worst_shape",
+     "pixel": [
+      1120,
+      300
+     ],
+     "status": "tight band",
+     "ratio": 1.5882918443482847,
+     "rel_dem_diff": 1.3145253436751443,
+     "worst_miss_ours": 2.5983740883547877
+    },
+    {
+     "n": 5,
+     "case": "worst_band",
+     "pixel": [
+      1110,
+      390
+     ],
+     "status": "tight band",
+     "ratio": 0.6632689088821845,
+     "rel_dem_diff": 0.9591049756960339,
+     "worst_miss_ours": 2.9635400665507436
+    },
+    {
+     "n": 6,
+     "case": "widened",
+     "pixel": [
+      1172,
+      223
+     ],
+     "status": "widened 3x",
+     "ratio": 14.206976611293708,
+     "rel_dem_diff": 0.4294472474356329,
+     "worst_miss_ours": 1.2775611330465364
+    },
+    {
+     "n": 7,
+     "case": "unsolved",
+     "pixel": [
+      1210,
+      410
+     ],
+     "status": "unsolved",
+     "ratio": 1.272403315729195,
+     "rel_dem_diff": null,
+     "worst_miss_ours": 5.308455861953562
+    },
+    {
+     "n": 8,
+     "case": "typical",
+     "pixel": [
+      1214,
+      293
+     ],
+     "status": "tight band",
+     "ratio": 5.018698214570873,
+     "rel_dem_diff": 0.07850788612443224,
+     "worst_miss_ours": 0.9935020610235078
+    }
+   ]
+  },
+  {
+   "date": "20151121_181326",
+   "cy": 1202,
+   "cx": 1497,
+   "area": 27111,
+   "peak": 441.7693786621094,
+   "n_core": 395,
+   "chosen_by": "peak",
+   "region": 28,
+   "box": [
+    1106,
+    1401,
+    192
+   ],
+   "inside_tight_pct": {
+    "ours": 76.43141349437029,
+    "sup": 41.86020261308801
+   },
+   "status_counts": {
+    "unsolved": 3,
+    "tight band": 35437,
+    "widened 3x": 1399,
+    "widened 5x": 25
+   },
+   "pixels": [
+    {
+     "n": 1,
+     "case": "worst_dem",
+     "pixel": [
+      1230,
+      1468
+     ],
+     "status": "tight band",
+     "ratio": 441.769379064943,
+     "rel_dem_diff": 0.5079730861407878,
+     "worst_miss_ours": 7.665429011566609
+    },
+    {
+     "n": 2,
+     "case": "worst_dem",
+     "pixel": [
+      1229,
+      1469
+     ],
+     "status": "tight band",
+     "ratio": 256.0494616140727,
+     "rel_dem_diff": 0.7728606888587704,
+     "worst_miss_ours": 4.1681225160380055
+    },
+    {
+     "n": 3,
+     "case": "worst_dem",
+     "pixel": [
+      1230,
+      1469
+     ],
+     "status": "tight band",
+     "ratio": 228.76088808365972,
+     "rel_dem_diff": 0.6826071538430037,
+     "worst_miss_ours": 6.979795006954464
+    },
+    {
+     "n": 4,
+     "case": "worst_shape",
+     "pixel": [
+      1226,
+      1497
+     ],
+     "status": "tight band",
+     "ratio": 4.420407869778244,
+     "rel_dem_diff": 1.2386304862397988,
+     "worst_miss_ours": 1.821802555689372
+    },
+    {
+     "n": 5,
+     "case": "widened",
+     "pixel": [
+      1229,
+      1468
+     ],
+     "status": "widened 5x",
+     "ratio": 399.82744016724337,
+     "rel_dem_diff": 0.7419603555827314,
+     "worst_miss_ours": 3.2397425002897684
+    },
+    {
+     "n": 6,
+     "case": "unsolved",
+     "pixel": [
+      1214,
+      1494
+     ],
+     "status": "unsolved",
+     "ratio": 52.65052205826034,
+     "rel_dem_diff": null,
+     "worst_miss_ours": 11.012401904510895
+    },
+    {
+     "n": 7,
+     "case": "typical",
+     "pixel": [
+      1112,
+      1403
+     ],
+     "status": "tight band",
+     "ratio": 4.2846950317444925,
+     "rel_dem_diff": 0.06667163890962842,
+     "worst_miss_ours": 0.9623698748792604
+    }
+   ]
+  },
+  {
+   "date": "20151122_060020",
+   "cy": 1197,
+   "cx": 428,
+   "area": 33686,
+   "peak": 97.18609619140625,
+   "n_core": 61,
+   "chosen_by": "area",
+   "region": 29,
+   "box": [
+    1101,
+    332,
+    192
+   ],
+   "inside_tight_pct": {
+    "ours": 71.46909525231412,
+    "sup": 43.12033442818752
+   },
+   "status_counts": {
+    "unsolved": 5,
+    "tight band": 33490,
+    "widened 3x": 3299,
+    "widened 5x": 70
+   },
+   "pixels": [
+    {
+     "n": 1,
+     "case": "worst_dem",
+     "pixel": [
+      1148,
+      416
+     ],
+     "status": "tight band",
+     "ratio": 84.34469304641264,
+     "rel_dem_diff": 0.3746477238335119,
+     "worst_miss_ours": 5.625810843030689
+    },
+    {
+     "n": 2,
+     "case": "worst_dem",
+     "pixel": [
+      1205,
+      442
+     ],
+     "status": "tight band",
+     "ratio": 44.775394144905206,
+     "rel_dem_diff": 0.21172116656736978,
+     "worst_miss_ours": 2.0927577499071224
+    },
+    {
+     "n": 3,
+     "case": "worst_dem",
+     "pixel": [
+      1218,
+      439
+     ],
+     "status": "tight band",
+     "ratio": 20.27439198432026,
+     "rel_dem_diff": 0.4211372061241911,
+     "worst_miss_ours": 2.740998550052879
+    },
+    {
+     "n": 4,
+     "case": "worst_shape",
+     "pixel": [
+      1132,
+      364
+     ],
+     "status": "tight band",
+     "ratio": 2.659099030904953,
+     "rel_dem_diff": 1.1835051917291584,
+     "worst_miss_ours": 1.2923419293685918
+    },
+    {
+     "n": 5,
+     "case": "brightest",
+     "pixel": [
+      1148,
+      417
+     ],
+     "status": "unsolved",
+     "ratio": 97.18609696625752,
+     "rel_dem_diff": null,
+     "worst_miss_ours": 22.745646336569198
+    },
+    {
+     "n": 6,
+     "case": "widened",
+     "pixel": [
+      1149,
+      416
+     ],
+     "status": "widened 3x",
+     "ratio": 64.5955167363944,
+     "rel_dem_diff": 0.5053011485514467,
+     "worst_miss_ours": 2.483081774104037
+    },
+    {
+     "n": 7,
+     "case": "typical",
+     "pixel": [
+      1243,
+      403
+     ],
+     "status": "tight band",
+     "ratio": 5.305115428948411,
+     "rel_dem_diff": 0.06425577570210016,
+     "worst_miss_ours": 0.9724712599423396
+    }
+   ]
+  },
+  {
+   "date": "20151204_060404",
+   "cy": 844,
+   "cx": 223,
+   "area": 28665,
+   "peak": 80.0125503540039,
+   "n_core": 304,
+   "chosen_by": "area",
+   "region": 30,
+   "box": [
+    748,
+    127,
+    192
+   ],
+   "inside_tight_pct": {
+    "ours": 72.03205108525465,
+    "sup": 41.97341356338071
+   },
+   "status_counts": {
+    "unsolved": 0,
+    "tight band": 32573,
+    "widened 3x": 4226,
+    "widened 5x": 65
+   },
+   "pixels": [
+    {
+     "n": 1,
+     "case": "worst_dem",
+     "pixel": [
+      836,
+      225
+     ],
+     "status": "tight band",
+     "ratio": 48.124843051337926,
+     "rel_dem_diff": 0.3250342076391379,
+     "worst_miss_ours": 2.105047533592212
+    },
+    {
+     "n": 2,
+     "case": "worst_dem",
+     "pixel": [
+      835,
+      224
+     ],
+     "status": "tight band",
+     "ratio": 50.05642036497631,
+     "rel_dem_diff": 0.29758385486802036,
+     "worst_miss_ours": 2.200652312558714
+    },
+    {
+     "n": 3,
+     "case": "worst_dem",
+     "pixel": [
+      834,
+      223
+     ],
+     "status": "tight band",
+     "ratio": 51.45166678931581,
+     "rel_dem_diff": 0.22655257970639556,
+     "worst_miss_ours": 1.9893429426520055
+    },
+    {
+     "n": 4,
+     "case": "worst_shape",
+     "pixel": [
+      787,
+      304
+     ],
+     "status": "tight band",
+     "ratio": 1.0668803103335764,
+     "rel_dem_diff": 1.334473916700966,
+     "worst_miss_ours": 2.777502951550403
+    },
+    {
+     "n": 5,
+     "case": "worst_band",
+     "pixel": [
+      754,
+      143
+     ],
+     "status": "tight band",
+     "ratio": 1.143328321996126,
+     "rel_dem_diff": 0.7390353264492636,
+     "worst_miss_ours": 3.035064105298508
+    },
+    {
+     "n": 6,
+     "case": "brightest",
+     "pixel": [
+      852,
+      229
+     ],
+     "status": "tight band",
+     "ratio": 80.01255405479313,
+     "rel_dem_diff": 0.08642400882000802,
+     "worst_miss_ours": 0.9775668046029367
+    },
+    {
+     "n": 7,
+     "case": "widened",
+     "pixel": [
+      901,
+      255
+     ],
+     "status": "widened 3x",
+     "ratio": 17.831629189085792,
+     "rel_dem_diff": 0.27794238047926284,
+     "worst_miss_ours": 0.704913024627337
+    },
+    {
+     "n": 8,
+     "case": "typical",
+     "pixel": [
+      887,
+      162
+     ],
+     "status": "tight band",
+     "ratio": 3.035893179941955,
+     "rel_dem_diff": 0.02796130539218697,
+     "worst_miss_ours": 0.9754745874376479
+    }
+   ]
+  },
+  {
+   "date": "20151204_180328",
+   "cy": 1191,
+   "cx": 284,
+   "area": 32678,
+   "peak": 148.7207489013672,
+   "n_core": 888,
+   "chosen_by": "area",
+   "region": 31,
+   "box": [
+    1095,
+    188,
+    192
+   ],
+   "inside_tight_pct": {
+    "ours": 76.62623361544807,
+    "sup": 50.89981362094779
+   },
+   "status_counts": {
+    "unsolved": 1,
+    "tight band": 32729,
+    "widened 3x": 4090,
+    "widened 5x": 44
+   },
+   "pixels": [
+    {
+     "n": 1,
+     "case": "worst_dem",
+     "pixel": [
+      1181,
+      284
+     ],
+     "status": "tight band",
+     "ratio": 145.29794206317382,
+     "rel_dem_diff": 0.3691576014401826,
+     "worst_miss_ours": 6.8216234929883095
+    },
+    {
+     "n": 2,
+     "case": "worst_dem",
+     "pixel": [
+      1196,
+      280
+     ],
+     "status": "tight band",
+     "ratio": 81.5347957256649,
+     "rel_dem_diff": 0.6472322304514271,
+     "worst_miss_ours": 3.0984400985537097
+    },
+    {
+     "n": 3,
+     "case": "worst_dem",
+     "pixel": [
+      1195,
+      279
+     ],
+     "status": "tight band",
+     "ratio": 76.36488606864698,
+     "rel_dem_diff": 0.6850811656708407,
+     "worst_miss_ours": 2.8161753034894366
+    },
+    {
+     "n": 4,
+     "case": "worst_shape",
+     "pixel": [
+      1282,
+      309
+     ],
+     "status": "tight band",
+     "ratio": 1.5552465277198495,
+     "rel_dem_diff": 2.308681842671861,
+     "worst_miss_ours": 1.1100399308475193
+    },
+    {
+     "n": 5,
+     "case": "worst_band",
+     "pixel": [
+      1178,
+      281
+     ],
+     "status": "tight band",
+     "ratio": 68.26249449799707,
+     "rel_dem_diff": 0.21158189341935155,
+     "worst_miss_ours": 7.151086788478458
+    },
+    {
+     "n": 6,
+     "case": "brightest",
+     "pixel": [
+      1189,
+      282
+     ],
+     "status": "tight band",
+     "ratio": 148.720756549339,
+     "rel_dem_diff": 0.12654787079125643,
+     "worst_miss_ours": 3.0953902187116245
+    },
+    {
+     "n": 7,
+     "case": "widened",
+     "pixel": [
+      1181,
+      285
+     ],
+     "status": "widened 5x",
+     "ratio": 118.48114338285355,
+     "rel_dem_diff": 0.3550680908580257,
+     "worst_miss_ours": 2.396309871685339
+    },
+    {
+     "n": 8,
+     "case": "unsolved",
+     "pixel": [
+      1182,
+      285
+     ],
+     "status": "unsolved",
+     "ratio": 127.05583778937688,
+     "rel_dem_diff": null,
+     "worst_miss_ours": 27.022455330045087
+    },
+    {
+     "n": 9,
+     "case": "typical",
+     "pixel": [
+      1245,
+      300
+     ],
+     "status": "tight band",
+     "ratio": 2.569941455059352,
+     "rel_dem_diff": 0.1861904388747304,
+     "worst_miss_ours": 0.9005999646127896
+    }
+   ]
+  },
+  {
+   "date": "20151206_060626",
+   "cy": 952,
+   "cx": 198,
+   "area": 32501,
+   "peak": 42.62654495239258,
+   "n_core": 35,
+   "chosen_by": "area",
+   "region": 32,
+   "box": [
+    856,
+    102,
+    192
+   ],
+   "inside_tight_pct": {
+    "ours": 74.32342184767053,
+    "sup": 40.54380664652568
+   },
+   "status_counts": {
+    "unsolved": 7,
+    "tight band": 31445,
+    "widened 3x": 5273,
+    "widened 5x": 139
+   },
+   "pixels": [
+    {
+     "n": 1,
+     "case": "worst_dem",
+     "pixel": [
+      964,
+      212
+     ],
+     "status": "tight band",
+     "ratio": 18.17567461838283,
+     "rel_dem_diff": 1.0842590492657798,
+     "worst_miss_ours": 2.3231052892238964
+    },
+    {
+     "n": 2,
+     "case": "worst_dem",
+     "pixel": [
+      958,
+      212
+     ],
+     "status": "tight band",
+     "ratio": 35.8187492680923,
+     "rel_dem_diff": 0.19493631709893916,
+     "worst_miss_ours": 1.5127850882588918
+    },
+    {
+     "n": 3,
+     "case": "worst_dem",
+     "pixel": [
+      953,
+      212
+     ],
+     "status": "tight band",
+     "ratio": 28.413950295217326,
+     "rel_dem_diff": 0.2832217637740476,
+     "worst_miss_ours": 1.3462079077621305
+    },
+    {
+     "n": 4,
+     "case": "worst_shape",
+     "pixel": [
+      988,
+      291
+     ],
+     "status": "tight band",
+     "ratio": 1.9182109542949168,
+     "rel_dem_diff": 1.2354047562124235,
+     "worst_miss_ours": 1.4766833559745733
+    },
+    {
+     "n": 5,
+     "case": "worst_band",
+     "pixel": [
+      864,
+      164
+     ],
+     "status": "tight band",
+     "ratio": 1.3217861586720623,
+     "rel_dem_diff": 0.6391548460408695,
+     "worst_miss_ours": 3.0300320610603135
+    },
+    {
+     "n": 6,
+     "case": "brightest",
+     "pixel": [
+      944,
+      202
+     ],
+     "status": "tight band",
+     "ratio": 42.626545793747695,
+     "rel_dem_diff": 0.07477718193463226,
+     "worst_miss_ours": 0.9949844843073646
+    },
+    {
+     "n": 7,
+     "case": "widened",
+     "pixel": [
+      958,
+      213
+     ],
+     "status": "widened 3x",
+     "ratio": 19.354086254483825,
+     "rel_dem_diff": 0.46751557651487025,
+     "worst_miss_ours": 0.9886844111065721
+    },
+    {
+     "n": 8,
+     "case": "unsolved",
+     "pixel": [
+      957,
+      213
+     ],
+     "status": "unsolved",
+     "ratio": 19.2433938634223,
+     "rel_dem_diff": null,
+     "worst_miss_ours": 28.633253956364406
+    },
+    {
+     "n": 9,
+     "case": "typical",
+     "pixel": [
+      888,
+      135
+     ],
+     "status": "tight band",
+     "ratio": 1.1893517720838982,
+     "rel_dem_diff": 0.08100025904273822,
+     "worst_miss_ours": 1.0309805103773688
+    }
+   ]
+  },
+  {
+   "date": "20151214_055823",
+   "cy": 1215,
+   "cx": 271,
+   "area": 31101,
+   "peak": 60.53834533691406,
+   "n_core": 44,
+   "chosen_by": "area",
+   "region": 33,
+   "box": [
+    1119,
+    175,
+    192
+   ],
+   "inside_tight_pct": {
+    "ours": 68.51295964902152,
+    "sup": 29.048086359175663
+   },
+   "status_counts": {
+    "unsolved": 0,
+    "tight band": 34646,
+    "widened 3x": 2204,
+    "widened 5x": 14
+   },
+   "pixels": [
+    {
+     "n": 1,
+     "case": "worst_dem",
+     "pixel": [
+      1268,
+      279
+     ],
+     "status": "tight band",
+     "ratio": 13.616163274717278,
+     "rel_dem_diff": 0.6442619494029332,
+     "worst_miss_ours": 2.506697604481048
+    },
+    {
+     "n": 2,
+     "case": "worst_dem",
+     "pixel": [
+      1204,
+      276
+     ],
+     "status": "tight band",
+     "ratio": 42.78921919053569,
+     "rel_dem_diff": 0.2857064665799626,
+     "worst_miss_ours": 1.5443453794065032
+    },
+    {
+     "n": 3,
+     "case": "worst_dem",
+     "pixel": [
+      1286,
+      298
+     ],
+     "status": "tight band",
+     "ratio": 11.117948213087024,
+     "rel_dem_diff": 0.6371668070629696,
+     "worst_miss_ours": 4.736924462449822
+    },
+    {
+     "n": 4,
+     "case": "worst_shape",
+     "pixel": [
+      1140,
+      317
+     ],
+     "status": "tight band",
+     "ratio": 1.267074922548687,
+     "rel_dem_diff": 5.06445552577362,
+     "worst_miss_ours": 0.886922543542691
+    },
+    {
+     "n": 5,
+     "case": "worst_band",
+     "pixel": [
+      1296,
+      251
+     ],
+     "status": "tight band",
+     "ratio": 2.5082797129062846,
+     "rel_dem_diff": 0.4022239468915518,
+     "worst_miss_ours": 5.083735351423804
+    },
+    {
+     "n": 6,
+     "case": "brightest",
+     "pixel": [
+      1202,
+      274
+     ],
+     "status": "tight band",
+     "ratio": 60.53834607413865,
+     "rel_dem_diff": 0.1458969360750953,
+     "worst_miss_ours": 1.5043161211348235
+    },
+    {
+     "n": 7,
+     "case": "widened",
+     "pixel": [
+      1238,
+      270
+     ],
+     "status": "widened 3x",
+     "ratio": 10.268912979012335,
+     "rel_dem_diff": 0.8360841636953428,
+     "worst_miss_ours": 1.2717794631647663
+    },
+    {
+     "n": 8,
+     "case": "typical",
+     "pixel": [
+      1141,
+      309
+     ],
+     "status": "tight band",
+     "ratio": 1.1221276129256363,
+     "rel_dem_diff": 0.02139567849251182,
+     "worst_miss_ours": 0.9887916755049349
+    }
+   ]
+  },
+  {
+   "date": "20151220_055956",
+   "cy": 1099,
+   "cx": 197,
+   "area": 35400,
+   "peak": 302.6606750488281,
+   "n_core": 661,
+   "chosen_by": "area",
+   "region": 34,
+   "box": [
+    1003,
+    101,
+    192
+   ],
+   "inside_tight_pct": {
+    "ours": 74.96785767678278,
+    "sup": 42.35909702496636
+   },
+   "status_counts": {
+    "unsolved": 1,
+    "tight band": 33445,
+    "widened 3x": 3321,
+    "widened 5x": 97
+   },
+   "pixels": [
+    {
+     "n": 1,
+     "case": "worst_dem",
+     "pixel": [
+      1095,
+      196
+     ],
+     "status": "tight band",
+     "ratio": 235.9590746723015,
+     "rel_dem_diff": 0.4213200843131674,
+     "worst_miss_ours": 2.8468370752196006
+    },
+    {
+     "n": 2,
+     "case": "worst_dem",
+     "pixel": [
+      1093,
+      197
+     ],
+     "status": "tight band",
+     "ratio": 249.99342559927874,
+     "rel_dem_diff": 0.38827276840696284,
+     "worst_miss_ours": 2.8605420931040615
+    },
+    {
+     "n": 3,
+     "case": "worst_dem",
+     "pixel": [
+      1097,
+      195
+     ],
+     "status": "tight band",
+     "ratio": 222.36965931823096,
+     "rel_dem_diff": 0.418294774024914,
+     "worst_miss_ours": 2.3878023933608343
+    },
+    {
+     "n": 4,
+     "case": "worst_shape",
+     "pixel": [
+      1023,
+      265
+     ],
+     "status": "tight band",
+     "ratio": 1.0764840435437657,
+     "rel_dem_diff": 1.4101014520282424,
+     "worst_miss_ours": 1.3333287097621054
+    },
+    {
+     "n": 5,
+     "case": "worst_band",
+     "pixel": [
+      1098,
+      198
+     ],
+     "status": "tight band",
+     "ratio": 279.9682930067963,
+     "rel_dem_diff": 0.19453998238622322,
+     "worst_miss_ours": 12.641825675885245
+    },
+    {
+     "n": 6,
+     "case": "brightest",
+     "pixel": [
+      1095,
+      198
+     ],
+     "status": "tight band",
+     "ratio": 302.66067209601874,
+     "rel_dem_diff": 0.13124860272741132,
+     "worst_miss_ours": 3.108266382866227
+    },
+    {
+     "n": 7,
+     "case": "widened",
+     "pixel": [
+      1090,
+      198
+     ],
+     "status": "widened 3x",
+     "ratio": 210.62148682172523,
+     "rel_dem_diff": 0.1900219014145324,
+     "worst_miss_ours": 1.6282599003780724
+    },
+    {
+     "n": 8,
+     "case": "unsolved",
+     "pixel": [
+      1115,
+      210
+     ],
+     "status": "unsolved",
+     "ratio": 33.722725584310524,
+     "rel_dem_diff": null,
+     "worst_miss_ours": 12.247352959921136
+    },
+    {
+     "n": 9,
+     "case": "typical",
+     "pixel": [
+      1172,
+      257
+     ],
+     "status": "tight band",
+     "ratio": 2.3000927501865704,
+     "rel_dem_diff": 0.15508729449559797,
+     "worst_miss_ours": 0.9750722178943791
+    }
+   ]
+  },
+  {
+   "date": "20151220_060015",
+   "cy": 1099,
+   "cx": 197,
+   "area": 35523,
+   "peak": 301.4068603515625,
+   "n_core": 657,
+   "chosen_by": "area",
+   "region": 35,
+   "box": [
+    1003,
+    101,
+    192
+   ],
+   "inside_tight_pct": {
+    "ours": 74.8205544043007,
+    "sup": 42.01880049253687
+   },
+   "status_counts": {
+    "unsolved": 4,
+    "tight band": 33297,
+    "widened 3x": 3471,
+    "widened 5x": 92
+   },
+   "pixels": [
+    {
+     "n": 1,
+     "case": "worst_dem",
+     "pixel": [
+      1090,
+      198
+     ],
+     "status": "tight band",
+     "ratio": 205.0352994866758,
+     "rel_dem_diff": 0.642720684873081,
+     "worst_miss_ours": 3.251838254454203
+    },
+    {
+     "n": 2,
+     "case": "worst_dem",
+     "pixel": [
+      1093,
+      197
+     ],
+     "status": "tight band",
+     "ratio": 239.97724201378878,
+     "rel_dem_diff": 0.43204314375250846,
+     "worst_miss_ours": 3.066331069918033
+    },
+    {
+     "n": 3,
+     "case": "worst_dem",
+     "pixel": [
+      1096,
+      196
+     ],
+     "status": "tight band",
+     "ratio": 244.18857393089996,
+     "rel_dem_diff": 0.39234747043167717,
+     "worst_miss_ours": 2.7761570153989847
+    },
+    {
+     "n": 4,
+     "case": "worst_shape",
+     "pixel": [
+      1064,
+      230
+     ],
+     "status": "tight band",
+     "ratio": 1.8391766737944557,
+     "rel_dem_diff": 1.1358606979621928,
+     "worst_miss_ours": 2.5340856213365517
+    },
+    {
+     "n": 5,
+     "case": "worst_band",
+     "pixel": [
+      1098,
+      198
+     ],
+     "status": "tight band",
+     "ratio": 278.26675127580137,
+     "rel_dem_diff": 0.2054953208813726,
+     "worst_miss_ours": 14.330089076836522
+    },
+    {
+     "n": 6,
+     "case": "brightest",
+     "pixel": [
+      1095,
+      198
+     ],
+     "status": "tight band",
+     "ratio": 301.40688186209434,
+     "rel_dem_diff": 0.15133606489992932,
+     "worst_miss_ours": 2.213167410214448
+    },
+    {
+     "n": 7,
+     "case": "widened",
+     "pixel": [
+      1109,
+      206
+     ],
+     "status": "widened 3x",
+     "ratio": 73.64545619504568,
+     "rel_dem_diff": 0.23040094774996053,
+     "worst_miss_ours": 2.015960220833153
+    },
+    {
+     "n": 8,
+     "case": "unsolved",
+     "pixel": [
+      1108,
+      208
+     ],
+     "status": "unsolved",
+     "ratio": 63.27288220757691,
+     "rel_dem_diff": null,
+     "worst_miss_ours": 9.069395912827934
+    },
+    {
+     "n": 9,
+     "case": "typical",
+     "pixel": [
+      1007,
+      230
+     ],
+     "status": "tight band",
+     "ratio": 2.297634774716133,
+     "rel_dem_diff": 0.10818594280701359,
+     "worst_miss_ours": 1.0834132823395333
+    }
+   ]
+  },
+  {
+   "date": "20151221_052855",
+   "cy": 1104,
+   "cx": 200,
+   "area": 29854,
+   "peak": 57.54923629760742,
+   "n_core": 239,
+   "chosen_by": "area",
+   "region": 36,
+   "box": [
+    1008,
+    104,
+    192
+   ],
+   "inside_tight_pct": {
+    "ours": 72.4122398726765,
+    "sup": 37.93579772379208
+   },
+   "status_counts": {
+    "unsolved": 0,
+    "tight band": 33301,
+    "widened 3x": 3507,
+    "widened 5x": 56
+   },
+   "pixels": [
+    {
+     "n": 1,
+     "case": "worst_dem",
+     "pixel": [
+      1121,
+      188
+     ],
+     "status": "tight band",
+     "ratio": 25.50484307461185,
+     "rel_dem_diff": 0.4558120623075996,
+     "worst_miss_ours": 2.2700932898325394
+    },
+    {
+     "n": 2,
+     "case": "worst_dem",
+     "pixel": [
+      1083,
+      198
+     ],
+     "status": "tight band",
+     "ratio": 34.690915856389914,
+     "rel_dem_diff": 0.27568638530941947,
+     "worst_miss_ours": 8.134941207166047
+    },
+    {
+     "n": 3,
+     "case": "worst_dem",
+     "pixel": [
+      1088,
+      209
+     ],
+     "status": "tight band",
+     "ratio": 50.165703644068685,
+     "rel_dem_diff": 0.2063155411416182,
+     "worst_miss_ours": 1.1030577578377758
+    },
+    {
+     "n": 4,
+     "case": "worst_shape",
+     "pixel": [
+      1105,
+      289
+     ],
+     "status": "tight band",
+     "ratio": 1.1730031887837005,
+     "rel_dem_diff": 1.2462571020735522,
+     "worst_miss_ours": 2.824863105020655
+    },
+    {
+     "n": 5,
+     "case": "brightest",
+     "pixel": [
+      1097,
+      205
+     ],
+     "status": "tight band",
+     "ratio": 57.5492376855256,
+     "rel_dem_diff": 0.12190453975208636,
+     "worst_miss_ours": 0.7270940836478048
+    },
+    {
+     "n": 6,
+     "case": "widened",
+     "pixel": [
+      1083,
+      218
+     ],
+     "status": "widened 5x",
+     "ratio": 36.7997224599103,
+     "rel_dem_diff": 0.9747959535687193,
+     "worst_miss_ours": 0.9620598120789806
+    },
+    {
+     "n": 7,
+     "case": "typical",
+     "pixel": [
+      1119,
+      130
+     ],
+     "status": "tight band",
+     "ratio": 3.3158290363817784,
+     "rel_dem_diff": 0.05480185601003918,
+     "worst_miss_ours": 0.955366895801894
+    }
+   ]
+  },
+  {
+   "date": "20151221_180358",
+   "cy": 731,
+   "cx": 285,
+   "area": 29963,
+   "peak": 208.49710083007812,
+   "n_core": 508,
+   "chosen_by": "area",
+   "region": 37,
+   "box": [
+    635,
+    189,
+    192
+   ],
+   "inside_tight_pct": {
+    "ours": 70.47766650770943,
+    "sup": 37.63312668892068
+   },
+   "status_counts": {
+    "unsolved": 1149,
+    "tight band": 25164,
+    "widened 3x": 9210,
+    "widened 5x": 1341
+   },
+   "pixels": [
+    {
+     "n": 1,
+     "case": "worst_dem",
+     "pixel": [
+      738,
+      284
+     ],
+     "status": "tight band",
+     "ratio": 100.19702512943239,
+     "rel_dem_diff": 0.8282756017631651,
+     "worst_miss_ours": 7.8255970869270906
+    },
+    {
+     "n": 2,
+     "case": "worst_dem",
+     "pixel": [
+      735,
+      285
+     ],
+     "status": "tight band",
+     "ratio": 68.99403346344154,
+     "rel_dem_diff": 0.9087521460090779,
+     "worst_miss_ours": 8.258344667768673
+    },
+    {
+     "n": 3,
+     "case": "worst_dem",
+     "pixel": [
+      730,
+      285
+     ],
+     "status": "tight band",
+     "ratio": 56.94137938921228,
+     "rel_dem_diff": 0.7013968988040847,
+     "worst_miss_ours": 5.451158704274047
+    },
+    {
+     "n": 4,
+     "case": "worst_shape",
+     "pixel": [
+      726,
+      327
+     ],
+     "status": "tight band",
+     "ratio": 1.25854355026618,
+     "rel_dem_diff": 1.363149878698581,
+     "worst_miss_ours": 0.9765200392565623
+    },
+    {
+     "n": 5,
+     "case": "worst_band",
+     "pixel": [
+      719,
+      297
+     ],
+     "status": "tight band",
+     "ratio": 18.387813683001028,
+     "rel_dem_diff": 1.1731410330238452,
+     "worst_miss_ours": 10.407192130534662
+    },
+    {
+     "n": 6,
+     "case": "brightest",
+     "pixel": [
+      734,
+      293
+     ],
+     "status": "unsolved",
+     "ratio": 208.4971067004978,
+     "rel_dem_diff": null,
+     "worst_miss_ours": 166547.0860707647
+    },
+    {
+     "n": 7,
+     "case": "widened",
+     "pixel": [
+      737,
+      285
+     ],
+     "status": "widened 3x",
+     "ratio": 142.09864155750893,
+     "rel_dem_diff": 0.267211649282399,
+     "worst_miss_ours": 3.133792850826322
+    },
+    {
+     "n": 8,
+     "case": "typical",
+     "pixel": [
+      669,
+      219
+     ],
+     "status": "tight band",
+     "ratio": 1.0717635744228977,
+     "rel_dem_diff": 0.28616829052248965,
+     "worst_miss_ours": 1.0741099749815874
+    }
+   ]
+  },
+  {
+   "date": "20151223_060355",
+   "cy": 1133,
+   "cx": 261,
+   "area": 30016,
+   "peak": 48.966094970703125,
+   "n_core": 16,
+   "chosen_by": "area",
+   "region": 38,
+   "box": [
+    1037,
+    165,
+    192
+   ],
+   "inside_tight_pct": {
+    "ours": 67.08221510403139,
+    "sup": 30.017603093527256
+   },
+   "status_counts": {
+    "unsolved": 2,
+    "tight band": 34653,
+    "widened 3x": 2131,
+    "widened 5x": 78
+   },
+   "pixels": [
+    {
+     "n": 1,
+     "case": "worst_dem",
+     "pixel": [
+      1146,
+      273
+     ],
+     "status": "tight band",
+     "ratio": 22.755009213859534,
+     "rel_dem_diff": 0.5739714939745021,
+     "worst_miss_ours": 2.7848695516426876
+    },
+    {
+     "n": 2,
+     "case": "worst_dem",
+     "pixel": [
+      1139,
+      233
+     ],
+     "status": "tight band",
+     "ratio": 15.540837277067093,
+     "rel_dem_diff": 0.5031174688273415,
+     "worst_miss_ours": 2.0196422188661365
+    },
+    {
+     "n": 3,
+     "case": "worst_dem",
+     "pixel": [
+      1150,
+      240
+     ],
+     "status": "tight band",
+     "ratio": 14.412771420314256,
+     "rel_dem_diff": 0.50261967709876,
+     "worst_miss_ours": 1.2556764184353646
+    },
+    {
+     "n": 4,
+     "case": "worst_shape",
+     "pixel": [
+      1159,
+      348
+     ],
+     "status": "tight band",
+     "ratio": 2.4289765304530877,
+     "rel_dem_diff": 1.3111591967002783,
+     "worst_miss_ours": 1.596929343718505
+    },
+    {
+     "n": 5,
+     "case": "worst_band",
+     "pixel": [
+      1210,
+      278
+     ],
+     "status": "tight band",
+     "ratio": 1.829395997001835,
+     "rel_dem_diff": 0.8719721221773165,
+     "worst_miss_ours": 3.1532686526498743
+    },
+    {
+     "n": 6,
+     "case": "brightest",
+     "pixel": [
+      1112,
+      291
+     ],
+     "status": "tight band",
+     "ratio": 48.96609550651092,
+     "rel_dem_diff": 0.058526596563922215,
+     "worst_miss_ours": 1.156032522635874
+    },
+    {
+     "n": 7,
+     "case": "widened",
+     "pixel": [
+      1074,
+      320
+     ],
+     "status": "widened 3x",
+     "ratio": 17.12540324724812,
+     "rel_dem_diff": 0.6600949369264071,
+     "worst_miss_ours": 1.2601277109263056
+    },
+    {
+     "n": 8,
+     "case": "unsolved",
+     "pixel": [
+      1163,
+      342
+     ],
+     "status": "unsolved",
+     "ratio": 1.7335937614006012,
+     "rel_dem_diff": null,
+     "worst_miss_ours": 8.57329805973145
+    },
+    {
+     "n": 9,
+     "case": "typical",
+     "pixel": [
+      1092,
+      244
+     ],
+     "status": "tight band",
+     "ratio": 12.644557378051326,
+     "rel_dem_diff": 0.02947300039367662,
+     "worst_miss_ours": 1.075849977672116
+    }
+   ]
+  },
+  {
+   "date": "20151224_062458",
+   "cy": 1130,
+   "cx": 394,
+   "area": 29109,
+   "peak": 1399.75048828125,
+   "n_core": 1424,
+   "chosen_by": "peak",
+   "region": 39,
+   "box": [
+    1034,
+    298,
+    192
+   ],
+   "inside_tight_pct": {
+    "ours": 68.88946549039959,
+    "sup": 42.8097791616214
+   },
+   "status_counts": {
+    "unsolved": 48,
+    "tight band": 34686,
+    "widened 3x": 2066,
+    "widened 5x": 64
+   },
+   "pixels": [
+    {
+     "n": 1,
+     "case": "worst_dem",
+     "pixel": [
+      1127,
+      394
+     ],
+     "status": "tight band",
+     "ratio": 968.805411129934,
+     "rel_dem_diff": 0.761746897529925,
+     "worst_miss_ours": 14.936790969788959
+    },
+    {
+     "n": 2,
+     "case": "worst_dem",
+     "pixel": [
+      1128,
+      393
+     ],
+     "status": "tight band",
+     "ratio": 1083.7415015408737,
+     "rel_dem_diff": 0.5904908089482404,
+     "worst_miss_ours": 16.21369058620336
+    },
+    {
+     "n": 3,
+     "case": "worst_dem",
+     "pixel": [
+      1126,
+      394
+     ],
+     "status": "tight band",
+     "ratio": 1024.646360599489,
+     "rel_dem_diff": 0.5700805915714297,
+     "worst_miss_ours": 16.481506993342336
+    },
+    {
+     "n": 4,
+     "case": "worst_shape",
+     "pixel": [
+      1206,
+      401
+     ],
+     "status": "tight band",
+     "ratio": 2.823612511514489,
+     "rel_dem_diff": 1.2533750451502388,
+     "worst_miss_ours": 2.0482109760517897
+    },
+    {
+     "n": 5,
+     "case": "worst_band",
+     "pixel": [
+      1126,
+      397
+     ],
+     "status": "tight band",
+     "ratio": 440.8851006573994,
+     "rel_dem_diff": 0.43523032068187995,
+     "worst_miss_ours": 18.42320493572689
+    },
+    {
+     "n": 6,
+     "case": "brightest",
+     "pixel": [
+      1127,
+      392
+     ],
+     "status": "tight band",
+     "ratio": 1399.750534149526,
+     "rel_dem_diff": 0.12379892210885665,
+     "worst_miss_ours": 5.596751154001244
+    },
+    {
+     "n": 7,
+     "case": "widened",
+     "pixel": [
+      1128,
+      391
+     ],
+     "status": "widened 3x",
+     "ratio": 783.7611003730536,
+     "rel_dem_diff": 0.3528758634662826,
+     "worst_miss_ours": 2.3508732548226763
+    },
+    {
+     "n": 8,
+     "case": "unsolved",
+     "pixel": [
+      1128,
+      390
+     ],
+     "status": "unsolved",
+     "ratio": 452.1213902358135,
+     "rel_dem_diff": null,
+     "worst_miss_ours": 14.776678439397719
+    },
+    {
+     "n": 9,
+     "case": "typical",
+     "pixel": [
+      1124,
+      313
+     ],
+     "status": "tight band",
+     "ratio": 11.1890428878704,
+     "rel_dem_diff": 0.07877652283230091,
+     "worst_miss_ours": 1.0876899858939169
+    }
+   ]
+  },
+  {
+   "date": "20151225_175923",
+   "cy": 1156,
+   "cx": 597,
+   "area": 32141,
+   "peak": 159.95773315429688,
+   "n_core": 3820,
+   "chosen_by": "area",
+   "region": 40,
+   "box": [
+    1060,
+    501,
+    192
+   ],
+   "inside_tight_pct": {
+    "ours": 63.627450980392155,
+    "sup": 28.044982698961938
+   },
+   "status_counts": {
+    "unsolved": 4,
+    "tight band": 34680,
+    "widened 3x": 2104,
+    "widened 5x": 76
+   },
+   "pixels": [
+    {
+     "n": 1,
+     "case": "worst_dem",
+     "pixel": [
+      1159,
+      573
+     ],
+     "status": "tight band",
+     "ratio": 131.37227798690708,
+     "rel_dem_diff": 0.5778748173389795,
+     "worst_miss_ours": 5.043468996906874
+    },
+    {
+     "n": 2,
+     "case": "worst_dem",
+     "pixel": [
+      1154,
+      591
+     ],
+     "status": "tight band",
+     "ratio": 127.60567631489891,
+     "rel_dem_diff": 0.42314307699902637,
+     "worst_miss_ours": 1.5428512892703077
+    },
+    {
+     "n": 3,
+     "case": "worst_dem",
+     "pixel": [
+      1152,
+      687
+     ],
+     "status": "tight band",
+     "ratio": 33.27394744822204,
+     "rel_dem_diff": 0.7880274113384671,
+     "worst_miss_ours": 4.6740109854049186
+    },
+    {
+     "n": 4,
+     "case": "worst_shape",
+     "pixel": [
+      1193,
+      567
+     ],
+     "status": "tight band",
+     "ratio": 4.192739588481394,
+     "rel_dem_diff": 1.160138569472136,
+     "worst_miss_ours": 1.7321925866959087
+    },
+    {
+     "n": 5,
+     "case": "worst_band",
+     "pixel": [
+      1145,
+      596
+     ],
+     "status": "tight band",
+     "ratio": 78.68419560685794,
+     "rel_dem_diff": 0.1161953649599767,
+     "worst_miss_ours": 7.251040101297328
+    },
+    {
+     "n": 6,
+     "case": "brightest",
+     "pixel": [
+      1157,
+      583
+     ],
+     "status": "tight band",
+     "ratio": 159.95774103497354,
+     "rel_dem_diff": 0.1204197547465951,
+     "worst_miss_ours": 1.0188813326559147
+    },
+    {
+     "n": 7,
+     "case": "widened",
+     "pixel": [
+      1162,
+      633
+     ],
+     "status": "widened 3x",
+     "ratio": 98.81778938501718,
+     "rel_dem_diff": 0.09403433201599509,
+     "worst_miss_ours": 1.043802550140645
+    },
+    {
+     "n": 8,
+     "case": "unsolved",
+     "pixel": [
+      1144,
+      589
+     ],
+     "status": "unsolved",
+     "ratio": 39.390567386973814,
+     "rel_dem_diff": null,
+     "worst_miss_ours": 14.821537563306803
+    },
+    {
+     "n": 9,
+     "case": "typical",
+     "pixel": [
+      1136,
+      662
+     ],
+     "status": "tight band",
+     "ratio": 21.921006529877832,
+     "rel_dem_diff": 0.04040557585820519,
+     "worst_miss_ours": 1.0481718856013909
+    }
+   ]
+  }
+ ],
+ "totals": {
+  "ours": {
+   "unsolved": {
+    "inside": 0,
+    "<=1.5": 0,
+    "<=3": 0,
+    ">3": 2043
+   },
+   "tight band": {
+    "inside": 975639,
+    "<=1.5": 359583,
+    "<=3": 16961,
+    ">3": 3996
+   },
+   "widened 3x": {
+    "inside": 105083,
+    "<=1.5": 6323,
+    "<=3": 1054,
+    ">3": 310
+   },
+   "widened 5x": {
+    "inside": 2366,
+    "<=1.5": 810,
+    "<=3": 231,
+    ">3": 161
+   }
+  },
+  "sup": {
+   "unsolved": {
+    "inside": 0,
+    "<=1.5": 0,
+    "<=3": 0,
+    ">3": 2043
+   },
+   "tight band": {
+    "inside": 557794,
+    "<=1.5": 630610,
+    "<=3": 143027,
+    ">3": 24748
+   },
+   "widened 3x": {
+    "inside": 84709,
+    "<=1.5": 13020,
+    "<=3": 11519,
+    ">3": 3522
+   },
+   "widened 5x": {
+    "inside": 775,
+    "<=1.5": 978,
+    "<=3": 1264,
+    ">3": 551
+   }
+  }
+ },
+ "candidates": 2186,
+ "settings": {
+  "npz_dir": "/scratch/hsr3649/dem/data/lp_AIA_hofdeconv_full",
+  "dates_file": "/scratch/hsr3649/dem/data/lp_AIA_hofdeconv_full_DS/test_datetimes.txt",
+  "thresholds": "eval_and_enet_specs/aia_thresholds.json",
+  "model": "output/experiments/followup/scaled_mlp6_barrier_h680_sqrt_ff12_resample_clampkeep_al10_sched_relax_full_ep200_s2.pt",
+  "supervised": "paper_model/checkpoints/BP_5_Wide_10.1M.pth",
+  "n": 40,
+  "n_flaring": 15,
+  "box": 192,
+  "min_area": 300,
+  "tolfac": 1.4,
+  "workers": 6,
+  "seed": 0,
+  "out": "output/experiments/active_regions"
+ }
+}

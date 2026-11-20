@@ -22,10 +22,14 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
 import numpy as np  # noqa: E402
 
-RUNS = ("ref", "mu1", "mu100", "nofines", "lr1e-4", "lr1e-3", "round5", "round50")
+RUNS = ("ref", "mu1", "mu100", "nofines", "lr1e-4", "lr1e-3", "round5", "round50",
+        "bpflags", "tight", "trunc1", "trunc3", "trunc10")
+SET = "hard"
 LABEL = {"ref": "reference (mu 10, lr 3e-4, round 20 ep)", "mu1": "mu 1", "mu100": "mu 100",
          "nofines": "no fines (penalty mu 10 only)", "lr1e-4": "lr 1e-4", "lr1e-3": "lr 1e-3",
-         "round5": "round every 5 epochs", "round50": "round every 50 epochs"}
+         "round5": "round every 5 epochs", "round50": "round every 50 epochs",
+         "bpflags": "BP's flags (final model's way)", "tight": "no flags, tight band everywhere",
+         "trunc1": "no flags, penalty capped at 1", "trunc3": "no flags, capped at 3", "trunc10": "no flags, capped at 10"}
 COLOR = {"ref": "black", "mu1": "tab:blue", "mu100": "tab:orange", "nofines": "tab:red",
          "lr1e-4": "tab:blue", "lr1e-3": "tab:orange", "round5": "tab:blue", "round50": "tab:orange"}
 AXES = {"mu": ("ref", "mu1", "mu100", "nofines"), "lr": ("ref", "lr1e-4", "lr1e-3"),
@@ -38,7 +42,7 @@ GROUP = {6: "3.2-10x Bright", 7: "10-32x Bright", 8: "flare core"}
 def load(d):
     out = {}
     for r in RUNS:
-        p = os.path.join(d, f"net_hard_{r}.json")
+        p = os.path.join(d, f"net_{SET}_{r}.json")
         if os.path.exists(p):
             out[r] = json.load(open(p))
     return out
@@ -146,6 +150,15 @@ def summary(runs, out):
                  f"{ho['pixels_outside_pct']['0.01']:6.2f} / {ho['weight_over_lp_pooled']:.3f} / {ho['dem_mae_vs_lp']:.3g} | "
                  f"{co['pixels_outside_pct']['0.01']:6.2f} / {co.get('peak_over_lp_median', float('nan')):.3f} | "
                  f"{run['runtime_s'] / 60:.0f}")
+    flagged = [r for r, run in runs.items() if "by_flag_train" in run["final"]]
+    if any(runs[r]["args"].get("pixels") == "all" for r in flagged):
+        L.append("\nby BP's flag, training pixels (miss in TIGHT half-widths; BP's band = 3x/5x where BP widened):")
+        L.append("run | class: n / inside tight % / inside BP's band % / worst miss p50, p90 / DEM MAE vs LP / vs BP")
+        for r in flagged:
+            for cls, o in runs[r]["final"]["by_flag_train"].items():
+                L.append(f"{r:8s} | {cls:8s}: {o['n']:6d} / {o['inside_tight_pct']:6.2f} / {o['inside_bp_band_pct']:6.2f} / "
+                         f"{o['worst_miss_p50']:.3g}, {o['worst_miss_p90']:.3g} / {o.get('dem_mae_vs_lp', float('nan')):.3g} / "
+                         f"{o.get('dem_mae_vs_bp', float('nan')):.3g}")
     text = "\n".join(L)
     open(os.path.join(out, "summary.txt"), "w").write(text + "\n")
     print(text)
@@ -155,11 +168,17 @@ def main():
     p = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     p.add_argument("--dir", required=True)
     p.add_argument("--out", required=True)
+    p.add_argument("--set", default="hard", help="hard / mix / mixall")
     args = p.parse_args()
+    global SET
+    SET = args.set
     os.makedirs(args.out, exist_ok=True)
     runs = load(args.dir)
+    AXES["flags"] = ("bpflags", "tight", "trunc1", "trunc3", "trunc10")
+    COLOR.update({"bpflags": "black", "tight": "tab:red", "trunc1": "tab:blue", "trunc3": "tab:orange", "trunc10": "tab:green"})
     for axis in AXES:
-        compare(runs, axis, args.out)
+        if any(r in runs for r in AXES[axis]):
+            compare(runs, axis, args.out)
     if "ref" in runs and runs["ref"].get("tracked"):
         logT = np.linspace(5.5, 7.2, 18)
         pixel_figs(runs["ref"], logT, args.out)

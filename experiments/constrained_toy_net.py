@@ -58,6 +58,12 @@ def parse_args():
                    help="train on pixels whose linear program is feasible, or on every pixel")
     p.add_argument("--n-train", type=int, default=1_000_000)
     p.add_argument("--score-every", type=int, default=1, help="score the watched sets every this many epochs")
+    p.add_argument("--trunc", type=float, default=0.0,
+                   help="truncated penalty: a band edge missed by more than this many half-widths costs no more "
+                        "(no gradient past it, and its multiplier is not raised); 0 = off")
+    p.add_argument("--relax-bp", action="store_true",
+                   help="BP's flags as in the final model: drop pixels BP could not solve, widen the band 3x / 5x "
+                        "where BP did (needs --pixels all)")
     p.add_argument("--track", type=int, default=0,
                    help="record, every epoch, the multipliers, band gaps and DEM of this many training pixels "
                         "(half flare cores, half 3.2-32x) for figures of the method at work")
@@ -170,16 +176,22 @@ def make_optimizers(args, model):
             torch.optim.Adam(rest, lr=args.lr)]
 
 
-def load_set(path, device, tolfac, lam_bar, select=None, n=None, rng=None):
+def load_set(path, device, tolfac, lam_bar, select=None, n=None, rng=None, relax_bp=False):
     z = np.load(path)
     status = z["lp_status"]
     idx = np.arange(len(status)) if select is None else np.flatnonzero(select(status))
+    tol_all = np.asarray(z["tol"]) if "tol" in z.files else np.ones(len(status), np.int64)
+    if relax_bp:
+        idx = idx[tol_all[idx] > 0]
     if n is not None and len(idx) > n:
         idx = np.sort(rng.choice(idx, size=n, replace=False))
     t = lambda a, dt=torch.float32: torch.as_tensor(np.asarray(a)[idx], dtype=dt, device=device)
     obs, err = t(z["obs"]), t(z["err"])
-    h = tolfac * err
-    return {"n": len(idx), "obs": obs, "h": h, "P": h * torch.as_tensor(lam_bar, dtype=torch.float32, device=device),
+    tol = t(tol_all, torch.long)
+    level = torch.where(tol > 1, tol, torch.ones_like(tol)).float()
+    h_tight = tolfac * err
+    h = h_tight * level[:, None] if relax_bp else h_tight
+    return {"n": len(idx), "obs": obs, "h": h, "h_tight": h_tight, "level": level, "tol": tol, "P": h * torch.as_tensor(lam_bar, dtype=torch.float32, device=device),
             "feasible": t(status == 0, torch.bool), "obj": t(z["lp_obj"]), "tmin": t(z["lp_tmin"]),
             "dem_lp": t(z["lp_dem_lp"]), "dem_solver": t(z["dem"]), "group": t(z["group"], torch.long),
             "y_true": torch.cat([t(z["lp_y_lo"]), t(z["lp_y_hi"])], dim=1)}
@@ -204,6 +216,8 @@ def multipliers(dual, obs, P):
 
 
 def penalty(form, g_lo, g_hi, st, P, Y=None):
+    if st.get("trunc", 0) > 0:                       # past the cap a miss costs no more
+        g_lo, g_hi = g_lo.clamp(max=st["trunc"]), g_hi.clamp(max=st["trunc"])
     u2 = torch.relu(g_lo) ** 2 + torch.relu(g_hi) ** 2
     if form in ("quad", "quad_ramp"):
         return st["mu"] * u2.sum(1)
@@ -279,6 +293,32 @@ def score(model, d, D, B, sel=None):
     return out
 
 
+@torch.no_grad()
+def by_flag(model, d, D, B):
+    """Per BP flag (tight band / widened / unsolved), measured against the TIGHT band and BP's own band."""
+    x = predict(model, d["obs"])
+    dem = x @ B.T
+    r = (x @ D.T - d["obs"]) / d["h_tight"]
+    worst = (r.abs() - 1.0).clamp(min=0).max(1).values           # tight half-widths outside the band
+    worst_bp = ((r.abs() / d["level"][:, None]) - 1.0).clamp(min=0).max(1).values
+    out = {}
+    for name, sel in (("tight", d["tol"] == 1), ("widened", d["tol"] > 1), ("unsolved", d["tol"] == 0)):
+        if not sel.any():
+            continue
+        o = {"n": int(sel.sum()), "inside_tight_pct": float(100 * (worst[sel] <= 0.01).float().mean()),
+             "inside_bp_band_pct": float(100 * (worst_bp[sel] <= 0.01).float().mean()),
+             "worst_miss_p50": float(worst[sel].median()), "worst_miss_p90": float(torch.quantile(worst[sel], 0.9)),
+             "weight_p50": float(x[sel].sum(1).median())}
+        ok = sel & d["feasible"]
+        if ok.any():
+            o["dem_mae_vs_lp"] = float((dem[ok] - d["dem_lp"][ok]).abs().mean())
+        fin = sel & torch.isfinite(d["dem_solver"]).all(1)
+        if fin.any():
+            o["dem_mae_vs_bp"] = float((dem[fin] - d["dem_solver"][fin]).abs().mean())
+        out[name] = o
+    return out
+
+
 def main():
     args = parse_args()
     torch.manual_seed(args.seed)
@@ -292,7 +332,9 @@ def main():
     lam_bar = (1.0 / D.max(dim=1).values).cpu().numpy()
     # status 0 = a DEM fits every band; anything else is an infeasible pixel
     pick = (lambda s: s == 0) if args.pixels == "feasible" else None
-    train = load_set(f"{args.data}_train.npz", device, args.tolfac, lam_bar, pick, args.n_train, rng)
+    if args.relax_bp and args.pixels != "all":
+        raise ValueError("--relax-bp needs --pixels all")
+    train = load_set(f"{args.data}_train.npz", device, args.tolfac, lam_bar, pick, args.n_train, rng, args.relax_bp)
     hold = load_set(f"{args.data}_hold.npz", device, args.tolfac, lam_bar)
     bal = load_set(f"{args.data}_balanced.npz", device, args.tolfac, lam_bar)
     N = train["n"]
@@ -333,7 +375,7 @@ def main():
         return 0.5 * (1.0 + math.cos(math.pi * min((step - ramp_steps) / max(total - ramp_steps, 1), 1.0)))
 
     scheds = [torch.optim.lr_scheduler.LambdaLR(o, lr_at) for o in opts]
-    st = {"mu": args.mu, "eps": args.eps, "kappa": args.kappa}
+    st = {"mu": args.mu, "eps": args.eps, "kappa": args.kappa, "trunc": args.trunc}
     Y = dual = dual_opt = None
     if args.form == "al":
         Y = torch.zeros(N, 12, device=device)
@@ -391,7 +433,8 @@ def main():
             return
         g = torch.cat([g_lo, g_hi], dim=1)
         if args.form == "al":
-            Y = torch.relu(Y + args.dual_step * 2.0 * st["mu"] * g).clamp(max=args.y_max)
+            Y_new = torch.relu(Y + args.dual_step * 2.0 * st["mu"] * g).clamp(max=args.y_max)
+            Y = torch.where(g > args.trunc, Y, Y_new) if args.trunc > 0 else Y_new
             y_mean = float(Y.mean())
         else:
             old = copy.deepcopy(dual).eval()
@@ -508,7 +551,8 @@ def main():
               f"viol p99 {tr['violation']['p99']:.3g}  hold {ho['pixels_outside_pct']['0.01']:.2f}% w/LP {ho['weight_over_lp_pooled']:.4f}  "
               f"cores {co['pixels_outside_pct']['0.01']:.1f}% peak/LP {co['peak_over_lp_median']:.3f}  {rec['secs']:.0f}s", flush=True)
 
-    final = {"train": history[-1]["train"], "hold_feasible": score(scorer, hold, D, B, hold["feasible"]),
+    final = {"by_flag_train": by_flag(scorer, train, D, B), "by_flag_hold": by_flag(scorer, hold, D, B),
+             "train": history[-1]["train"], "hold_feasible": score(scorer, hold, D, B, hold["feasible"]),
              "hold_all": score(scorer, hold, D, B),
              "balanced_bands": {lab: {"feasible": score(scorer, bal, D, B, bal["feasible"] & (bal["group"] == g)),
                                       "infeasible": score(scorer, bal, D, B, ~bal["feasible"] & (bal["group"] == g))}

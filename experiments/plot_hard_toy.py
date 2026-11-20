@@ -22,17 +22,20 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
 import numpy as np  # noqa: E402
 
-RUNS = ("ref", "mu1", "mu100", "nofines", "lr1e-4", "lr1e-3", "round5", "round50",
+RUNS = ("ref", "mu1", "mu100", "nofines", "lr1e-4", "lr1e-3", "round5", "round50", "ref_long", "lr1e-3_long",
         "bpflags", "tight", "trunc1", "trunc3", "trunc10")
 SET = "hard"
 LABEL = {"ref": "reference (mu 10, lr 3e-4, round 20 ep)", "mu1": "mu 1", "mu100": "mu 100",
          "nofines": "no fines (penalty mu 10 only)", "lr1e-4": "lr 1e-4", "lr1e-3": "lr 1e-3",
          "round5": "round every 5 epochs", "round50": "round every 50 epochs",
+         "ref_long": "reference, 3000 epochs", "lr1e-3_long": "lr 1e-3, 3000 epochs",
          "bpflags": "BP's flags (final model's way)", "tight": "no flags, tight band everywhere",
          "trunc1": "no flags, penalty capped at 1", "trunc3": "no flags, capped at 3", "trunc10": "no flags, capped at 10"}
 COLOR = {"ref": "black", "mu1": "tab:blue", "mu100": "tab:orange", "nofines": "tab:red",
-         "lr1e-4": "tab:blue", "lr1e-3": "tab:orange", "round5": "tab:blue", "round50": "tab:orange"}
+         "lr1e-4": "tab:blue", "lr1e-3": "tab:orange", "round5": "tab:blue", "round50": "tab:orange",
+         "ref_long": "tab:green", "lr1e-3_long": "tab:purple"}
 AXES = {"mu": ("ref", "mu1", "mu100", "nofines"), "lr": ("ref", "lr1e-4", "lr1e-3"),
+        "length": ("ref", "ref_long", "lr1e-3", "lr1e-3_long"),
         "round": ("ref", "round5", "round50")}
 CHANNELS = (94, 131, 171, 193, 211, 335)
 EDGES = [f"{c} low" for c in CHANNELS] + [f"{c} high" for c in CHANNELS]
@@ -131,8 +134,8 @@ def paper_fig(run, out, n=4):
         axs[0, col].set_title(f"pixel {t['index'][k]} ({GROUP.get(t['group'][k], '')})", fontsize=9)
         draw_fines(axs[1, col], ep, Y, np.asarray(t["dual_prices"][k]))
     axs[0, 0].set_ylabel("worst band miss (half-widths)")
-    fig.suptitle("one network trained on hard pixels: the fines grow toward BP's dual prices (dashed) "
-                 "as the band miss falls", fontsize=10)
+    fig.suptitle("one network trained on hard pixels: worst band miss (top) and fines by epoch (bottom; dashed: "
+                 "BP's dual prices, the per-pixel answer)", fontsize=10)
     fig.tight_layout()
     fig.savefig(os.path.join(out, "pixels_ref.png"), dpi=120)
     plt.close(fig)

@@ -8,7 +8,7 @@
 #   bash experiments/submit_hard_toy.sh ref mu1    # some
 set -euo pipefail
 cd "$(dirname "$0")/.."
-COMMON="--hidden 680 --batch 512 --epochs ${EPOCHS:-600} --al-warm 20 --track 12"
+COMMON="--hidden 680 --batch 512 --epochs ${EPOCHS:-600} --al-warm 20 --track 12 --score-every 5"
 declare -A RUN=(
   [ref]="al|--mu 10 --mu-max 10 --lr 3e-4 --outer 20"
   [mu1]="al|--mu 1 --mu-max 1 --lr 3e-4 --outer 20"

@@ -57,6 +57,7 @@ def parse_args():
     p.add_argument("--pixels", choices=["feasible", "all"], default="feasible",
                    help="train on pixels whose linear program is feasible, or on every pixel")
     p.add_argument("--n-train", type=int, default=1_000_000)
+    p.add_argument("--score-every", type=int, default=1, help="score the watched sets every this many epochs")
     p.add_argument("--track", type=int, default=0,
                    help="record, every epoch, the multipliers, band gaps and DEM of this many training pixels "
                         "(half flare cores, half 3.2-32x) for figures of the method at work")
@@ -488,8 +489,12 @@ def main():
                 update_multipliers(epoch)
                 round_start["epoch"] = len(epoch_losses)
         rec = {"epoch": epoch, "step": step, "lr": scheds[-1].get_last_lr()[0], "mu": st["mu"], "eps": st["eps"],
-               "loss": tot / steps_per_epoch, "weight_term": l1 / steps_per_epoch, "penalty_term": pen / steps_per_epoch,
-               "train": score(scorer, train_watch, D, B),
+               "loss": tot / steps_per_epoch, "weight_term": l1 / steps_per_epoch, "penalty_term": pen / steps_per_epoch}
+        track(epoch)
+        if epoch % args.score_every and epoch != args.epochs:
+            history.append(rec)
+            continue
+        rec |= {"train": score(scorer, train_watch, D, B),
                "hold_feasible": score(scorer, hold_watch, D, B, hold_watch["feasible"]),
                "bright_feasible": score(scorer, bal, D, B, bal["feasible"] & (bal["group"] >= 6)),
                "core_feasible": score(scorer, bal, D, B, bal["feasible"] & (bal["group"] == 8)),
@@ -497,7 +502,6 @@ def main():
         if args.pixels == "all":
             rec["hold_all"] = score(scorer, hold_watch, D, B)
         history.append(rec)
-        track(epoch)
         tr, ho, co = rec["train"], rec["hold_feasible"], rec["core_feasible"]
         print(f"epoch {epoch:3d}  loss {rec['loss']:.4f} (weight {rec['weight_term']:.4f}, penalty {rec['penalty_term']:.4g})  "
               f"mu {st['mu']:.4g} eps {st['eps']:.3g}  train outside>0.01: {tr['pixels_outside_pct']['0.01']:.2f}% "

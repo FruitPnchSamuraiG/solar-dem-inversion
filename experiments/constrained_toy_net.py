@@ -57,6 +57,9 @@ def parse_args():
     p.add_argument("--pixels", choices=["feasible", "all"], default="feasible",
                    help="train on pixels whose linear program is feasible, or on every pixel")
     p.add_argument("--n-train", type=int, default=1_000_000)
+    p.add_argument("--track", type=int, default=0,
+                   help="record, every epoch, the multipliers, band gaps and DEM of this many training pixels "
+                        "(half flare cores, half 3.2-32x) for figures of the method at work")
     p.add_argument("--epochs", type=int, default=100)
     p.add_argument("--batch", type=int, default=4096)
     p.add_argument("--lr", type=float, default=3e-4)
@@ -350,6 +353,29 @@ def main():
     converged = {"epoch": None}
     floor = {"reached": None, "before_raise": None, "mu_before": None}
 
+    tracked = None
+    if args.track > 0:
+        g_all, f_all = train["group"].cpu().numpy(), train["feasible"].cpu().numpy()
+        pick = []
+        for sel, k in ((f_all & (g_all == 8), (args.track + 1) // 2), (f_all & (g_all >= 6) & (g_all < 8), args.track // 2)):
+            idx = np.flatnonzero(sel)
+            pick += list(rng.choice(idx, size=min(k, idx.size), replace=False)) if idx.size else []
+        tk = torch.as_tensor(np.sort(np.asarray(pick, np.int64)), device=device)
+        tracked = {"index": tk.tolist(), "group": train["group"][tk].tolist(), "obs": train["obs"][tk].tolist(),
+                   "dem_lp": train["dem_lp"][tk].tolist(), "dem_solver": train["dem_solver"][tk].tolist(),
+                   "lp_objective": train["obj"][tk].tolist(), "dual_prices": train["y_true"][tk].tolist(),
+                   "records": []}
+
+    @torch.no_grad()
+    def track(epoch):
+        if tracked is None:
+            return
+        x = predict(scorer, train["obs"][tk])
+        g_lo, g_hi = gaps(x, D, train["obs"][tk], train["h"][tk])
+        tracked["records"].append({"epoch": epoch, "dem": (x @ B.T).tolist(), "weight": x.sum(1).tolist(),
+                                   "gap": torch.cat([g_lo, g_hi], dim=1).tolist(),
+                                   "multipliers": None if Y is None else Y[tk].tolist()})
+
     def update_multipliers(epoch):
         """The outer step: y <- relu(y + 2 mu g), then the textbook rule for mu."""
         nonlocal Y, prev_v
@@ -410,6 +436,7 @@ def main():
              "core_feasible": score(scorer, bal, D, B, bal["feasible"] & (bal["group"] == 8))}
     print(f"before training: train outside>0.01 {start['train']['pixels_outside_pct']['0.01']:.2f}%, "
           f"hold w/LP {start['hold_feasible']['weight_over_lp_pooled']:.4f}", flush=True)
+    track(0)
     for epoch in range(1, args.epochs + 1):
         perm = torch.randperm(N, device=device)
         tot = l1 = pen = 0.0
@@ -470,6 +497,7 @@ def main():
         if args.pixels == "all":
             rec["hold_all"] = score(scorer, hold_watch, D, B)
         history.append(rec)
+        track(epoch)
         tr, ho, co = rec["train"], rec["hold_feasible"], rec["core_feasible"]
         print(f"epoch {epoch:3d}  loss {rec['loss']:.4f} (weight {rec['weight_term']:.4f}, penalty {rec['penalty_term']:.4g})  "
               f"mu {st['mu']:.4g} eps {st['eps']:.3g}  train outside>0.01: {tr['pixels_outside_pct']['0.01']:.2f}% "
@@ -510,7 +538,7 @@ def main():
               "ramp_epochs": ramp_epochs, "params": sum(p.numel() for p in model.parameters()),
               "multiplier_updates": updates, "mu_final": st["mu"], "stopped_at_epoch": converged["epoch"],
               "floor_reached_at_epoch": floor["reached"],
-              "before_training": start, "history": history, "final": final,
+              "before_training": start, "history": history, "final": final, "tracked": tracked,
               "runtime_s": round(time.time() - t0, 1)}
     os.makedirs(os.path.dirname(os.path.abspath(args.output)) or ".", exist_ok=True)
     with open(args.output, "w") as fh:

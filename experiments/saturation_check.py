@@ -11,8 +11,9 @@ saturated when any channel's estimate reaches --sat counts.
   2. every pixel at 32x the Bright threshold or above in the test split, by BP's status (tight band,
      widened, unsolved): share saturated
 
-Staged test blocks are 256 x 256 AIA pixels (128 x 128 on the DEM grid), 256 per image in row-major
-order, images in test_datetimes.txt order; the mapping is checked against the solver files.
+Staged test blocks are 256 x 256 AIA pixels (128 x 128 on the DEM grid), 64 per image drawn as the
+staging script draws them (random.seed(image index), shuffle), images in sorted date order; the mapping
+is checked against the solver files.
 
     python3 experiments/saturation_check.py --pixels output/experiments/flare_pixels/pixels.npz --out <dir>
 """
@@ -68,13 +69,22 @@ def main():
     nb = zarr.open(os.path.join(args.root, "test_x.zarr"), mode="r").shape[-1]
     per = nb // len(dates)
     assert per * len(dates) == nb, (nb, len(dates))
-    side = int(round(per ** 0.5))
+    import random
+
+    def order(i):                       # dataset/stage_hofdeconv_full.py: random.seed(i), shuffle, keep PER_IMAGE
+        random.seed(i)
+        blocks = [(bi * 256, bj * 256) for bi in range(16) for bj in range(16)]
+        random.shuffle(blocks)
+        return blocks[:per]
+    orders = {}
     sf = np.stack([np.load(os.path.join(args.npz_dir, f"{d}.npz"))["scaleFactor"].reshape(-1)[:6] for d in dates])
 
     def full_pos(b, i, j):
         di, loc = divmod(int(b), per)
-        by, bx = divmod(loc, side)
-        return di, by * 128 + int(i), bx * 128 + int(j)
+        if di not in orders:
+            orders[di] = order(di)
+        sy, sx = orders[di][loc]
+        return di, sy // 2 + int(i), sx // 2 + int(j)
 
     P = np.load(args.pixels)
     where = P["where"]

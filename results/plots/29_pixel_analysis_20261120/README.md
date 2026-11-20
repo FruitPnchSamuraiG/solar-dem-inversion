@@ -34,8 +34,27 @@ tight band (549 at 3x, 151 at 5x, 806 unsolved). Each of the 16,749 is put in on
 
 ## Disk maps (`band_maps/`)
 
-Network's worst channel against the band BP used, beside BP's status, for two test dates. At
-pixels BP solves at the tight band: inside 91.0% / 91.2%, within 1.5 half-widths 8.7% / 8.5%,
-within 3 0.36% / 0.31%, beyond 3 0.00% / 0.01%. Slight misses are spread over the disk;
-the clear misses sit in active-region and flare cores. The worst channel when outside is most
-often 211 A, then 193 A. All unsolved pixels (62 / 86) are far outside.
+Network's worst channel against the band BP used, beside BP's status, for all eight viewer dates
+(`summary.json` two dates, `summary_6dates.json` the other six). Over the 30.6M pixels BP solves at
+the tight band: inside 91.8% (91.0 to 93.0% per date), within 1.5 half-widths 7.8%, within 3 0.38%,
+beyond 3 0.00%. At pixels BP had to widen to 3x, 98.8% are inside that band. Slight misses are spread
+over the disk; the clear misses sit in active-region and flare cores. The worst channel when outside
+is most often 211 A, then 193 A.
+
+## Pixels BP cannot solve even at 5x (`unsolvable/`, `experiments/unsolvable_pixels.py`)
+
+2,981 over the eight dates (33 to 1,932 per date). For each: the smallest band multiple that admits
+any DEM, whether dropping one channel makes the tight band solvable, and its position.
+
+- 90% (2,695) sit in the outermost 10 pixels of the image frame, far off the Sun, mostly on three
+  dates (1,904 on 12 Nov 2015). Typically one channel holds a lone reading (211 A, sometimes 193 or
+  335 A, hundreds of DN/s) while the others read about zero: image-edge artifacts, not plasma.
+  Dropping 211 A alone makes 1,502 of them solvable.
+- 286 lie on or just off the disk. There 131 A reads about zero (83 of 190 on disk are exactly
+  zero) next to 600-700 DN/s in 171 and 193 A; no DEM gives that much 171/193 A without some
+  131 A, and dropping 131 A alone makes most of them solvable. A zeroed or too-low 131 A reading
+  (the deconvolution clamp) is the likely cause.
+- They need a band of about 6x the tight one (median; p90 8x).
+
+So BP's unsolvable pixels are almost all bad readings in one channel, not plasma no DEM can
+explain. Cutouts (`cutout_*.png`) show six of them in every channel at full resolution.

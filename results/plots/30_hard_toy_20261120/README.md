@@ -56,10 +56,12 @@ Per class, training pixels, miss in tight half-widths:
 | capped at 1 half-width | 37.7 / 11.3 (collapsed: weight 0.08x LP) | 54.8 | 19 / 53 |
 | capped at 3 | 42.2 / 4.15 | 96.8 | 28 / 53 |
 | capped at 10 | 45.4 / 2.11 | 97.6 | 17 / 100 |
-| BP's flags (the final model's way) | pending | | |
+| BP's flags (the final model's way; unsolved pixels left out) | 42.3 / 1.73 | 88.1 (DEM MAE vs BP 0.19; no flags 0.48) | not trained on |
 
 - With no flags at all, the network lands 98% of the pixels BP widened inside BP's widened band by
-  itself, and the unsolvable pixels miss by ~6 half-widths (what they need).
+  itself (88% with the flags), and the unsolvable pixels miss by ~6 half-widths (what they need).
+  The cost: on the solvable pixels its DEM is 13% further from the LP's (1.95 vs 1.73), and at the
+  widened pixels its DEM is further from BP's (0.48 vs 0.19).
 - The cap does what it says (past it a pixel exerts no pull), but on a network the abandoned pixels
   drift far (worst 10% miss 50 to 100 half-widths): wild resynthesis. A cap of 1 kills training
   (early on every pixel is past it, so there is no gradient and the output goes to zero); a cap needs
